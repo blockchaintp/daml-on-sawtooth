@@ -11,16 +11,8 @@ import com.digitalasset.api.util.TimeProvider
 import com.digitalasset.daml.lf.data.Ref
 import com.digitalasset.daml.lf.value.Value
 import com.digitalasset.daml.lf.value.Value.{AbsoluteContractId, VersionedValue}
-import com.digitalasset.ledger.backend.api.v1.LedgerSyncEvent.{
-  AcceptedTransaction,
-  Heartbeat,
-  RejectedCommand
-}
-import com.digitalasset.ledger.backend.api.v1.RejectionReason.{
-  Disputed,
-  DuplicateCommandId,
-  Inconsistent
-}
+import com.digitalasset.ledger.backend.api.v1.LedgerSyncEvent.{AcceptedTransaction, Heartbeat, RejectedCommand}
+import com.digitalasset.ledger.backend.api.v1.RejectionReason.{Disputed, DuplicateCommandId, Inconsistent, TimedOut}
 import com.digitalasset.ledger.backend.api.v1._
 import com.digitalasset.ledger.example.Transaction.TxDelta
 import org.reactivestreams.{Publisher, Subscriber}
@@ -136,6 +128,20 @@ class Ledger(
           recordedAt)
     }
 
+    // time validation
+    validator
+      .checkLet(
+        timeProvider.getCurrentTime,
+        submission.ledgerEffectiveTime,
+        submission.maximumRecordTime,
+        submission.commandId,
+        submission.applicationId)
+      .fold(
+        t =>
+          return offset =>
+            mkRejectedCommand(TimedOut(t.getMessage), offset, submission, recordedAt),
+        _ => ())
+
     // check for consistency
     // NOTE: we do this by checking the activeness of all input contracts, both
     // consuming and non-consuming.
@@ -195,7 +201,7 @@ class Ledger(
   private def publishEvent(event: LedgerSyncEvent): Unit = {
     val subscriptions = lock.synchronized(this.subscriptions)
     for (s <- subscriptions) {
-      s.queue.offer(event)
+      s.queue.put(event)
     }
   }
 
