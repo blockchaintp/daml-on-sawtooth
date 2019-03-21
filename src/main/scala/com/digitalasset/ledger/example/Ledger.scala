@@ -4,7 +4,6 @@
 package com.digitalasset.ledger.example
 
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue, TimeUnit}
 
 import akka.stream.ActorMaterializer
@@ -29,8 +28,8 @@ import com.digitalasset.ledger.example.Transaction._
 import com.digitalasset.platform.sandbox.config.DamlPackageContainer
 import com.digitalasset.platform.server.services.command.time.TimeModelValidator
 import com.digitalasset.platform.services.time.TimeModel
+import org.reactivestreams
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -54,12 +53,12 @@ class Ledger(
 
   private val ec = mat.system.dispatcher
   private val validator = TimeModelValidator(timeModel)
-  private val shutdown = new AtomicBoolean(false)
 
   private var ledger = List.empty[LedgerSyncEvent]
   private var offset = 0
   private var activeContracts = Map.empty[AbsoluteContractId, ContractEntry]
-  private var duplicationCheck = Set.empty[(String /*ApplicationId*/, CommandId)]
+  private var duplicationCheck =
+    Set.empty[(String /*ApplicationId*/, CommandId)]
   private var subscriptions = List.empty[Subscription]
 
   private val heartbeatTask = mat.system.scheduler
@@ -69,7 +68,9 @@ class Ledger(
       () => publishHeartbeat()
     )(ec)
 
-  def getCurrentLedgerEnd: LedgerSyncOffset = lock.synchronized { offset.toString }
+  def getCurrentLedgerEnd: LedgerSyncOffset = lock.synchronized {
+    offset.toString
+  }
 
   def lookupActiveContract(contractId: AbsoluteContractId): Option[ContractEntry] =
     lock.synchronized { activeContracts.get(contractId) }
@@ -167,22 +168,24 @@ class Ledger(
           val snapshot = getEventsSnapshot(offset)
           val queue = new LinkedBlockingQueue[LedgerSyncEvent]()
           snapshot.foreach(event => queue.offer(event))
-          val task = Future {
-            while (!shutdown.get) {
-              subscriber.onNext(queue.take())
+          subscriber.onSubscribe(new reactivestreams.Subscription {
+            override def request(n: Long): Unit = ec.execute { () =>
+              (1 to n.toInt).foreach { _ =>
+                subscriber.onNext(queue.take())
+              }
             }
-            subscriber.onComplete()
-          }(ec)
-          subscriptions = subscriptions :+ Subscription(queue, task)
+            override def cancel(): Unit =
+              throw new UnsupportedOperationException
+          })
+          subscriptions = subscriptions :+ Subscription(queue, subscriber)
         }
     }
 
   def shutdownTasks(): Unit = lock.synchronized {
     heartbeatTask.cancel()
-    shutdown.set(true)
     publishHeartbeat()
     for (s <- subscriptions) {
-      Await.result(s.task, FiniteDuration(10, TimeUnit.SECONDS))
+      s.subscriber.onComplete()
     }
   }
 
@@ -266,7 +269,7 @@ class Ledger(
   */
 case class Subscription(
     queue: BlockingQueue[LedgerSyncEvent],
-    task: Future[Unit]
+    subscriber: Subscriber[_ >: LedgerSyncEvent]
 )
 
 /**
