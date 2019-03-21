@@ -1,0 +1,11 @@
+project:
+  sdk-version: 0.11.17
+  scenario: Main:setup
+  name: quickstart-java
+  source: daml/Main.daml
+  parties:
+  - Alice
+  - Bob
+  - USD_Bank
+  - EUR_Bank
+version: 2
