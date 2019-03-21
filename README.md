@@ -13,12 +13,14 @@ the DAML on Sawtooth integration.
 
 ### Requirements
 
-The DA SDK version 100.11.17 or greater, the Scala SBT build tool and a modern JVM. All of the commands in this README are assumed to be executed from within the repository root.
+The DA SDK version 0.11.17 or greater (corresponding to library version 100.11.17), the Scala SBT build tool and a modern JVM. All of the commands in this README are assumed to be executed from within the repository root.
 
 ### Building the example ledger-api-server
 
 ```
-sbt compile
+$ sbt compile
+...
+[success] Total time: 5 s, completed Mar 21, 2019, 1:25:03 PM
 ```
 
 ### Compiling the example "quickstart-java" DAML project
@@ -26,16 +28,18 @@ sbt compile
 We first need to use the DAML SDK to compile some example DAML code into a DAR (DAML archive) file:
 
 ```
-(cd quickstart-java; da compile)
+$ (cd quickstart-java; da compile)
+Created .../daml-on-sawtooth/quickstart-java/target/quickstart-java.dar.
 ```
 
 ### Running the example ledger-api-server
 
 In order to run the ledger-api-server, we (currently) need to provide it with the DAML packages up front. Assuming we have compiled the DAML code using the step above, we can now issue the following command to start a server:
 
-
 ```
-sbt "runMain com.digitalasset.ledger.example.Main quickstart-java/target/quickstart-java.dar"
+$ sbt "runMain com.digitalasset.ledger.example.Main quickstart-java/target/quickstart-java.dar"
+...
+Initialized Ledger API server version 0.0.1 with ledger-id = sandbox-10eccc3e-5f84-4d35-8888-532451dcb21a, port = 6865, dar file = DamlPackageContainer(List(quickstart-java/target/quickstart-java.dar)), time mode = Static, daml-engine = {}
 ```
 
 ### Running the semantics tests against a ledger-api-server
@@ -43,8 +47,9 @@ sbt "runMain com.digitalasset.ledger.example.Main quickstart-java/target/quickst
 The quickstart DAR package contains testing scenarios that we can replay against the server that we started in the previous step. To start the tester with the quickstart DAR, issue the following command:
 
 ```
-sbt "test:runMain com.digitalasset.platform.semantictest.StandaloneSemanticTestRunner quickstart-java/target/quickstart-java.dar"
+$ sbt "test:runMain com.digitalasset.platform.semantictest.StandaloneSemanticTestRunner quickstart-java/target/quickstart-java.dar"
+...
+Testing scenario: Main:setup
+All scenarios completed.
+[success] Total time: 9 s, completed Mar 21, 2019, 1:27:27 PM
 ```
-
-This is the expected output:
-TODO
