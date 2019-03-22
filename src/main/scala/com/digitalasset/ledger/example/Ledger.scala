@@ -4,7 +4,8 @@
 package com.digitalasset.ledger.example
 
 import java.time.Instant
-import java.util.concurrent.{TimeUnit}
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 import akka.NotUsed
 import akka.stream.{ActorMaterializer, OverflowStrategy}
@@ -32,6 +33,7 @@ import com.digitalasset.platform.server.services.command.time.TimeModelValidator
 import com.digitalasset.platform.services.time.TimeModel
 
 import scala.concurrent.duration.FiniteDuration
+import akka.actor.{Actor, ActorSystem, Props}
 
 /**
   * This is an example (simple) in-memory ledger, which comprises most of the ledger api backend.
@@ -50,18 +52,27 @@ class Ledger(
     timeProvider: TimeProvider,
     mat: ActorMaterializer) {
 
-  private[this] val lock = new Object()
+  private val ledgerState = new AtomicReference[LedgerState](emptyLedgerState)
 
   private val ec = mat.system.dispatcher
   private val validator = TimeModelValidator(timeModel)
 
-  private var ledger = List.empty[LedgerSyncEvent]
-  private var offset = 0
-  private var activeContracts = Map.empty[AbsoluteContractId, ContractEntry]
-  private var duplicationCheck =
-    Set.empty[(String /*ApplicationId*/, CommandId)]
-  private var subscriptionQueues = List.empty[SourceQueueWithComplete[LedgerSyncEvent]]
+  /**
+    * Task to dispatch ledger sync events to subscribers
+    * in a repeatable ledger-defined order.
+    */
+  private val dispatcherTask = ActorSystem("ledger").actorOf(Props(new Actor {
+    var offset: Int = 0 // the next offset to send
+    override def receive: Receive = {
+      case () =>
+        publishEvent(ledgerState.get().ledger(offset))
+        offset = offset + 1
+    }
+  }))
 
+  /**
+    * Task to send out transient heartbeat events to subscribers.
+    */
   private val heartbeatTask = mat.system.scheduler
     .schedule(
       FiniteDuration(5, TimeUnit.SECONDS),
@@ -69,72 +80,133 @@ class Ledger(
       () => publishHeartbeat()
     )(ec)
 
-  def getCurrentLedgerEnd: LedgerSyncOffset = lock.synchronized {
-    offset.toString
-  }
+  def getCurrentLedgerEnd: LedgerSyncOffset =
+    ledgerState.get().offset.toString
 
   def lookupActiveContract(contractId: AbsoluteContractId): Option[ContractEntry] =
-    lock.synchronized { activeContracts.get(contractId) }
+    ledgerState.get().activeContracts.get(contractId)
 
-  def activeContractSetSnapshot(): (LedgerSyncOffset, Map[AbsoluteContractId, ContractEntry]) =
-    lock.synchronized { (getCurrentLedgerEnd, activeContracts) }
-
-  def submitAndNotify(submission: TransactionSubmission): Unit = {
-    publishEvent(submitToLedger(submission))
+  def activeContractSetSnapshot(): (LedgerSyncOffset, Map[AbsoluteContractId, ContractEntry]) = {
+    val state = ledgerState.get()
+    (state.offset.toString, state.activeContracts)
   }
 
-  def submitToLedger(submission: TransactionSubmission): LedgerSyncEvent = {
+  /**
+    * Submit the supplied transaction to the ledger and notify all ledger event subscriptions of the
+    * resultant event.
+    * NOTE: Care must be taken to make sure we can always send out ledger sync events in the same
+    * order, therefore when broadcasting new events, we use a separate task to enqueue events directly
+    * from the ledger and only signal that task here.
+    */
+  def submitAndNotify(submission: TransactionSubmission): Unit = {
+    submitToLedger(submission)
+    notifyDispatcher()
+  }
+
+  /**
+    * Submit the supplied transaction to the ledger.
+    * This will result in a LedgerSyncEvent being written to the ledger.
+    * If the submission fails, then a RejectedCommand event is written, otherwise
+    * an AcceptedTransaction event is written and the transaction is assumed "committed".
+    * Note that this happens in two phases:
+    * 1) We read the current state of the ledger then perform consistency checks
+    *    and full validation on the transaction. The full validation is relatively
+    *    expensive and we don't want to perform it in phase 2 below.
+    * 2) We then re-read the ledger state using an optimistic lock, perform the
+    *    consistency checks again and then update the ledger state. This phase must
+    *    be side-effect free, as it may get repeated if the optimistic locking fails.
+    */
+  def submitToLedger(submission: TransactionSubmission): Unit = {
 
     val recordedAt = timeProvider.getCurrentTime
 
     // determine inputs and outputs
     val txDelta = Transaction.computeTxDelta(submission)
 
-    // validate transaction
-    val mkEvent: LedgerSyncOffset => LedgerSyncEvent =
-      validateSubmission(submission, txDelta, recordedAt)
+    // perform checks upfront and full validation
+    val validationResult = validateSubmission(submission, txDelta, recordedAt, ledgerState.get())
 
-    lock.synchronized {
+    // atomically read and update the ledger state
+    ledgerState.updateAndGet { prevState =>
+      // advance ledger
+      val newOffset = prevState.offset + 1
 
-      val newOffset = advanceLedgerOffset()
-
-      // create an event with this offset
-      val event = mkEvent(newOffset)
+      // determine the final event, re-checking consistency now we have the (optimistic) lock
+      val event = (for (_ <- validationResult;
+        _ <- checkSubmission(submission, txDelta, recordedAt, prevState)) yield (())) match {
+        case Left(mkEvent) => mkEvent(newOffset.toString)
+        case Right(()) => mkAcceptedTransaction(newOffset.toString, submission, recordedAt)
+      }
 
       // update the ledger
-      this.ledger = this.ledger :+ event
+      val ledger = prevState.ledger :+ event
 
       // assign any new outputs absolute contract ids
-      val outputs = mkContractOutputs(submission, txDelta, newOffset)
+      val outputs = mkContractOutputs(submission, txDelta, newOffset.toString)
 
       // prune active contract cache of any consumed inputs and add the outputs
-      activeContracts = (activeContracts -- txDelta.inputs) ++ outputs
+      val activeContracts = (prevState.activeContracts -- txDelta.inputs) ++ outputs
 
       // record in duplication check cache
-      duplicationCheck = duplicationCheck + ((submission.applicationId, submission.commandId))
+      val duplicationCheck = prevState.duplicationCheck + (
+        (
+          submission.applicationId,
+          submission.commandId))
 
-      event
+      LedgerState(
+        ledger,
+        newOffset,
+        activeContracts,
+        duplicationCheck,
+        prevState.subscriptionQueues)
     }
   }
 
-  private def advanceLedgerOffset(): LedgerSyncOffset = lock.synchronized {
-    this.offset = this.offset + 1
-    getCurrentLedgerEnd
-  }
-
+  /**
+    * This is the relatively expensive transaction validation that is performed off the critical lock-holding path.
+    * Note that we also perform the consistency checks prior to validation, in order to fail-fast if there is a consistency issue.
+    * However these checks will need to be performed again once the lock is held.
+    */
   private def validateSubmission(
       submission: TransactionSubmission,
       txDelta: TxDelta,
-      recordedAt: Instant): LedgerSyncOffset => LedgerSyncEvent = {
+      recordedAt: Instant,
+      ledgerState: LedgerState): Either[LedgerSyncOffset => LedgerSyncEvent, Unit] = {
+
+    checkSubmission(submission, txDelta, recordedAt, ledgerState) match {
+      case rejection @ Left(_) => rejection
+      case Right(()) =>
+        // validate transaction
+        Validation
+          .validate(submission, ledgerState.activeContracts.mapValues(_.contract), packages) match {
+          case Validation.Failure(msg) =>
+            Left(offset => mkRejectedCommand(Disputed(msg), offset, submission, recordedAt))
+          case Validation.Success =>
+            Right(())
+        }
+    }
+  }
+
+  /**
+    * Check submission for duplicates, time-outs and consistency
+    * NOTE: this is performed pre-commit prior to validation and also
+    * during commit while the ledger state lock is held.
+    */
+  private def checkSubmission(
+      submission: TransactionSubmission,
+      txDelta: TxDelta,
+      recordedAt: Instant,
+      ledgerState: LedgerState): Either[LedgerSyncOffset => LedgerSyncEvent, Unit] = {
 
     // check for and ignore duplicates
-    if (duplicationCheck.contains((submission.applicationId, submission.commandId))) {
-      return offset =>
-        mkRejectedCommand(
-          DuplicateCommandId("duplicate submission detected"),
-          offset,
-          submission,
-          recordedAt)
+    if (ledgerState.duplicationCheck.contains((submission.applicationId, submission.commandId))) {
+      return Left(
+        offset =>
+          mkRejectedCommand(
+            DuplicateCommandId("duplicate submission detected"),
+            offset,
+            submission,
+            recordedAt))
     }
 
     // time validation
@@ -147,71 +219,78 @@ class Ledger(
         submission.applicationId)
       .fold(
         t =>
-          return offset =>
-            mkRejectedCommand(TimedOut(t.getMessage), offset, submission, recordedAt),
+          return Left(
+            offset => mkRejectedCommand(TimedOut(t.getMessage), offset, submission, recordedAt)),
         _ => ())
 
     // check for consistency
     // NOTE: we do this by checking the activeness of all input contracts, both
     // consuming and non-consuming.
-    if (!txDelta.inputs.subsetOf(activeContracts.keySet) ||
-      !txDelta.inputs_nc.subsetOf(activeContracts.keySet)) {
-      return offset =>
-        mkRejectedCommand(
-          Inconsistent("one or more of the inputs has been consumed"),
-          offset,
-          submission,
-          recordedAt)
+    if (!txDelta.inputs.subsetOf(ledgerState.activeContracts.keySet) ||
+      !txDelta.inputs_nc.subsetOf(ledgerState.activeContracts.keySet)) {
+      return Left(
+        offset =>
+          mkRejectedCommand(
+            Inconsistent("one or more of the inputs has been consumed"),
+            offset,
+            submission,
+            recordedAt))
     }
+    Right(())
+  }
 
-    // validate transaction
-    Validation
-      .validate(submission, activeContracts.mapValues(_.contract), packages) match {
-      case Validation.Failure(msg) =>
-        offset =>
-          mkRejectedCommand(Disputed(msg), offset, submission, recordedAt)
-      case Validation.Success =>
-        offset =>
-          mkAcceptedTransaction(offset, submission, recordedAt)
+  /**
+    * Subscribe to the stream of ledger sync events
+    */
+  def ledgerSyncEvents(offset: Option[LedgerSyncOffset]): Source[LedgerSyncEvent, NotUsed] = {
+    val (queue, source) =
+      Source.queue[LedgerSyncEvent](Int.MaxValue, OverflowStrategy.fail).preMaterialize()(mat)
+    val state = ledgerState.updateAndGet { state =>
+      LedgerState(
+        state.ledger,
+        state.offset,
+        state.activeContracts,
+        state.duplicationCheck,
+        state.subscriptionQueues :+ queue)
+    }
+    val snapshot = getEventsSnapshot(state, offset)
+    Source(snapshot).concat(source)
+  }
+
+  /**
+    * Shutdown this ledger implementation, stopping the heartbeat tasks and closing
+    * all subscription streams.
+    */
+  def shutdownTasks(): Unit = {
+    heartbeatTask.cancel()
+    publishHeartbeat()
+    for (q <- ledgerState.get().subscriptionQueues) {
+      q.complete
     }
   }
 
-  def ledgerSyncEvents(offset: Option[LedgerSyncOffset]): Source[LedgerSyncEvent, NotUsed] =
-    lock.synchronized {
-      val (queue, source) =
-        Source.queue[LedgerSyncEvent](Int.MaxValue, OverflowStrategy.fail).preMaterialize()(mat)
-      val snapshot = getEventsSnapshot(offset)
-      snapshot.foreach(event => queue.offer(event))
-      subscriptionQueues = subscriptionQueues :+ queue
-      source
-    }
-
-  def shutdownTasks(): Unit = lock.synchronized {
-    heartbeatTask.cancel()
-    publishHeartbeat()
-    for (q <- subscriptionQueues) {
-      q.complete
-    }
+  private def notifyDispatcher(): Unit = {
+    dispatcherTask ! (())
   }
 
   private def publishHeartbeat(): Unit =
     publishEvent(Heartbeat(timeProvider.getCurrentTime, getCurrentLedgerEnd))
 
   private def publishEvent(event: LedgerSyncEvent): Unit = {
-    val subscriptionQueues = lock.synchronized(this.subscriptionQueues)
-    for (q <- subscriptionQueues) {
+    for (q <- ledgerState.get().subscriptionQueues) {
       q.offer(event)
     }
   }
 
-  private def getEventsSnapshot(offset: Option[LedgerSyncOffset]): List[LedgerSyncEvent] =
-    lock.synchronized {
-      val index: Int = offset match {
-        case Some(s) => Integer.parseInt(s)
-        case None => 0
-      }
-      ledger.splitAt(index)._2
+  private def getEventsSnapshot(
+      ledgerState: LedgerState,
+      offset: Option[LedgerSyncOffset]): List[LedgerSyncEvent] = {
+    val index: Int = offset match {
+      case Some(s) => Integer.parseInt(s)
+      case None => 0
     }
+    ledgerState.ledger.splitAt(index)._2
+  }
 
   private def mkContractOutputs(
       submission: TransactionSubmission,
@@ -264,15 +343,29 @@ class Ledger(
       offset,
       Some(submission.applicationId))
 
+  private def emptyLedgerState =
+    LedgerState(
+      List.empty[LedgerSyncEvent],
+      0,
+      Map.empty[AbsoluteContractId, ContractEntry],
+      Set.empty[(String /*ApplicationId*/, CommandId)],
+      List.empty[SourceQueueWithComplete[LedgerSyncEvent]]
+    )
+
+  /**
+    * The state of the ledger, which must be updated atomically.
+    */
+  case class LedgerState(
+      ledger: List[LedgerSyncEvent],
+      offset: Int,
+      activeContracts: Map[AbsoluteContractId, ContractEntry],
+      duplicationCheck: Set[(String /*ApplicationId*/, CommandId)],
+      subscriptionQueues: List[SourceQueueWithComplete[LedgerSyncEvent]])
+
 }
 
 /**
   * These are the entries in the Active Contract Set.
-  * @param contract
-  * @param let
-  * @param transactionId
-  * @param workflowId
-  * @param witnesses
   */
 case class ContractEntry(
     contract: Value.ContractInst[VersionedValue[AbsoluteContractId]],
