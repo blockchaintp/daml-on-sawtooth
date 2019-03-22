@@ -6,6 +6,8 @@ module Main where
 
 import Iou
 import IouTrade()
+import Tests.IouTest
+import Tests.TradeTest
 
 setup = scenario do
   alice <- getParty "Alice"

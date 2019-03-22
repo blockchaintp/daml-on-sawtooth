@@ -4,23 +4,32 @@
 package com.digitalasset.ledger.example
 
 import java.time.Instant
-import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{TimeUnit}
 
-import akka.stream.ActorMaterializer
+import akka.NotUsed
+import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import com.digitalasset.api.util.TimeProvider
 import com.digitalasset.daml.lf.data.Ref
 import com.digitalasset.daml.lf.value.Value
 import com.digitalasset.daml.lf.value.Value.{AbsoluteContractId, VersionedValue}
-import com.digitalasset.ledger.backend.api.v1.LedgerSyncEvent.{AcceptedTransaction, Heartbeat, RejectedCommand}
-import com.digitalasset.ledger.backend.api.v1.RejectionReason.{Disputed, DuplicateCommandId, Inconsistent, TimedOut}
+import com.digitalasset.ledger.backend.api.v1.LedgerSyncEvent.{
+  AcceptedTransaction,
+  Heartbeat,
+  RejectedCommand
+}
+import com.digitalasset.ledger.backend.api.v1.RejectionReason.{
+  Disputed,
+  DuplicateCommandId,
+  Inconsistent,
+  TimedOut
+}
 import com.digitalasset.ledger.backend.api.v1._
 import com.digitalasset.ledger.example.Transaction.TxDelta
-import org.reactivestreams.{Publisher, Subscriber}
 import com.digitalasset.ledger.example.Transaction._
 import com.digitalasset.platform.sandbox.config.DamlPackageContainer
 import com.digitalasset.platform.server.services.command.time.TimeModelValidator
 import com.digitalasset.platform.services.time.TimeModel
-import org.reactivestreams
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -51,7 +60,7 @@ class Ledger(
   private var activeContracts = Map.empty[AbsoluteContractId, ContractEntry]
   private var duplicationCheck =
     Set.empty[(String /*ApplicationId*/, CommandId)]
-  private var subscriptions = List.empty[Subscription]
+  private var subscriptionQueues = List.empty[SourceQueueWithComplete[LedgerSyncEvent]]
 
   private val heartbeatTask = mat.system.scheduler
     .schedule(
@@ -167,31 +176,21 @@ class Ledger(
     }
   }
 
-  def ledgerSyncEvents(offset: Option[LedgerSyncOffset]): Publisher[LedgerSyncEvent] =
-    new Publisher[LedgerSyncEvent] {
-      override def subscribe(subscriber: Subscriber[_ >: LedgerSyncEvent]): Unit =
-        lock.synchronized {
-          val snapshot = getEventsSnapshot(offset)
-          val queue = new LinkedBlockingQueue[LedgerSyncEvent]()
-          snapshot.foreach(event => queue.offer(event))
-          subscriber.onSubscribe(new reactivestreams.Subscription {
-            override def request(n: Long): Unit = ec.execute { () =>
-              (1 to n.toInt).foreach { _ =>
-                subscriber.onNext(queue.take())
-              }
-            }
-            override def cancel(): Unit =
-              throw new UnsupportedOperationException
-          })
-          subscriptions = subscriptions :+ Subscription(queue, subscriber)
-        }
+  def ledgerSyncEvents(offset: Option[LedgerSyncOffset]): Source[LedgerSyncEvent, NotUsed] =
+    lock.synchronized {
+      val (queue, source) =
+        Source.queue[LedgerSyncEvent](Int.MaxValue, OverflowStrategy.fail).preMaterialize()(mat)
+      val snapshot = getEventsSnapshot(offset)
+      snapshot.foreach(event => queue.offer(event))
+      subscriptionQueues = subscriptionQueues :+ queue
+      source
     }
 
   def shutdownTasks(): Unit = lock.synchronized {
     heartbeatTask.cancel()
     publishHeartbeat()
-    for (s <- subscriptions) {
-      s.subscriber.onComplete()
+    for (q <- subscriptionQueues) {
+      q.complete
     }
   }
 
@@ -199,9 +198,9 @@ class Ledger(
     publishEvent(Heartbeat(timeProvider.getCurrentTime, getCurrentLedgerEnd))
 
   private def publishEvent(event: LedgerSyncEvent): Unit = {
-    val subscriptions = lock.synchronized(this.subscriptions)
-    for (s <- subscriptions) {
-      s.queue.put(event)
+    val subscriptionQueues = lock.synchronized(this.subscriptionQueues)
+    for (q <- subscriptionQueues) {
+      q.offer(event)
     }
   }
 
@@ -266,17 +265,6 @@ class Ledger(
       Some(submission.applicationId))
 
 }
-
-/**
-  * Every ledger-events subscription has a blocking-queue and a task that continually consumes that
-  * queue. To publish an event, we append it to the associated queue.
-  * @param queue
-  * @param task
-  */
-case class Subscription(
-    queue: BlockingQueue[LedgerSyncEvent],
-    subscriber: Subscriber[_ >: LedgerSyncEvent]
-)
 
 /**
   * These are the entries in the Active Contract Set.

@@ -49,8 +49,7 @@ class Backend(
   override def ledgerSyncEvents(
       offset: Option[LedgerSyncOffset]): Source[LedgerSyncEvent, NotUsed] = {
     logger.debug("ledgerSyncEvents called.")
-    Source
-      .fromPublisher(ledger.ledgerSyncEvents(offset))
+    ledger.ledgerSyncEvents(offset)
       .map(event => {
         logger.debug("Publishing event: " + event.toString)
         event
