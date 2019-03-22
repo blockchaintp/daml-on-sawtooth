@@ -52,7 +52,21 @@ The quickstart DAR package contains testing scenarios that we can replay against
 ```
 $ sbt "test:runMain com.digitalasset.platform.semantictest.StandaloneSemanticTestRunner quickstart-java/target/quickstart-java.dar"
 ...
+Testing scenario: Tests.TradeTest:trade_test
+Testing scenario: Tests.IouTest:iou_test
 Testing scenario: Main:setup
 All scenarios completed.
-[success] Total time: 9 s, completed Mar 21, 2019, 1:27:27 PM
+[success] Total time: 12 s, completed 22-Mar-2019 08:37:12
 ```
+
+### Running the navigator console
+
+An interactive console for issuing ledger api requests can be started using the SDK and the following command:
+
+```
+da run navigator -- console localhost 6865
+```
+
+More details regarding the navigator console can be found [here](https://docs.daml.com/tools/navigator/console.html):
+
+Note that for those that prefer a Web UI, a navigator server can be started by specifying "server" instead of "console". Once started, this should also open a page in your default browser.
