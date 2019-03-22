@@ -1,3 +1,6 @@
+*DISCLAIMER: This repo is not yet Apache 2.0 despite the LICENSE file(s).*
+
+
 # Welcome to the DAML on Sawtooth repository
 
 See
