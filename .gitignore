@@ -1,2 +1,9 @@
-target
+**/target
 *.log
+
+# Exclude eclipse items
+**/.settings
+**/.classpath
+**/.project
+**/.checkstyle
+**/.cache-main
