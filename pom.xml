@@ -15,6 +15,8 @@
 		<module>daml-on-x-example</module>
 		<module>daml-on-sawtooth-protobufs</module>
 		<module>noop-transaction-processor</module>
+		<module>sawtooth-daml-tp</module>
+		<module>sawtooth-daml-rpc</module>
 	</modules>
 
 	<properties>
