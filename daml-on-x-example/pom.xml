@@ -26,20 +26,23 @@
 	</build>
 	
 	<dependencies>
+		<!-- Logging -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
+		
+		<!-- Scala -->
 		<dependency>
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
 		</dependency>
 
+		<!-- DAML -->
 		<dependency>
 			<groupId>com.daml.ledger</groupId>
 			<artifactId>bindings-java</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>com.daml.scala</groupId>
 			<artifactId>akka-stream-client_${scala.lang.version}</artifactId>
@@ -120,8 +123,7 @@
 			<groupId>com.digitalasset.ledger</groupId>
 			<artifactId>semantic-test-runner</artifactId>
 			<scope>test</scope>
-		</dependency>
-		
+		</dependency>		
 		<dependency>
 			<groupId>com.thesamet.scalapb</groupId>
 			<artifactId>scalapb-runtime_${scala.lang.version}</artifactId>

@@ -16,8 +16,8 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.blockchaintp.daml.state.protobuf";
-option go_package = "daml_state_pb";
+option java_package = "com.blockchaintp.sawtooth.daml.state.protobuf";
+option go_package = "sawtooth_daml_state_pb";
 
 
 message DuplicateCommand {
