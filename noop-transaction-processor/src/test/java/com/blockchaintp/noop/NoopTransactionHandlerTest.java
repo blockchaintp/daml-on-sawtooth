@@ -15,7 +15,6 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 
-@SuppressWarnings("unused")
 public class NoopTransactionHandlerTest {
 
 	@Test

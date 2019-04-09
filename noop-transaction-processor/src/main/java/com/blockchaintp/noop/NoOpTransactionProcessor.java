@@ -4,8 +4,6 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Option.Builder;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
@@ -31,7 +29,6 @@ public class NoOpTransactionProcessor {
 		return parser.parse(options, args);
 	}
 
-	@SuppressWarnings("unused")
 	public static void main(String[] args) {
 		try {
 			CommandLine cli = parseArgs(args);
