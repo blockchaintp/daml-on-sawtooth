@@ -16,18 +16,23 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.blockchaintp.sawtooth.daml.state.protobuf";
-option go_package = "sawtooth_daml_state_pb";
-
+package com.blockchaintp.sawtooth.daml.state.protobuf;
+import "google/protobuf/timestamp.proto";
+import "com/digitalasset/daml/lf/transaction.proto";
 
 message DuplicateCommand {
+	string party=1;
+	string applicationId=2;
+	string commandId=3;
+	google.protobuf.Timestamp expiration=4;
 }
 
-message LedgerSyncEvent {
+message Contract {
+	com.digitalasset.daml.lf.transaction.ContractInstance contract=1;
+	bool archived=2;
 }
 
-message ContractInst {
+message Package {
 }
 
-message DAMLPackage {
-}
+
