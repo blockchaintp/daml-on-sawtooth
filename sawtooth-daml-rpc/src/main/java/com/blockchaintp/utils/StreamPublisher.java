@@ -71,7 +71,7 @@ public class StreamPublisher<T> implements Publisher<T> {
             }
 
             for (; ; ) {
-                long currentDemand = demand.getAcquire();
+                long currentDemand = demand.get();
 
                 if (currentDemand == Long.MAX_VALUE) {
                     return;
