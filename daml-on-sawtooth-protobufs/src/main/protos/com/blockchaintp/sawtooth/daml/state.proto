@@ -30,9 +30,13 @@ message DuplicateCommand {
 message Contract {
 	com.digitalasset.daml.lf.transaction.ContractInstance contract=1;
 	bool archived=2;
+	string contract_id=3;
+	repeated string stakeholders=4;
+	repeated string signatories=5;
+	
 }
 
-message Package {
+message DAMLPackage {
 }
 
 
