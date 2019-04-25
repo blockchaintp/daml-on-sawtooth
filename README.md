@@ -9,4 +9,8 @@ Maven version: 3.6.0
 
 # License
 
-Copyright @2019, Blockchain Technology Partners
+Repo is currently private but the intention is to open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+# Copyright
+
+Copyright @2019, Digital Asset (Switzerland) GmbH
