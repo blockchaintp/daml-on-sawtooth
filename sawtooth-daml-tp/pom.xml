@@ -42,39 +42,12 @@
 
   <!-- DAML -->
   <dependency>
-   <groupId>com.digitalasset</groupId>
-   <artifactId>daml-lf-engine_${scala.lang.version}</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>com.digitalasset.ledger</groupId>
-   <artifactId>ledger-backend-api_${scala.lang.version}</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>com.daml.ledger</groupId>
-   <artifactId>participant-state_${scala.lang.version}</artifactId>
-   <version>100.12.13</version>
-  </dependency>
-  <dependency>
    <groupId>com.daml.ledger</groupId>
    <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
-   <version>100.12.13</version>
-  </dependency>
-  <dependency>
-   <groupId>com.thesamet.scalapb</groupId>
-   <artifactId>scalapb-runtime_${scala.lang.version}</artifactId>
-   <version>0.8.4</version>
   </dependency>
 
 
   <!-- Hyperledger Sawtooth -->
-  <dependency>
-   <groupId>org.hyperledger.sawtooth</groupId>
-   <artifactId>sawtooth-sdk-signing</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>org.hyperledger.sawtooth</groupId>
-   <artifactId>sawtooth-sdk-protos</artifactId>
-  </dependency>
   <dependency>
    <groupId>org.hyperledger.sawtooth</groupId>
    <artifactId>sawtooth-sdk-transaction-processor</artifactId>
