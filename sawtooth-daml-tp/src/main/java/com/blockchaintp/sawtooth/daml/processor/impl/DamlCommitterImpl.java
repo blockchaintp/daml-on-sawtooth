@@ -22,7 +22,7 @@ import scala.collection.immutable.Map;
 public class DamlCommitterImpl implements DamlCommitter {
   private Engine engine;
 
-  public DamlCommitterImpl(Engine damlEngine) {
+  public DamlCommitterImpl(final Engine damlEngine) {
     this.engine = damlEngine;
   }
 

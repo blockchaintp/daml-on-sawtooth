@@ -37,6 +37,8 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
 public class DamlLedgerStateTest {
 
+  private static final int RANDOM_STRING_LENGTH = 10;
+
   private Pair<State, Map<String, ByteString>> getMockState() {
     Map<String, ByteString> stateMap = new HashMap<>();
     State s = mock(State.class);
@@ -84,13 +86,13 @@ public class DamlLedgerStateTest {
     Pair<State, Map<String, ByteString>> mockPair = getMockState();
     State mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
-    String appId = RandomString.make(10);
-    String submitter = RandomString.make(10);
-    String commandId = RandomString.make(10);
+    String appId = RandomString.make(RANDOM_STRING_LENGTH);
+    String submitter = RandomString.make(RANDOM_STRING_LENGTH);
+    String commandId = RandomString.make(RANDOM_STRING_LENGTH);
     DamlCommandDedupKey firstKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
         .setCommandId(commandId).build();
     DamlCommandDedupKey emptyKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
-        .setCommandId(RandomString.make(10)).build();
+        .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
     DamlCommandDedupValue firstVal = DamlCommandDedupValue.newBuilder().build();
     try {
       ledgerState.setDamlCommandDedup(firstKey, firstVal);
@@ -147,16 +149,16 @@ public class DamlLedgerStateTest {
     Pair<State, Map<String, ByteString>> mockPair = getMockState();
     State mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
-    DamlLogEntryId firstKey = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(RandomString.make(10)))
-        .build();
-    DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(RandomString.make(10)))
-        .build();
+    DamlLogEntryId firstKey = DamlLogEntryId.newBuilder()
+        .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
+    DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder()
+        .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntry firstVal = DamlLogEntry.getDefaultInstance();
     try {
       ledgerState.setDamlLogEntry(firstKey, firstVal);
       DamlLogEntry testVal = ledgerState.getDamlLogEntry(firstKey);
       assertTrue(firstVal.equals(testVal));
-      //DamlStateKey stateKey = DamlStateKey.newBuilder().set
+      // DamlStateKey stateKey = DamlStateKey.newBuilder().set
       Map<DamlLogEntryId, DamlLogEntry> retMap = ledgerState.getDamlLogEntries(Arrays.asList(firstKey));
       assertTrue(firstVal.equals(retMap.get(firstKey)));
       try {
@@ -177,8 +179,8 @@ public class DamlLedgerStateTest {
     State mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
 
-    String firstKey = RandomString.make(10);
-    String emptyKey = RandomString.make(10);
+    String firstKey = RandomString.make(RANDOM_STRING_LENGTH);
+    String emptyKey = RandomString.make(RANDOM_STRING_LENGTH);
     Archive firstVal = Archive.getDefaultInstance();
     try {
       ledgerState.setDamlPackage(firstKey, firstVal);

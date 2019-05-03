@@ -9,11 +9,11 @@ import com.digitalasset.daml.lf.engine.Engine;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.TransactionProcessor;
 
-public class DamlTransactionProcessorMain {
+public final class DamlTransactionProcessorMain {
 
   private static final Logger LOGGER = Logger.getLogger(DamlTransactionProcessorMain.class.getName());
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     TransactionProcessor transactionProcessor = new TransactionProcessor(args[0]);
     Engine engine = new Engine();
     DamlCommitter committer = new DamlCommitterImpl(engine);
@@ -26,6 +26,10 @@ public class DamlTransactionProcessorMain {
     } catch (InterruptedException exc) {
       LOGGER.warning("TransactionProcessor was interrupted");
     }
+  }
+
+  private DamlTransactionProcessorMain() {
+    // private constructor for utility class
   }
 
 }
