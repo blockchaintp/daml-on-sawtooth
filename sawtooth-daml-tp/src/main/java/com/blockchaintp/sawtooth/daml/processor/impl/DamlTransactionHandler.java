@@ -49,6 +49,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   /**
    * Constructs a TransactionHandler for DAML Transactions.
+   * @param damlCommitter the DamlCommitter which will be used to process submissions
    */
   public DamlTransactionHandler(final DamlCommitter damlCommitter) {
     this.committer = damlCommitter;

@@ -19,9 +19,18 @@ import scala.Tuple2;
 import scala.collection.JavaConverters;
 import scala.collection.immutable.Map;
 
+/**
+ * The concrete implementation of DamlCommitter.
+ * @author scealiontach
+ */
 public class DamlCommitterImpl implements DamlCommitter {
   private Engine engine;
 
+  /**
+   * Build a DamlCommitterImpl. The Engine to be used is passed in to allow reuse
+   * since Engine initialization can be costly.
+   * @param damlEngine the Engine to be used for this committer
+   */
   public DamlCommitterImpl(final Engine damlEngine) {
     this.engine = damlEngine;
   }

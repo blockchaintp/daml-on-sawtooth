@@ -103,7 +103,7 @@ public final class Namespace {
 
   /**
    * Construct a context address for the contract with logical id .
-   * @param contractId the logical contract Id
+   * @param contractId the contract Id
    * @return the byte string address
    */
   public static String makeDamlContractAddress(final DamlContractId contractId) {
@@ -113,7 +113,7 @@ public final class Namespace {
   /**
    * Construct a context address for the ledger sync event with logical id
    * eventId.
-   * @param entryId the logical event Idarg0)
+   * @param entryId the log entry Id
    * @return the byte string address
    */
   public static String makeDamlLogEntryAddress(final DamlLogEntryId entryId) {
@@ -129,6 +129,11 @@ public final class Namespace {
     return makeAddress(DAML_PACKAGE_NS, packageId);
   }
 
+  /**
+   * A utility method to make addresses for most Daml state entry types.
+   * @param keyObject the key object which will be used to create the address
+   * @return a sawtooth context address
+   */
   public static String makeAddressForType(final Object keyObject) {
     if (DamlContractId.class.equals(keyObject.getClass())) {
       return makeDamlContractAddress((DamlContractId) keyObject);
