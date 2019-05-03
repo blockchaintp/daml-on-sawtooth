@@ -1,4 +1,4 @@
-package com.blockchaintp.sawtooth.daml.procesor;
+package com.blockchaintp.sawtooth.daml.processor.impl;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,17 +19,25 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.Namespace;
-import com.blockchaintp.sawtooth.daml.processor.impl.DAMLTransactionHandler;
+import com.blockchaintp.sawtooth.daml.processor.impl.DamlTransactionHandler;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
+import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 
+import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.processor.State;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
+import scala.Tuple2;
 
-public class DAMLTransactionHandlerTest {
+public class DamlTransactionHandlerTest {
 
   private Pair<State, Map<String, ByteString>> getMockState() {
     Map<String, ByteString> stateMap = new HashMap<>();
@@ -72,22 +81,20 @@ public class DAMLTransactionHandlerTest {
     return Pair.with(s, stateMap);
   }
 
-  private DAMLTransactionHandler getDAMLTransactionHandlerInstance() {
-    return new DAMLTransactionHandler();
-  }
-
   @Test
   public void testGetVersion() {
-    DAMLTransactionHandler handler = this.getDAMLTransactionHandlerInstance();
+    DamlCommitter committer = mock(DamlCommitter.class);
+    DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     final String result = handler.getVersion();
     assertNotNull("getVersion returning null", result);
-    assertTrue(String.format("getVersion  Expected: %s Got %s", Namespace.FAMILY_VERSION_1_0, result),
-        result.equals(Namespace.FAMILY_VERSION_1_0));
+    assertTrue(String.format("getVersion  Expected: %s Got %s", Namespace.DAML_FAMILY_VERSION_1_0, result),
+        result.equals(Namespace.DAML_FAMILY_VERSION_1_0));
   }
 
   @Test
   public void testGetNameSpaces() {
-    DAMLTransactionHandler handler = this.getDAMLTransactionHandlerInstance();
+    DamlCommitter committer = mock(DamlCommitter.class);
+    DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     Collection<String> result = handler.getNameSpaces();
     assertNotNull("getNamespace returning null", handler.getNameSpaces());
     assertTrue("getNamespace returning one element", (result.size() == 1));
@@ -101,11 +108,12 @@ public class DAMLTransactionHandlerTest {
 
   @Test
   public void testTransactionFamilyName() {
-    DAMLTransactionHandler handler = this.getDAMLTransactionHandlerInstance();
+    DamlCommitter committer = mock(DamlCommitter.class);
+    DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     final String result = handler.transactionFamilyName();
     assertNotNull("transactionFamilyName returning null", result);
-    assertTrue(String.format("transactionFamilyName Expected: %s Got %s", Namespace.FAMILY_NAME, result),
-        result.equals(Namespace.FAMILY_NAME));
+    assertTrue(String.format("transactionFamilyName Expected: %s Got %s", Namespace.DAML_FAMILY_NAME, result),
+        result.equals(Namespace.DAML_FAMILY_NAME));
 
   }
 
@@ -113,8 +121,8 @@ public class DAMLTransactionHandlerTest {
   public void testApplyEmptyPayload() {
     Pair<State, Map<String, ByteString>> p = getMockState();
     State state = p.getValue0();
-
-    DAMLTransactionHandler handler = this.getDAMLTransactionHandlerInstance();
+    DamlCommitter committer = mock(DamlCommitter.class);
+    DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     TpProcessRequest transactionRequest = TpProcessRequest.getDefaultInstance().toBuilder().clearPayload().build();
 
     try {
@@ -130,8 +138,8 @@ public class DAMLTransactionHandlerTest {
 
   @Test
   public void testApplyRequestInvalidFamilyName() {
-
-    DAMLTransactionHandler handler = this.getDAMLTransactionHandlerInstance();
+    DamlCommitter committer = mock(DamlCommitter.class);
+    DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     TpProcessRequest transactionRequest = mock(TpProcessRequest.class);
     Pair<State, Map<String, ByteString>> p = getMockState();
     State state = p.getValue0();
@@ -153,6 +161,30 @@ public class DAMLTransactionHandlerTest {
       fail("Familyname and/or version do not match");
     }
 
+  }
+
+  @Test
+  public void testApply() {
+    DamlCommitter committer=mock(DamlCommitter.class);
+    DamlTransactionHandler handler = new DamlTransactionHandler(committer);
+    TransactionHeader txHeader=TransactionHeader.newBuilder().setFamilyName(Namespace.DAML_FAMILY_NAME).setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).build();
+    Archive archive=Archive.getDefaultInstance();
+    DamlStateKey archiveKey=DamlStateKey.newBuilder().setPackageId(RandomString.make(10)).build();
+    DamlSubmission submission=DamlSubmission.newBuilder().setArchive(Archive.getDefaultInstance()).build();
+    TpProcessRequest transactionRequest = TpProcessRequest.newBuilder().setHeader(txHeader).setPayload(submission.toByteString()).build();
+    Pair<State, Map<String, ByteString>> p = getMockState();
+    State state = p.getValue0();
+
+    Map<DamlStateKey,DamlStateValue> stateMap=new HashMap<>();
+    DamlStateValue archiveValue=DamlStateValue.newBuilder().setArchive(archive).build();
+    stateMap.put(archiveKey, archiveValue);
+    when(committer.processSubmission(any(), any(), any(), any(),any(),any())).thenReturn(Tuple2.apply(DamlLogEntry.getDefaultInstance(), stateMap));
+    try {
+      handler.apply(transactionRequest, state);
+    } catch (InvalidTransactionException | InternalError exc) {
+      exc.printStackTrace();
+      fail("No exceptions should be thrown");
+    }
   }
 
 }

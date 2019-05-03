@@ -2,6 +2,10 @@ package com.blockchaintp.sawtooth.daml.processor;
 
 import java.io.UnsupportedEncodingException;
 
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+
 import sawtooth.sdk.processor.Utils;
 
 /**
@@ -10,9 +14,6 @@ import sawtooth.sdk.processor.Utils;
  * @author scealiontach
  */
 public final class Namespace {
-  private Namespace() {
-  }
-
   /**
    * Sawtooth Namespaces are 6 chars long.
    */
@@ -26,40 +27,32 @@ public final class Namespace {
   /**
    * The DAML family name "daml".
    */
-  public static final String FAMILY_NAME = "daml";
+  public static final String DAML_FAMILY_NAME = "daml";
 
   /**
    * Family Version 1.0 .
    */
-  public static final String FAMILY_VERSION_1_0 = "1.0";
+  public static final String DAML_FAMILY_VERSION_1_0 = "1.0";
 
   /**
    * Address space for duplicate command records.
    */
-  public static final String DUPLICATE_COMMAND_NS = getNameSpace() + "00";
+  public static final String DAML_DUPLICATE_COMMAND_NS = getNameSpace() + "00";
 
   /**
    * Address space for contract entries.
    */
-  public static final String CONTRACT_NS = getNameSpace() + "01";
+  public static final String DAML_CONTRACT_NS = getNameSpace() + "01";
 
   /**
-   * Address space for ledger sync events.
+   * Address space for Log Entries.
    */
-  public static final String LEDGER_SYNC_EVENT_NS = getNameSpace() + "02";
+  public static final String DAML_LOG_ENTRY_NS = getNameSpace() + "02";
 
   /**
    * Address space for package entries.
    */
-  public static final String PACKAGE_NS = getNameSpace() + "03";
-
-  /**
-   * The first 6 characters of the family name hash.
-   * @return The first 6 characters of the family name hash
-   */
-  public static String getNameSpace() {
-    return getHash(FAMILY_NAME).substring(0, NAMESPACE_LENGTH);
-  }
+  public static final String DAML_PACKAGE_NS = getNameSpace() + "03";
 
   /**
    * For a given string return its hash512, transform the encoding problems into
@@ -73,6 +66,14 @@ public final class Namespace {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException("Charset UTF-8 is not found! This should never happen.", e);
     }
+  }
+
+  /**
+   * The first 6 characters of the family name hash.
+   * @return The first 6 characters of the family name hash
+   */
+  public static String getNameSpace() {
+    return getHash(DAML_FAMILY_NAME).substring(0, NAMESPACE_LENGTH);
   }
 
   /**
@@ -92,24 +93,12 @@ public final class Namespace {
   }
 
   /**
-   * Construct a context address for duplication command identified the arguments provided.
-   * @param party the submitter of the command
-   * @param applicationId the application id of the command
-   * @param commandId the id of the commmand
+   * Construct a context address for DamlCommandDedupKey provided.
+   * @param key the command dedup key
    * @return the byte string address
    */
-  public static String makeDuplicateCommadAddress(final String party, final String applicationId,
-      final String commandId) {
-    return makeAddress(DUPLICATE_COMMAND_NS, party, applicationId, commandId);
-  }
-
-  /**
-   * Construct a context address for the ledger sync event with logical id eventId.
-   * @param eventId the logical event Id
-   * @return the byte string address
-   */
-  public static String makeLedgerSyncEventAddress(final String eventId) {
-    return makeAddress(LEDGER_SYNC_EVENT_NS, eventId);
+  public static String makeDamlCommadDedupAddress(final DamlCommandDedupKey key) {
+    return makeAddress(DAML_DUPLICATE_COMMAND_NS, key.getSubmitter(), key.getApplicationId(), key.getCommandId());
   }
 
   /**
@@ -117,8 +106,18 @@ public final class Namespace {
    * @param contractId the logical contract Id
    * @return the byte string address
    */
-  public static String makeContractAddress(final String contractId) {
-    return makeAddress(CONTRACT_NS, contractId);
+  public static String makeDamlContractAddress(final DamlContractId contractId) {
+    return makeAddress(DAML_CONTRACT_NS, String.valueOf(contractId.getNodeId()));
+  }
+
+  /**
+   * Construct a context address for the ledger sync event with logical id
+   * eventId.
+   * @param entryId the logical event Idarg0)
+   * @return the byte string address
+   */
+  public static String makeDamlLogEntryAddress(final DamlLogEntryId entryId) {
+    return makeAddress(DAML_LOG_ENTRY_NS, entryId.getEntryId().toStringUtf8());
   }
 
   /**
@@ -126,8 +125,25 @@ public final class Namespace {
    * @param packageId the logical package Id
    * @return the byte string address
    */
-  public static String makePackageAddress(final String packageId) {
-    return makeAddress(PACKAGE_NS, packageId);
+  public static String makeDamlPackageAddress(final String packageId) {
+    return makeAddress(DAML_PACKAGE_NS, packageId);
+  }
+
+  public static String makeAddressForType(final Object keyObject) {
+    if (DamlContractId.class.equals(keyObject.getClass())) {
+      return makeDamlContractAddress((DamlContractId) keyObject);
+    } else if (DamlLogEntryId.class.equals(keyObject.getClass())) {
+      return makeDamlLogEntryAddress((DamlLogEntryId) keyObject);
+    } else if (DamlCommandDedupKey.class.equals(keyObject.getClass())) {
+      return makeDamlCommadDedupAddress((DamlCommandDedupKey) keyObject);
+    } else if (String.class.equals(keyObject.getClass())) {
+      return makeDamlPackageAddress((String) keyObject);
+    } else {
+      return null;
+    }
+  }
+
+  private Namespace() {
   }
 
 }

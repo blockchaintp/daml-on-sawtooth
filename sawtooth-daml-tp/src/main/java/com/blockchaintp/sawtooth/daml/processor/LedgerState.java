@@ -1,8 +1,18 @@
 package com.blockchaintp.sawtooth.daml.processor;
 
-import com.blockchaintp.sawtooth.daml.protobuf.AcceptedTransaction;
-import com.blockchaintp.sawtooth.daml.state.protobuf.Contract;
-import com.blockchaintp.sawtooth.daml.state.protobuf.DAMLPackage;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractState;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.digitalasset.daml_lf.DamlLf.Archive;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -12,23 +22,25 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  * @author scealiontach
  */
 public interface LedgerState {
-
   /**
    * @param submitter     party who submitted the command
    * @param applicationID application the command was issued fo
    * @param commandID     the id of the command issued
    * @return true if this command has been recorded, otherwise false
+   * @throws InvalidTransactionException
+   * @throws InternalError
    */
-  boolean isDuplicateCommand(String submitter, String applicationID, String commandID);
+  DamlCommandDedupValue getDamlCommandDedup(DamlCommandDedupKey commandKey)
+      throws InternalError, InvalidTransactionException;
 
-  /**
-   * @param submitter     party who submitted the command
-   * @param applicationID application the command was issued fo
-   * @param commandID     the id of the command issued
-   * @param status        true to set this combination as a command that has been
-   *                      issued, false to clear it
-   */
-  void setDuplicateCommand(String submitter, String applicationID, String commandID, boolean status);
+  Map<DamlStateKey, DamlStateValue> getDamlCommandDedups(Collection<DamlStateKey> keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlCommandDedupKey, DamlCommandDedupValue> getDamlCommandDedups(DamlCommandDedupKey... keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlStateKey, DamlStateValue> getDamlCommandDedups(DamlStateKey... keys)
+      throws InternalError, InvalidTransactionException;
 
   /**
    * Get the contract for a given contractId.
@@ -39,7 +51,53 @@ public interface LedgerState {
    * @throws InvalidTransactionException an attempt to read a contract which is
    *                                     not allowed.
    */
-  Contract getContract(String contractId) throws InternalError, InvalidTransactionException;
+  DamlContractState getDamlContract(DamlContractId contractId) throws InternalError, InvalidTransactionException;
+
+  Map<DamlStateKey, DamlStateValue> getDamlContracts(Collection<DamlStateKey> keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlContractId, DamlContractState> getDamlContracts(DamlContractId... keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlStateKey, DamlStateValue> getDamlContracts(DamlStateKey... keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(Collection<DamlLogEntryId> keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(DamlLogEntryId... keys)
+      throws InternalError, InvalidTransactionException;
+
+  DamlLogEntry getDamlLogEntry(DamlLogEntryId entryId) throws InternalError, InvalidTransactionException;
+
+  /**
+   * Fetch the DAML Package referred to by the packageId.
+   * @param packageId the logical packageId of the package
+   * @return the package
+   * @throws InvalidTransactionException
+   * @throws InternalError
+   */
+  Archive getDamlPackage(String packageId) throws InternalError, InvalidTransactionException;
+
+  Map<DamlStateKey, DamlStateValue> getDamlPackages(Collection<DamlStateKey> keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<DamlStateKey, DamlStateValue> getDamlPackages(DamlStateKey... keys)
+      throws InternalError, InvalidTransactionException;
+
+  Map<String, Archive> getDamlPackages(String... keys) throws InternalError, InvalidTransactionException;
+
+  /**
+   * @param submitter     party who submitted the command
+   * @param applicationID application the command was issued fo
+   * @param commandID     the id of the command issued
+   * @param status        true to set this combination as a command that has been
+   *                      issued, false to clear it
+   * @throws InvalidTransactionException
+   * @throws InternalError
+   */
+  void setDamlCommandDedup(DamlCommandDedupKey key, DamlCommandDedupValue val)
+      throws InternalError, InvalidTransactionException;
 
   /**
    * Store a contract in the context.
@@ -48,43 +106,25 @@ public interface LedgerState {
    * @throws InvalidTransactionException an attempt to read a contract which is
    *                                     not allowed.
    */
-  void setContract(Contract contract) throws InternalError, InvalidTransactionException;
+  void setDamlContract(DamlContractId key, DamlContractState val) throws InternalError, InvalidTransactionException;
 
-  /**
-   * Check if a contract is marked as active given its logical contractId.
-   * @param contractId the string representation of the contract (not a byte
-   *                   string)
-   * @return true if the contract is active
-   * @throws InternalError               system error
-   * @throws InvalidTransactionException an attempt to read a contract which is
-   *                                     not allowed.
-   */
-  boolean isActiveContract(String contractId) throws InternalError, InvalidTransactionException;
-
-  /**
-   * Mark the contract referred to by the contractId active based on the argument.
-   * @param contractId the string representation of the contract (not a byte
-   *                   string)
-   * @param active     true for active, otherwise false
-   */
-  void setActiveContract(String contractId, boolean active);
+  void setDamlLogEntries(Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
+      throws InternalError, InvalidTransactionException;
 
   /**
    * @param acceptedTraction // This is form of Ledger syncEvent
+   * @throws InvalidTransactionException
+   * @throws InternalError
    */
-  void addLedgerSyncEvent(AcceptedTransaction acceptedTraction);
-
-  /**
-   * Fetch the DAML Package referred to by the packageId.
-   * @param packageId the logical packageId of the package
-   * @return the package
-   */
-  DAMLPackage getDAMLPackage(String packageId);
+  void setDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError, InvalidTransactionException;
 
   /**
    * Store the given package at the logical address packageId.
    * @param damlPackage the DAMLPackage
-   * @param packageId the logical identifier for the package
+   * @param packageId   the logical identifier for the package
    */
-  void setDAMLPackage(DAMLPackage damlPackage, String packageId);
+  void setDamlPackage(String key, Archive val) throws InternalError, InvalidTransactionException;
+
+  void setDamlPackages(Collection<Entry<String, Archive>> entries) throws InternalError, InvalidTransactionException;
+
 }
