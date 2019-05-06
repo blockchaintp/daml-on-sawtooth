@@ -12,6 +12,7 @@ import java.util.UUID;
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
+import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -22,8 +23,6 @@ import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.platform.services.time.TimeModel;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -49,7 +48,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   /**
    * Constructs a TransactionHandler for DAML Transactions.
-   * @param damlCommitter the DamlCommitter which will be used to process submissions
+   * @param damlCommitter the DamlCommitter which will be used to process
+   *                      submissions
    */
   public DamlTransactionHandler(final DamlCommitter damlCommitter) {
     this.committer = damlCommitter;
@@ -130,12 +130,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InternalError, InvalidTransactionException {
     List<String> inputList = txHeader.getInputsList();
-    BiMap<DamlLogEntryId, String> inputLogEntryKeys = HashBiMap.create();
+    Map<DamlLogEntryId, String> inputLogEntryKeys = KeyValueUtils.submissionToLogAddressMap(submission);
 
-    List<DamlLogEntryId> inputLogEntriesList = submission.getInputLogEntriesList();
-    for (DamlLogEntryId id : inputLogEntriesList) {
-      inputLogEntryKeys.put(id, Namespace.makeDamlLogEntryAddress(id));
-    }
     if (!inputList.containsAll(inputLogEntryKeys.values())) {
       throw new InvalidTransactionException(String.format("Not all LogEntryId's were declared as inputs"));
     }
@@ -146,26 +142,12 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Map<DamlStateKey, DamlStateValue> buildStateMap(final LedgerState ledgerState,
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
-    List<DamlStateKey> inputDamlStateList = submission.getInputDamlStateList();
-
-    BiMap<DamlStateKey, String> inputContractKeys = HashBiMap.create();
-    BiMap<DamlStateKey, String> inputPackageKeys = HashBiMap.create();
-    BiMap<DamlStateKey, String> inputCommandDedupKeys = HashBiMap.create();
-    for (DamlStateKey k : inputDamlStateList) {
-      switch (k.getKeyCase()) {
-      case COMMAND_DEDUP:
-        inputCommandDedupKeys.put(k, Namespace.makeDamlCommadDedupAddress(k.getCommandDedup()));
-        break;
-      case PACKAGE_ID:
-        inputPackageKeys.put(k, Namespace.makeDamlPackageAddress(k.getPackageId()));
-        break;
-      case CONTRACT_ID:
-        inputContractKeys.put(k, Namespace.makeDamlContractAddress(k.getContractId()));
-        break;
-      default:
-        continue;
-      }
-    }
+    Map<DamlStateKey, String> inputContractKeys = KeyValueUtils.submissionToDamlStateAddress(submission,
+        DamlStateKey.KeyCase.CONTRACT_ID);
+    Map<DamlStateKey, String> inputPackageKeys = KeyValueUtils.submissionToDamlStateAddress(submission,
+        DamlStateKey.KeyCase.PACKAGE_ID);
+    Map<DamlStateKey, String> inputCommandDedupKeys = KeyValueUtils.submissionToDamlStateAddress(submission,
+        DamlStateKey.KeyCase.COMMAND_DEDUP);
 
     List<String> inputList = txHeader.getInputsList();
     if (!inputList.containsAll(inputCommandDedupKeys.values())) {

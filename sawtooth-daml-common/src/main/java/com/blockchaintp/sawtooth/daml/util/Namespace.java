@@ -5,6 +5,7 @@ import java.io.UnsupportedEncodingException;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 
 import sawtooth.sdk.processor.Utils;
 
@@ -131,21 +132,30 @@ public final class Namespace {
 
   /**
    * A utility method to make addresses for most Daml state entry types.
-   * @param keyObject the key object which will be used to create the address
+   * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
-  public static String makeAddressForType(final Object keyObject) {
-    if (DamlContractId.class.equals(keyObject.getClass())) {
-      return makeDamlContractAddress((DamlContractId) keyObject);
-    } else if (DamlLogEntryId.class.equals(keyObject.getClass())) {
-      return makeDamlLogEntryAddress((DamlLogEntryId) keyObject);
-    } else if (DamlCommandDedupKey.class.equals(keyObject.getClass())) {
-      return makeDamlCommadDedupAddress((DamlCommandDedupKey) keyObject);
-    } else if (String.class.equals(keyObject.getClass())) {
-      return makeDamlPackageAddress((String) keyObject);
-    } else {
+  public static String makeAddressForType(final DamlStateKey key) {
+    switch (key.getKeyCase()) {
+    case COMMAND_DEDUP:
+      return makeDamlCommadDedupAddress(key.getCommandDedup());
+    case CONTRACT_ID:
+      return makeDamlContractAddress(key.getContractId());
+    case PACKAGE_ID:
+      return makeDamlPackageAddress(key.getPackageId());
+    default:
       return null;
     }
+  }
+
+  /**
+   * A utility method to make addresses for most DamlLogEntryId key types,
+   * complementing the other methods with similar signature.
+   * @param key the key object which will be used to create the address
+   * @return a sawtooth context address
+   */
+  public static String makeAddressForType(final DamlLogEntryId key) {
+    return makeDamlLogEntryAddress(key);
   }
 
   private Namespace() {
