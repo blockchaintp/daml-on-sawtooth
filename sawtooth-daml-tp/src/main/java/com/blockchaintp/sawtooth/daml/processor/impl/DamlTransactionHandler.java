@@ -131,13 +131,13 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throws InternalError, InvalidTransactionException {
     List<String> inputList = txHeader.getInputsList();
     BiMap<DamlLogEntryId, String> inputLogEntryKeys = HashBiMap.create();
-    if (!inputList.containsAll(inputLogEntryKeys.values())) {
-      throw new InvalidTransactionException(String.format("Not all LogEntryId's were declared as inputs"));
-    }
 
     List<DamlLogEntryId> inputLogEntriesList = submission.getInputLogEntriesList();
     for (DamlLogEntryId id : inputLogEntriesList) {
       inputLogEntryKeys.put(id, Namespace.makeDamlLogEntryAddress(id));
+    }
+    if (!inputList.containsAll(inputLogEntryKeys.values())) {
+      throw new InvalidTransactionException(String.format("Not all LogEntryId's were declared as inputs"));
     }
     Map<DamlLogEntryId, DamlLogEntry> inputLogEntries = ledgerState.getDamlLogEntries(inputLogEntryKeys.keySet());
     return inputLogEntries;
