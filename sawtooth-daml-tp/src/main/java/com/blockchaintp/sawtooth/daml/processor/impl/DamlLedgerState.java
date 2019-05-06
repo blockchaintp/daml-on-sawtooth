@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
-import com.blockchaintp.sawtooth.daml.processor.Namespace;
+import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;

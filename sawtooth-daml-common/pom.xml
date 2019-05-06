@@ -40,11 +40,23 @@
    <artifactId>mockito-core</artifactId>
   </dependency>
 
+  <!-- DAML -->
+  <dependency>
+   <groupId>com.daml.ledger</groupId>
+   <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
+  </dependency>
+
   <!-- BTP -->
   <dependency>
    <groupId>daml-on-sawtooth</groupId>
    <artifactId>daml-on-sawtooth-protobufs</artifactId>
    <version>${project.parent.version}</version>
+  </dependency>
+
+  <!-- Hyperledger Sawtooth -->
+  <dependency>
+   <groupId>org.hyperledger.sawtooth</groupId>
+   <artifactId>sawtooth-sdk-transaction-processor</artifactId>
   </dependency>
 
  </dependencies>

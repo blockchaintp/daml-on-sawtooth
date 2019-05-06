@@ -20,7 +20,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
-import com.blockchaintp.sawtooth.daml.processor.Namespace;
+import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;

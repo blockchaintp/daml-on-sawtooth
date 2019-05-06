@@ -1,4 +1,4 @@
-package com.blockchaintp.sawtooth.daml.processor;
+package com.blockchaintp.sawtooth.daml.util;
 
 import java.io.UnsupportedEncodingException;
 

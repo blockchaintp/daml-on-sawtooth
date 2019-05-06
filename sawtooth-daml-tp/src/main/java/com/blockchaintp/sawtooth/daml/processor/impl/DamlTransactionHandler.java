@@ -11,8 +11,8 @@ import java.util.UUID;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
-import com.blockchaintp.sawtooth.daml.processor.Namespace;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
+import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
