@@ -26,7 +26,7 @@ import com.digitalasset.platform.services.time.TimeModel;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import sawtooth.sdk.processor.State;
+import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -59,7 +59,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   @Override
-  public void apply(final TpProcessRequest tpProcessRequest, final State state)
+  public void apply(final TpProcessRequest tpProcessRequest, final Context state)
       throws InvalidTransactionException, InternalError {
 
     basicRequestChecks(tpProcessRequest);
