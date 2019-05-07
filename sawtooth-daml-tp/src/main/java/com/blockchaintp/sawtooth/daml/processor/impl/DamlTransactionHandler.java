@@ -226,6 +226,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
         break;
       }
     }
+    ledgerState.sendLogEvent(entryId, newLogEntry);
   }
 
   @Override
