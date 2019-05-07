@@ -35,8 +35,8 @@ public interface ZMQDelegate {
   Socket getMonitor();
 
   /**
-   * Receieve a ZMQ event blocking until done
-   * @return
+   * Receieve a ZMQ event blocking until done.
+   * @return an event from the monitor socket
    */
   Event monitorRecv();
 
