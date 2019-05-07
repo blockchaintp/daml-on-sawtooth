@@ -10,7 +10,7 @@ import java.util.Collection;
 
 import org.junit.Test;
 
-import sawtooth.sdk.processor.State;
+import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -61,7 +61,7 @@ public class NoopTransactionHandlerTest {
         NoOpTransactionHandler.ALL_OK);
 
     TpProcessRequest transactionRequest = mock(TpProcessRequest.class);
-    State state = mock(State.class);
+    Context state = mock(Context.class);
 
     try {
       transactionHandler.apply(transactionRequest, state);
@@ -78,7 +78,7 @@ public class NoopTransactionHandlerTest {
         NoOpTransactionHandler.ALL_INVALID_TRANSACTION);
 
     TpProcessRequest transactionRequest = mock(TpProcessRequest.class);
-    State state = mock(State.class);
+    Context state = mock(Context.class);
 
     try {
       transactionHandler.apply(transactionRequest, state);
@@ -96,7 +96,7 @@ public class NoopTransactionHandlerTest {
         NoOpTransactionHandler.ALL_INTERNAL_ERROR);
 
     TpProcessRequest transactionRequest = mock(TpProcessRequest.class);
-    State state = mock(State.class);
+    Context state = mock(Context.class);
 
     try {
       transactionHandler.apply(transactionRequest, state);

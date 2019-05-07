@@ -20,7 +20,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
-import com.blockchaintp.sawtooth.daml.processor.Namespace;
+import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
@@ -29,7 +29,7 @@ import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 
 import net.bytebuddy.utility.RandomString;
-import sawtooth.sdk.processor.State;
+import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
@@ -40,9 +40,9 @@ public class DamlTransactionHandlerTest {
 
   private static final int RANDOM_STRING_LENGTH = 10;
 
-  private Pair<State, Map<String, ByteString>> getMockState() {
+  private Pair<Context, Map<String, ByteString>> getMockState() {
     Map<String, ByteString> stateMap = new HashMap<>();
-    State s = mock(State.class);
+    Context s = mock(Context.class);
     try {
       when(s.getState(anyCollection())).thenAnswer(new Answer<Map<String, ByteString>>() {
         @Override
@@ -120,8 +120,8 @@ public class DamlTransactionHandlerTest {
 
   @Test
   public void testApplyEmptyPayload() {
-    Pair<State, Map<String, ByteString>> p = getMockState();
-    State state = p.getValue0();
+    Pair<Context, Map<String, ByteString>> p = getMockState();
+    Context state = p.getValue0();
     DamlCommitter committer = mock(DamlCommitter.class);
     DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     TpProcessRequest transactionRequest = TpProcessRequest.getDefaultInstance().toBuilder().clearPayload().build();
@@ -142,8 +142,8 @@ public class DamlTransactionHandlerTest {
     DamlCommitter committer = mock(DamlCommitter.class);
     DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     TpProcessRequest transactionRequest = mock(TpProcessRequest.class);
-    Pair<State, Map<String, ByteString>> p = getMockState();
-    State state = p.getValue0();
+    Pair<Context, Map<String, ByteString>> p = getMockState();
+    Context state = p.getValue0();
 
     ByteString payload = mock(ByteString.class);
     when(transactionRequest.getPayload()).thenReturn(payload);
@@ -175,8 +175,8 @@ public class DamlTransactionHandlerTest {
     DamlSubmission submission = DamlSubmission.newBuilder().setArchive(Archive.getDefaultInstance()).build();
     TpProcessRequest transactionRequest = TpProcessRequest.newBuilder().setHeader(txHeader)
         .setPayload(submission.toByteString()).build();
-    Pair<State, Map<String, ByteString>> p = getMockState();
-    State state = p.getValue0();
+    Pair<Context, Map<String, ByteString>> p = getMockState();
+    Context state = p.getValue0();
 
     Map<DamlStateKey, DamlStateValue> stateMap = new HashMap<>();
     DamlStateValue archiveValue = DamlStateValue.newBuilder().setArchive(archive).build();

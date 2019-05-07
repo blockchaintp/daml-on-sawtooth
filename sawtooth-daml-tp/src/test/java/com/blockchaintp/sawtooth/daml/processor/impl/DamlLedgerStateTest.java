@@ -31,7 +31,7 @@ import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 
 import net.bytebuddy.utility.RandomString;
-import sawtooth.sdk.processor.State;
+import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
@@ -39,9 +39,9 @@ public class DamlLedgerStateTest {
 
   private static final int RANDOM_STRING_LENGTH = 10;
 
-  private Pair<State, Map<String, ByteString>> getMockState() {
+  private Pair<Context, Map<String, ByteString>> getMockState() {
     Map<String, ByteString> stateMap = new HashMap<>();
-    State s = mock(State.class);
+    Context s = mock(Context.class);
     try {
       when(s.getState(anyCollection())).thenAnswer(new Answer<Map<String, ByteString>>() {
         @Override
@@ -75,7 +75,6 @@ public class DamlLedgerStateTest {
 
       });
     } catch (InternalError | InvalidTransactionException e) {
-      // TODO Auto-generated catch block
       throw new RuntimeException("Shouldn't ever get an exception when building the mock");
     }
     return Pair.with(s, stateMap);
@@ -83,8 +82,8 @@ public class DamlLedgerStateTest {
 
   @Test
   public void testGetSetDamlCommandDedup() {
-    Pair<State, Map<String, ByteString>> mockPair = getMockState();
-    State mockState = mockPair.getValue0();
+    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
+    Context mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
     String appId = RandomString.make(RANDOM_STRING_LENGTH);
     String submitter = RandomString.make(RANDOM_STRING_LENGTH);
@@ -115,8 +114,8 @@ public class DamlLedgerStateTest {
 
   @Test
   public void testGetSetDamlContract() {
-    Pair<State, Map<String, ByteString>> mockPair = getMockState();
-    State mockState = mockPair.getValue0();
+    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
+    Context mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
 
     DamlContractId firstKey = DamlContractId.newBuilder().setEntryId(DamlLogEntryId.getDefaultInstance()).setNodeId(1)
@@ -146,8 +145,8 @@ public class DamlLedgerStateTest {
 
   @Test
   public void testGetSetDamlLogEntries() {
-    Pair<State, Map<String, ByteString>> mockPair = getMockState();
-    State mockState = mockPair.getValue0();
+    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
+    Context mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
     DamlLogEntryId firstKey = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
@@ -175,8 +174,8 @@ public class DamlLedgerStateTest {
 
   @Test
   public void testGetSetDamlPackage() {
-    Pair<State, Map<String, ByteString>> mockPair = getMockState();
-    State mockState = mockPair.getValue0();
+    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
+    Context mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
 
     String firstKey = RandomString.make(RANDOM_STRING_LENGTH);

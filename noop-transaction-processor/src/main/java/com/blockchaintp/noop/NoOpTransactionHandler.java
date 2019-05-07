@@ -4,10 +4,11 @@ import java.io.UnsupportedEncodingException;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collection;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sawtooth.sdk.processor.State;
+import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.Utils;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -61,7 +62,7 @@ public final class NoOpTransactionHandler implements TransactionHandler {
   }
 
   @Override
-  public void apply(final TpProcessRequest transactionRequest, final State state)
+  public void apply(final TpProcessRequest transactionRequest, final Context state)
       throws InvalidTransactionException, InternalError {
     switch (this.strategy) {
     case ALL_OK:

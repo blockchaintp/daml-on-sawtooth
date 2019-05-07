@@ -21,19 +21,7 @@ import "google/protobuf/timestamp.proto";
 
 
 message SawtoothDamlTransaction {
-	bytes submitterInfo=1;
-	TransactionMeta transactionMeta=2;
-	bytes submission=4;
+    bytes logEntryId=1;
+	bytes submission=2;
 }
 
-message SubmitterInfo {
-    string party=1;
-    string commandId=2;
-    string applicationId=3;
-    google.protobuf.Timestamp maxRecordTime=4;
-}
-
-message TransactionMeta {
-    google.protobuf.Timestamp ledgerEffectiveTime=1;
-    string workflowId=2;
-}

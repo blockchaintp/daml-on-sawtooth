@@ -8,7 +8,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
-import com.blockchaintp.sawtooth.daml.processor.Namespace;
+import com.blockchaintp.sawtooth.daml.util.EventConstants;
+import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;
@@ -21,7 +22,7 @@ import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import sawtooth.sdk.processor.State;
+import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
@@ -34,12 +35,12 @@ public final class DamlLedgerState implements LedgerState {
   /**
    * The state which this class wraps and delegates to.
    */
-  private State state;
+  private Context state;
 
   /**
    * @param aState the State class which this object wraps.
    */
-  public DamlLedgerState(final State aState) {
+  public DamlLedgerState(final Context aState) {
     this.state = aState;
   }
 
@@ -286,5 +287,13 @@ public final class DamlLedgerState implements LedgerState {
       setMap.put(Namespace.makeDamlPackageAddress(e.getKey()), e.getValue().toByteString());
     }
     state.setState(setMap.entrySet());
+  }
+
+  @Override
+  public void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry) throws InternalError {
+    Map<String, String> attrMap = new HashMap<>();
+    attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
+    state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), entry.toByteString());
+
   }
 }

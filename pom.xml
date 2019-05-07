@@ -12,11 +12,11 @@
 
 
  <modules>
-  <!-- <module>daml-on-x-example</module> -->
   <module>daml-on-sawtooth-protobufs</module>
   <module>noop-transaction-processor</module>
   <module>sawtooth-daml-tp</module>
   <module>sawtooth-daml-rpc</module>
+  <module>sawtooth-daml-common</module>
  </modules>
 
  <properties>
@@ -24,7 +24,7 @@
   <protobuf.version>3.6.1</protobuf.version>
   <checkstyle.path>checkstyle.xml</checkstyle.path>
   <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
-  <sawtooth.sdk.version>v0.1.2</sawtooth.sdk.version>
+  <sawtooth.sdk.version>v0.1.2-SNAPSHOT</sawtooth.sdk.version>
   <daml.sdk.version>100.12.13</daml.sdk.version>
   <daml.bindings.version>2.3.3</daml.bindings.version>
   <scala.lang.version>2.12</scala.lang.version>

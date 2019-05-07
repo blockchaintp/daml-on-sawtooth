@@ -68,7 +68,7 @@
   <!-- BTP -->
   <dependency>
    <groupId>daml-on-sawtooth</groupId>
-   <artifactId>daml-on-sawtooth-protobufs</artifactId>
+   <artifactId>sawtooth-daml-common</artifactId>
    <version>${project.parent.version}</version>
   </dependency>
  </dependencies>

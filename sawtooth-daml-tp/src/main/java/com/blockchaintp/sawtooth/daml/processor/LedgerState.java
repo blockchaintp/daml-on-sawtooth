@@ -265,4 +265,11 @@ public interface LedgerState {
    */
   void setDamlPackages(Collection<Entry<String, Archive>> entries) throws InternalError, InvalidTransactionException;
 
+  /**
+   * Record an event containing the provided log info.
+   * @param entryId the id of this log entry
+   * @param entry   the entry itself
+   * @throws InternalError when there is an unexpected back end error
+   */
+  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError;
 }
