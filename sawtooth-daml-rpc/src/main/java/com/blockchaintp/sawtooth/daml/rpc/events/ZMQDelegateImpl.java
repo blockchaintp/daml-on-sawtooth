@@ -8,11 +8,10 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 import org.zeromq.ZMQ.Socket;
 
-import com.google.protobuf.Message;
+import sawtooth.sdk.protobuf.Message;
 
 /**
  * An implementation of the ZMQDelegate.
- *
  */
 public class ZMQDelegateImpl implements ZMQDelegate {
 
@@ -59,5 +58,11 @@ public class ZMQDelegateImpl implements ZMQDelegate {
   @Override
   public final Socket getMonitor() {
     return this.monitor;
+  }
+
+  @Override
+  public final ZMQ.Event monitorRecv() {
+    ZMQ.Event event = ZMQ.Event.recv(this.monitor);
+    return event;
   }
 }

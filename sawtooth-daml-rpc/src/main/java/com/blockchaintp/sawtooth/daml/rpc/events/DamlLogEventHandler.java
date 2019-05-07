@@ -51,6 +51,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private final UnicastProcessor<Tuple2<Offset, Update>> processor;
 
   private ZMQDelegate zmqDelegate;
+  private LogEntryTransformer transformer;
 
   /**
    * Build a handler for the given zmqUrl.
@@ -65,6 +66,27 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * @param delegate the delegate to use
    */
   public DamlLogEventHandler(final ZMQDelegate delegate) {
+    this(delegate, new ArrayList<String>());
+  }
+
+  /**
+   * Build a handler based on the given delegate.and last known block ids.
+   * @param delegate the delegate to use
+   * @param blockIds the last known block ids for this event handler
+   */
+  public DamlLogEventHandler(final ZMQDelegate delegate, final Collection<String> blockIds) {
+    this(delegate, blockIds, new ParticipantStateLogEntryTransformer());
+  }
+
+  /**
+   * Build a handler based on the given delegate.and last known block ids.
+   * @param delegate the delegate to use
+   * @param blockIds the last known block ids for this event handler
+   * @param transform the transformer to use
+   */
+  public DamlLogEventHandler(final ZMQDelegate delegate, final Collection<String> blockIds,
+      final LogEntryTransformer transform) {
+    this.transformer = transform;
     this.subscriptions = new ArrayList<EventSubscription>();
     for (String subject : SUBSCRIBE_SUBJECTS) {
       EventSubscription evtSubscription = EventSubscription.newBuilder().setEventType(subject).build();
@@ -73,6 +95,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.zmqDelegate = delegate;
     // TODO add a cancel call back
     this.processor = UnicastProcessor.create();
+    this.lastBlockIds = blockIds;
   }
 
   private Map<String, String> eventAttributeMap(final Event evt) {
@@ -101,17 +124,16 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           ByteString entryIdVal = ByteString.copyFromUtf8(entryIdStr);
           DamlLogEntryId id = DamlLogEntryId.newBuilder().setEntryId(entryIdVal).build();
           DamlLogEntry logEntry = DamlLogEntry.parseFrom(evt.getData());
-          Update logEntryToUpdate = KeyValueConsumption.logEntryToUpdate(id, logEntry);
+          Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
           updates.add(logEntryToUpdate);
         }
       }
     }
 
-    long txCounter = 0;
     Collection<Tuple2<Offset, Update>> tuplesToReturn = new ArrayList<>();
     if (blockNum != 0) {
       for (Update u : updates) {
-        Offset offset = new Offset(new long[] {blockNum, txCounter});
+        Offset offset = new Offset(new long[] {blockNum, tuplesToReturn.size()});
         Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, u);
         tuplesToReturn.add(updateTuple);
       }
@@ -146,7 +168,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     return 0;
   }
 
-  private void processMessage(final Message message) throws InvalidProtocolBufferException {
+  protected final void processMessage(final Message message) throws InvalidProtocolBufferException {
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       EventList evtList = EventList.parseFrom(message.getContent());
       Collection<Tuple2<Offset, Update>> updates = eventToUpdates(evtList);
