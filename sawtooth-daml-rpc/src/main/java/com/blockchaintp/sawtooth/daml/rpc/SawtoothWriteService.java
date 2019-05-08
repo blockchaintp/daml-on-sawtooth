@@ -41,9 +41,8 @@ import scala.collection.JavaConverters;
 import sawtooth.sdk.protobuf.ClientBatchGetResponse;
 
 /**
- * A implementation of Sawtooth write service.
- * This is responsible for writing Daml submission to
- * to Sawtooth validator.
+ * A implementation of Sawtooth write service. This is responsible for writing
+ * Daml submission to to Sawtooth validator.
  */
 public class SawtoothWriteService implements WriteService {
 
@@ -145,21 +144,27 @@ public class SawtoothWriteService implements WriteService {
   }
 
   private Transaction makeSawtoothTransaction(final KeyManager keyManager, final Collection<String> inputAddresses,
-      final Collection<String> outputAddresses, final SawtoothDamlTransaction payload) {
+      final Collection<String> outputAddresses, final SawtoothDamlTransaction sawtoothDamlTxn) {
+
+    String payloadSha256 = Namespace.getHash(sawtoothDamlTxn.getSubmission().toString());
 
     TransactionHeader txnHeader = TransactionHeader.newBuilder().setFamilyName(Namespace.getNameSpace())
         .setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).setSignerPublicKey(keyManager.getPublicKeyInHex())
-        .setNonce(this.generateNonce()).setPayloadSha512Bytes(payload.getSubmission()).build();
+        .setNonce(this.generateNonce()).setPayloadSha512(payloadSha256).addAllInputs(inputAddresses)
+        .addAllOutputs(outputAddresses).build();
 
     String signedHeader = keyManager.sign(txnHeader.toByteArray());
     return Transaction.newBuilder().setHeader(txnHeader.toByteString()).setHeaderSignature(signedHeader)
-        .setPayload(payload.getSubmission()).build();
+        .setPayload(sawtoothDamlTxn.getSubmission()).build();
   }
 
   // This is based on the assumption there will only be one transaction per batch/
   private Batch makeSawtoothBatch(final KeyManager keyManager, final Transaction txn) {
     BatchHeader batchHeader = BatchHeader.newBuilder().setSignerPublicKey(keyManager.getPublicKeyInHex()).build();
-    return Batch.newBuilder().setHeader(batchHeader.toByteString()).addTransactions(txn).build();
+    String signedHeader = keyManager.sign(batchHeader.toByteArray());
+    return Batch.newBuilder().setHeader(batchHeader.toByteString())
+        .setHeaderSignature(signedHeader)
+        .addTransactions(txn).build();
   }
 
   private String generateNonce() {

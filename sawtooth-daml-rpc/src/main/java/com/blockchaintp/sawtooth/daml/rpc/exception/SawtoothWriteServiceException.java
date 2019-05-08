@@ -42,5 +42,4 @@ public class SawtoothWriteServiceException extends Exception {
   public SawtoothWriteServiceException(final String message) {
     super(String.format("Sawtooth writer service", message));
   }
- 
 }
