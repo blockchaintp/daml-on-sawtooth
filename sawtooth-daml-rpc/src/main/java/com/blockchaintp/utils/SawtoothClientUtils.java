@@ -55,10 +55,10 @@ public final class SawtoothClientUtils {
       final Collection<String> inputAddresses, final Collection<String> outputAddresses,
       final Collection<String> dependentTransactionIds, final ByteString payload) {
 
-    String payloadSha256 = Namespace.getHash(payload.toString());
+    String payloadHash = Namespace.getHash(payload.toString());
     TransactionHeader.Builder txnHeaderBldr = TransactionHeader.newBuilder().setFamilyName(Namespace.getNameSpace())
         .setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).setSignerPublicKey(keyManager.getPublicKeyInHex())
-        .setNonce(SawtoothClientUtils.generateNonce()).setPayloadSha512(payloadSha256).addAllInputs(inputAddresses)
+        .setNonce(SawtoothClientUtils.generateNonce()).setPayloadSha512(payloadHash).addAllInputs(inputAddresses)
         .addAllOutputs(outputAddresses).addAllDependencies(dependentTransactionIds);
     TransactionHeader txnHeader = txnHeaderBldr.build();
 
