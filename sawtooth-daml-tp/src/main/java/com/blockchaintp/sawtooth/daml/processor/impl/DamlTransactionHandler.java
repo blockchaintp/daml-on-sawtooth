@@ -68,8 +68,10 @@ public final class DamlTransactionHandler implements TransactionHandler {
     SawtoothDamlTransaction tx;
     TransactionHeader txHeader = tpProcessRequest.getHeader();
     DamlSubmission submission;
+    DamlLogEntryId entryId;
     try {
       tx = SawtoothDamlTransaction.parseFrom(tpProcessRequest.getPayload());
+      entryId = DamlLogEntryId.parseFrom(tx.getLogEntryId());
       submission = KeyValueSubmission.unpackDamlSubmission(tx.getSubmission());
     } catch (InvalidProtocolBufferException e) {
       InvalidTransactionException ite = new InvalidTransactionException(
@@ -90,8 +92,6 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
     // 3. Validate submission with DAML Engine
 
-    DamlLogEntryId entryId = DamlLogEntryId.newBuilder()
-        .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
 
     recordState(ledgerState, submission, inputLogEntries, stateMap, entryId);
   }
