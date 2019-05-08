@@ -1,8 +1,9 @@
 package com.blockchaintp.sawtooth.daml.rpc.events;
 
+import org.zeromq.ZMQ.Event;
 import org.zeromq.ZMQ.Socket;
 
-import com.google.protobuf.Message;
+import sawtooth.sdk.protobuf.Message;
 
 /**
  * An interface to indirect interaction with the ZMQ implementation. Useful for
@@ -32,5 +33,11 @@ public interface ZMQDelegate {
    * @return the monitor socket
    */
   Socket getMonitor();
+
+  /**
+   * Receieve a ZMQ event blocking until done.
+   * @return an event from the monitor socket
+   */
+  Event monitorRecv();
 
 }

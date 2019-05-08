@@ -29,7 +29,7 @@ public class MonitorDisconnectThread<T> extends Thread {
   public final void run() {
     while (true) {
       // blocks until disconnect event recieved
-      ZMQ.Event event = ZMQ.Event.recv(this.zmqDelegate.getMonitor());
+      ZMQ.Event event = this.zmqDelegate.monitorRecv();
       if (event.getEvent() == ZMQ.EVENT_DISCONNECTED) {
         this.processor.onComplete();
       }
