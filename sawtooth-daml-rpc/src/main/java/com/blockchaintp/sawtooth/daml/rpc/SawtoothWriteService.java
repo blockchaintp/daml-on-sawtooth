@@ -6,7 +6,11 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
+import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteServiceException;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.utils.KeyManager;
@@ -27,6 +31,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
+import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
 import sawtooth.sdk.protobuf.Message;
@@ -36,12 +41,35 @@ import scala.collection.JavaConverters;
 import sawtooth.sdk.protobuf.ClientBatchGetResponse;
 
 /**
- * A implementation of Sawtooth writer service.
- *
- * @author paulwizviz
- *
+ * A implementation of Sawtooth write service.
+ * This is responsible for writing Daml submission to
+ * to Sawtooth validator.
  */
 public class SawtoothWriteService implements WriteService {
+
+  private static Logger logger = LoggerFactory.getLogger(SawtoothWriteService.class);
+
+  private String validatorAddr;
+  private Stream stream;
+
+  /**
+   * Construct a SawtoothWriteService instance from a concrete stream.
+   *
+   * @param implementation of a ZMQ stream.
+   */
+  public SawtoothWriteService(final Stream implementation) {
+    this.stream = implementation;
+  }
+
+  /**
+   * Constructor a SawtoothWriteService instance from an address.
+   *
+   * @param validatorAddress in String format e.g. "http://localhost:3030".
+   */
+  public SawtoothWriteService(final String validatorAddress) {
+    this.stream = new ZmqStream(this.validatorAddr);
+    logger.info(String.format("Sawtooth writer initiated to reference validator address %s", validatorAddress));
+  }
 
   @Override
   public final void submitTransaction(final SubmitterInfo submitterInfo, final TransactionMeta transactionMeta,
@@ -77,19 +105,18 @@ public class SawtoothWriteService implements WriteService {
     KeyManager km = KeyManager.createSECP256k1();
 
     Transaction sawtoothTxn = this.makeSawtoothTransaction(km, inputAddresses, outputAddresses, payload);
-    Batch sawtootBatch = makeSawtoothBatch(km, sawtoothTxn);
+    Batch sawtoothBatch = makeSawtoothBatch(km, sawtoothTxn);
 
     try {
-      sendToValidator(sawtootBatch);
+      sendToValidator(sawtoothBatch);
     } catch (SawtoothWriteServiceException e) {
-      e.printStackTrace();
+      logger.error(e.getMessage());
     }
   }
 
   private void sendToValidator(final Batch sawtootBatch) throws SawtoothWriteServiceException {
-    String validatorAddress = ""; // TO=DO: find the correct address.
-    Stream stream = new ZmqStream(validatorAddress);
-    Future streamToValidator = stream.send(Message.MessageType.CLIENT_BATCH_GET_REQUEST, sawtootBatch.toByteString());
+    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_GET_REQUEST,
+        sawtootBatch.toByteString());
     ClientBatchGetResponse getResponse = null;
     try {
       ByteString result = streamToValidator.getResult();
@@ -99,16 +126,20 @@ public class SawtoothWriteService implements WriteService {
       }
 
     } catch (InterruptedException e) {
-      throw new SawtoothWriteServiceException();
+      throw new SawtoothWriteServiceException(
+          String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));
+    } catch (ValidatorConnectionError e) {
+      throw new SawtoothWriteServiceException(
+          String.format("Sawtooth validator connection error. Details: %s", e.getMessage()));
     } catch (InvalidProtocolBufferException e) {
-      throw new SawtoothWriteServiceException();
-    } catch (Exception e) {
-      e.printStackTrace();
+      throw new SawtoothWriteServiceException(
+          String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()));
     } finally {
       try {
         stream.close();
       } catch (Exception e) {
-        throw new SawtoothWriteServiceException();
+        throw new SawtoothWriteServiceException(
+            String.format("Unable to close writer stream exception. Details: %s", e.getMessage()));
       }
     }
   }
@@ -136,14 +167,6 @@ public class SawtoothWriteService implements WriteService {
     final int seedByteCount = 20;
     byte[] seed = secureRandom.generateSeed(seedByteCount);
     return seed.toString();
-  }
-
-  /**
-   *
-   * @author paulwizviz
-   *
-   */
-  private static class SawtoothWriteServiceException extends Exception {
   }
 
 }
