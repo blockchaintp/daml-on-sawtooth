@@ -18,7 +18,6 @@ import org.zeromq.ZMsg;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
-import com.daml.ledger.participant.state.kvutils.KeyValueConsumption;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.Update;
 import com.google.protobuf.ByteString;

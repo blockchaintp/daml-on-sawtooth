@@ -1,7 +1,7 @@
 package com.blockchaintp.sawtooth.daml.rpc;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -14,6 +14,7 @@ import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteServiceExceptio
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.utils.KeyManager;
+import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
@@ -33,42 +34,40 @@ import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Batch;
-import sawtooth.sdk.protobuf.BatchHeader;
+import sawtooth.sdk.protobuf.ClientBatchGetResponse;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
-import sawtooth.sdk.protobuf.TransactionHeader;
 import scala.collection.JavaConverters;
-import sawtooth.sdk.protobuf.ClientBatchGetResponse;
 
 /**
- * A implementation of Sawtooth write service.
- * This is responsible for writing Daml submission to
- * to Sawtooth validator.
+ * A implementation of Sawtooth write service. This is responsible for writing
+ * Daml submission to to Sawtooth validator.
  */
 public class SawtoothWriteService implements WriteService {
 
-  private static Logger logger = LoggerFactory.getLogger(SawtoothWriteService.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothWriteService.class);
 
-  private String validatorAddr;
   private Stream stream;
+
+  private KeyManager keyManager;
 
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
-   *
    * @param implementation of a ZMQ stream.
+   * @param kmgr the keyManager for this service
    */
-  public SawtoothWriteService(final Stream implementation) {
+  public SawtoothWriteService(final Stream implementation, final KeyManager kmgr) {
     this.stream = implementation;
+    this.keyManager = kmgr;
   }
 
   /**
    * Constructor a SawtoothWriteService instance from an address.
-   *
    * @param validatorAddress in String format e.g. "http://localhost:3030".
+   * @param kmgr the keyManager for this service
    */
-  public SawtoothWriteService(final String validatorAddress) {
-    this.stream = new ZmqStream(this.validatorAddr);
-    logger.info(String.format("Sawtooth writer initiated to reference validator address %s", validatorAddress));
+  public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr) {
+    this(new ZmqStream(validatorAddress), kmgr);
   }
 
   @Override
@@ -102,15 +101,14 @@ public class SawtoothWriteService implements WriteService {
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(transactionToSubmission.toByteString()).setLogEntryId(damlLogEntryId.toByteString()).build();
 
-    KeyManager km = KeyManager.createSECP256k1();
-
-    Transaction sawtoothTxn = this.makeSawtoothTransaction(km, inputAddresses, outputAddresses, payload);
-    Batch sawtoothBatch = makeSawtoothBatch(km, sawtoothTxn);
+    Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, inputAddresses,
+        outputAddresses, Arrays.asList(), payload.toByteString());
+    Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
 
     try {
       sendToValidator(sawtoothBatch);
     } catch (SawtoothWriteServiceException e) {
-      logger.error(e.getMessage());
+      LOGGER.error(e.getMessage());
     }
   }
 
@@ -142,31 +140,6 @@ public class SawtoothWriteService implements WriteService {
             String.format("Unable to close writer stream exception. Details: %s", e.getMessage()));
       }
     }
-  }
-
-  private Transaction makeSawtoothTransaction(final KeyManager keyManager, final Collection<String> inputAddresses,
-      final Collection<String> outputAddresses, final SawtoothDamlTransaction payload) {
-
-    TransactionHeader txnHeader = TransactionHeader.newBuilder().setFamilyName(Namespace.getNameSpace())
-        .setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).setSignerPublicKey(keyManager.getPublicKeyInHex())
-        .setNonce(this.generateNonce()).setPayloadSha512Bytes(payload.getSubmission()).build();
-
-    String signedHeader = keyManager.sign(txnHeader.toByteArray());
-    return Transaction.newBuilder().setHeader(txnHeader.toByteString()).setHeaderSignature(signedHeader)
-        .setPayload(payload.getSubmission()).build();
-  }
-
-  // This is based on the assumption there will only be one transaction per batch/
-  private Batch makeSawtoothBatch(final KeyManager keyManager, final Transaction txn) {
-    BatchHeader batchHeader = BatchHeader.newBuilder().setSignerPublicKey(keyManager.getPublicKeyInHex()).build();
-    return Batch.newBuilder().setHeader(batchHeader.toByteString()).addTransactions(txn).build();
-  }
-
-  private String generateNonce() {
-    SecureRandom secureRandom = new SecureRandom();
-    final int seedByteCount = 20;
-    byte[] seed = secureRandom.generateSeed(seedByteCount);
-    return seed.toString();
   }
 
 }
