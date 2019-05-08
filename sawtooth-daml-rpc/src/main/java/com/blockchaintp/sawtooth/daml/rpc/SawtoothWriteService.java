@@ -45,7 +45,7 @@ import scala.collection.JavaConverters;
  */
 public class SawtoothWriteService implements WriteService {
 
-  private static Logger Log = LoggerFactory.getLogger(SawtoothWriteService.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothWriteService.class);
 
   private Stream stream;
 
@@ -108,7 +108,7 @@ public class SawtoothWriteService implements WriteService {
     try {
       sendToValidator(sawtoothBatch);
     } catch (SawtoothWriteServiceException e) {
-      Log.error(e.getMessage());
+      LOGGER.error(e.getMessage());
     }
   }
 
