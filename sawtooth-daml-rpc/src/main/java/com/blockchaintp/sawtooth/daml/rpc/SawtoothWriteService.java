@@ -47,24 +47,27 @@ public class SawtoothWriteService implements WriteService {
 
   private static Logger logger = LoggerFactory.getLogger(SawtoothWriteService.class);
 
-  private String validatorAddr;
   private Stream stream;
+
+  private KeyManager keyManager;
 
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
    * @param implementation of a ZMQ stream.
+   * @param kmgr the keyManager for this service
    */
-  public SawtoothWriteService(final Stream implementation) {
+  public SawtoothWriteService(final Stream implementation, final KeyManager kmgr) {
     this.stream = implementation;
+    this.keyManager = kmgr;
   }
 
   /**
    * Constructor a SawtoothWriteService instance from an address.
    * @param validatorAddress in String format e.g. "http://localhost:3030".
+   * @param kmgr the keyManager for this service
    */
-  public SawtoothWriteService(final String validatorAddress) {
-    this.stream = new ZmqStream(this.validatorAddr);
-    logger.info(String.format("Sawtooth writer initiated to reference validator address %s", validatorAddress));
+  public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr) {
+    this(new ZmqStream(validatorAddress), kmgr);
   }
 
   @Override
@@ -98,11 +101,9 @@ public class SawtoothWriteService implements WriteService {
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(transactionToSubmission.toByteString()).setLogEntryId(damlLogEntryId.toByteString()).build();
 
-    KeyManager km = KeyManager.createSECP256k1();
-
-    Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(km, inputAddresses, outputAddresses,
-        Arrays.asList(), payload.toByteString());
-    Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(km, Arrays.asList(sawtoothTxn));
+    Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, inputAddresses,
+        outputAddresses, Arrays.asList(), payload.toByteString());
+    Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
 
     try {
       sendToValidator(sawtoothBatch);
