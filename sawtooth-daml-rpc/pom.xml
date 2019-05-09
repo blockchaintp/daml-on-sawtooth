@@ -54,10 +54,6 @@
   <!-- Hyperledger Sawtooth -->
   <dependency>
    <groupId>org.hyperledger.sawtooth</groupId>
-   <artifactId>sawtooth-sdk-signing</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>org.hyperledger.sawtooth</groupId>
    <artifactId>sawtooth-sdk-protos</artifactId>
   </dependency>
 

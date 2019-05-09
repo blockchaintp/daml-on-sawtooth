@@ -34,7 +34,8 @@ import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Batch;
-import sawtooth.sdk.protobuf.ClientBatchGetResponse;
+import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
+import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
 import scala.collection.JavaConverters;
@@ -54,7 +55,7 @@ public class SawtoothWriteService implements WriteService {
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
    * @param implementation of a ZMQ stream.
-   * @param kmgr the keyManager for this service
+   * @param kmgr           the keyManager for this service
    */
   public SawtoothWriteService(final Stream implementation, final KeyManager kmgr) {
     this.stream = implementation;
@@ -64,7 +65,7 @@ public class SawtoothWriteService implements WriteService {
   /**
    * Constructor a SawtoothWriteService instance from an address.
    * @param validatorAddress in String format e.g. "http://localhost:3030".
-   * @param kmgr the keyManager for this service
+   * @param kmgr             the keyManager for this service
    */
   public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr) {
     this(new ZmqStream(validatorAddress), kmgr);
@@ -112,14 +113,14 @@ public class SawtoothWriteService implements WriteService {
     }
   }
 
-  private void sendToValidator(final Batch sawtootBatch) throws SawtoothWriteServiceException {
-    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_GET_REQUEST,
-        sawtootBatch.toByteString());
-    ClientBatchGetResponse getResponse = null;
+  private void sendToValidator(final Batch batch) throws SawtoothWriteServiceException {
+    ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
+    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+    ClientBatchSubmitResponse getResponse = null;
     try {
       ByteString result = streamToValidator.getResult();
-      getResponse = ClientBatchGetResponse.parseFrom(result);
-      if (getResponse.getStatus() != ClientBatchGetResponse.Status.OK) {
+      getResponse = ClientBatchSubmitResponse.parseFrom(result);
+      if (getResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
         throw new SawtoothWriteServiceException();
       }
 
