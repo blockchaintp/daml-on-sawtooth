@@ -35,7 +35,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
 
   private static final Logger LOGGER = Logger.getLogger(TimeKeeperTransactionHandler.class.getName());
 
-  private static final int DEFAULT_MAX_HISTORY_SIZE = 0;
+  private static final int DEFAULT_MAX_HISTORY_SIZE = 10;
 
   private final String familyName;
   private final String namespace;
