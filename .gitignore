@@ -1,5 +1,7 @@
 **/target
 *.log
+# Created by maven-shade
+**/dependency-reduced-pom.xml
 
 # Exclude eclipse items
 **/.settings
@@ -7,4 +9,7 @@
 **/.project
 **/.checkstyle
 **/.cache-main
+**/.cache-tests
 **/.externalToolBuilders
+**/.metals
+
