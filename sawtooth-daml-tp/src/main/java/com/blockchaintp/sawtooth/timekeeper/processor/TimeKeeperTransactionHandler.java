@@ -93,8 +93,8 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       List<Timestamp> timeHistoryList = new ArrayList<>(myRecord.getTimeHistoryList());
       timeHistoryList.add(update.getTimeUpdate());
       timeHistoryList = prune(timeHistoryList);
-      Timestamp averageTs = getAverageTimeStamp(timeHistoryList);
-      Timestamp newCalculatedTs = getMaxTs(averageTs, myRecord.getLastCalculatedTime());
+      Timestamp newCalculatedTs = getMaxTs(getMaxTs((Timestamp[]) timeHistoryList.toArray()),
+          myRecord.getLastCalculatedTime());
 
       TimeKeeperRecord.Builder newRecordBldr = TimeKeeperRecord.newBuilder(myRecord);
       newRecordBldr.clearTimeHistory().addAllTimeHistory(timeHistoryList).setLastCalculatedTime(newCalculatedTs);
