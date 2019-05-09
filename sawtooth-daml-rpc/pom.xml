@@ -18,6 +18,10 @@
     <artifactId>maven-compiler-plugin</artifactId>
    </plugin>
    <plugin>
+    <groupId>net.alchim31.maven</groupId>
+    <artifactId>scala-maven-plugin</artifactId>
+   </plugin>
+   <plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-checkstyle-plugin</artifactId>
    </plugin>
@@ -34,6 +38,11 @@
    <artifactId>rxjava</artifactId>
    <version>2.2.8</version>
   </dependency>
+  <dependency>
+   <groupId>com.github.scopt</groupId>
+   <artifactId>scopt_2.12</artifactId>
+   <version>3.7.1</version>
+  </dependency>
   
   <!-- Unit testing -->
   <dependency>
@@ -49,6 +58,18 @@
   <dependency>
    <groupId>com.daml.ledger</groupId>
    <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
+  </dependency>
+  <dependency>
+   <groupId>com.daml.ledger</groupId>
+   <artifactId>participant-state-index_${scala.lang.version}</artifactId>
+  </dependency>
+  <dependency>
+   <groupId>com.daml.ledger</groupId>
+   <artifactId>reference-participant-state-index_${scala.lang.version}</artifactId>
+  </dependency>
+  <dependency>
+   <groupId>com.daml.ledger</groupId>
+   <artifactId>api-server-damlonx_${scala.lang.version}</artifactId>
   </dependency>
 
   <!-- Hyperledger Sawtooth -->
