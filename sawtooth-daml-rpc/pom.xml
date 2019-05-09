@@ -25,6 +25,26 @@
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-checkstyle-plugin</artifactId>
    </plugin>
+   <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-shade-plugin</artifactId>
+    <executions>
+     <execution>
+      <goals>
+       <goal>shade</goal>
+      </goals>
+      <configuration>
+       <shadedArtifactAttached>trye</shadedArtifactAttached>
+       <transformers>
+        <transformer
+         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+         <mainClass>com.blockchaintp.sawtooth.daml.rpc.SawtoothDamlRpc</mainClass>
+        </transformer>
+       </transformers>
+      </configuration>
+     </execution>
+    </executions>
+   </plugin>
   </plugins>
  </build>
 
@@ -43,7 +63,7 @@
    <artifactId>scopt_2.12</artifactId>
    <version>3.7.1</version>
   </dependency>
-  
+
   <!-- Unit testing -->
   <dependency>
    <groupId>junit</groupId>
@@ -57,14 +77,6 @@
   <!-- DAML -->
   <dependency>
    <groupId>com.daml.ledger</groupId>
-   <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>com.daml.ledger</groupId>
-   <artifactId>participant-state-index_${scala.lang.version}</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>com.daml.ledger</groupId>
    <artifactId>reference-participant-state-index_${scala.lang.version}</artifactId>
   </dependency>
   <dependency>
@@ -73,10 +85,6 @@
   </dependency>
 
   <!-- Hyperledger Sawtooth -->
-  <dependency>
-   <groupId>org.hyperledger.sawtooth</groupId>
-   <artifactId>sawtooth-sdk-protos</artifactId>
-  </dependency>
 
   <!-- Apache Commons -->
   <dependency>
