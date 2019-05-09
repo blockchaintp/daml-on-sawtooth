@@ -106,8 +106,24 @@
     <artifactId>
      participant-state-kvutils_${scala.lang.version}
     </artifactId>
-    <version>100.12.13</version>
+    <version>${daml.sdk.version}</version>
    </dependency>
+   <dependency>
+    <groupId>com.daml.ledger</groupId>
+    <artifactId>participant-state-index_${scala.lang.version}</artifactId>
+    <version>${daml.sdk.version}</version>
+   </dependency>
+   <dependency>
+    <groupId>com.daml.ledger</groupId>
+    <artifactId>reference-participant-state-index_${scala.lang.version}</artifactId>
+    <version>${daml.sdk.version}</version>
+   </dependency>
+   <dependency>
+    <groupId>com.daml.ledger</groupId>
+    <artifactId>api-server-damlonx_${scala.lang.version}</artifactId>
+    <version>${daml.sdk.version}</version>
+   </dependency>
+
   </dependencies>
  </dependencyManagement>
 
@@ -219,6 +235,11 @@
        </goals>
       </execution>
      </executions>
+    </plugin>
+    <plugin>
+     <groupId>org.apache.maven.plugins</groupId>
+     <artifactId>maven-shade-plugin</artifactId>
+     <version>3.2.1</version>
     </plugin>
     <plugin>
      <groupId>org.apache.maven.plugins</groupId>

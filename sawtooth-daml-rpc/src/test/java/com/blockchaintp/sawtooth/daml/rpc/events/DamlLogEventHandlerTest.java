@@ -61,7 +61,7 @@ public class DamlLogEventHandlerTest {
     doNothing().when(delegate).sendMessage(any());
     verify(delegate, times(1)).sendMessage(any());
   }
-  
+
   @Test
   public void testProcessMessage() {
     ZMQDelegate delegate = mock(ZMQDelegate.class);
@@ -125,8 +125,8 @@ public class DamlLogEventHandlerTest {
     LogEntryTransformer transformer = mock(LogEntryTransformer.class);
     DamlLogEventHandler dleh = new DamlLogEventHandler(delegate, new ArrayList<String>(), transformer);
 
-    when(delegate.monitorRecv()).thenReturn(new ZMQ.Event(ZMQ.EVENT_DISCONNECTED,new Object(), "address"));
-    TestSubscriber<Tuple2<Offset,Update>> ts=new TestSubscriber<>();
+    when(delegate.monitorRecv()).thenReturn(new ZMQ.Event(ZMQ.EVENT_DISCONNECTED, new Object(), "address"));
+    TestSubscriber<Tuple2<Offset, Update>> ts = new TestSubscriber<>();
     dleh.getPublisher().subscribe(ts);
     ts.assertEmpty();
     ts.assertNotComplete();
