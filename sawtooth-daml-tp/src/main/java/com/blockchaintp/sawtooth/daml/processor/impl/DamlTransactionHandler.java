@@ -3,10 +3,8 @@ package com.blockchaintp.sawtooth.daml.processor.impl;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
@@ -141,38 +139,16 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Map<DamlStateKey, DamlStateValue> buildStateMap(final LedgerState ledgerState,
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
-    Map<DamlStateKey, String> inputContractKeys = KeyValueUtils.submissionToDamlStateAddress(submission,
-        DamlStateKey.KeyCase.CONTRACT_ID);
-    Map<DamlStateKey, String> inputPackageKeys = KeyValueUtils.submissionToDamlStateAddress(submission,
-        DamlStateKey.KeyCase.PACKAGE_ID);
-    Map<DamlStateKey, String> inputCommandDedupKeys = KeyValueUtils.submissionToDamlStateAddress(submission,
-        DamlStateKey.KeyCase.COMMAND_DEDUP);
+    Map<DamlStateKey, String> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
 
     List<String> inputList = txHeader.getInputsList();
-    if (!inputList.containsAll(inputCommandDedupKeys.values())) {
-      throw new InvalidTransactionException(String.format("Not all CommandDedupKeys were declared as inputs"));
-    }
-    if (!inputList.containsAll(inputPackageKeys.values())) {
-      throw new InvalidTransactionException(String.format("Not all PackageKeys were declared as inputs"));
-    }
-    if (!inputList.containsAll(inputContractKeys.values())) {
-      throw new InvalidTransactionException(String.format("Not all ContractKeys were declared as inputs"));
+    if (!inputList.containsAll(inputDamlStateKeys.values())) {
+      throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
     }
 
-    // 3. Fetch all of the inputs
-    // Add all of the contracts to a list of contracts
-    // Add all of the templates/packages to a list of templates/packages
+    Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
 
-    Map<DamlStateKey, DamlStateValue> inputContracts = ledgerState.getDamlContracts(inputContractKeys.keySet());
-    Map<DamlStateKey, DamlStateValue> inputCommandDedup = ledgerState
-        .getDamlCommandDedups(inputCommandDedupKeys.keySet());
-    Map<DamlStateKey, DamlStateValue> inputPackages = ledgerState.getDamlPackages(inputPackageKeys.keySet());
-
-    Map<DamlStateKey, DamlStateValue> stateMap = new HashMap<>();
-    stateMap.putAll(inputContracts);
-    stateMap.putAll(inputCommandDedup);
-    stateMap.putAll(inputPackages);
-    return stateMap;
+    return inputStates;
   }
 
   private Configuration getConfiguration() {
@@ -208,23 +184,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     ledgerState.setDamlLogEntry(entryId, newLogEntry);
 
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
-    for (Entry<DamlStateKey, DamlStateValue> e : newState.entrySet()) {
-      DamlStateKey k = e.getKey();
-      DamlStateValue val = e.getValue();
-      switch (k.getKeyCase()) {
-      case COMMAND_DEDUP:
-        ledgerState.setDamlCommandDedup(k.getCommandDedup(), val.getCommandDedup());
-        break;
-      case CONTRACT_ID:
-        ledgerState.setDamlContract(k.getContractId(), val.getContractState());
-        break;
-      case PACKAGE_ID:
-        ledgerState.setDamlPackage(k.getPackageId(), val.getArchive());
-        break;
-      default:
-        break;
-      }
-    }
+    ledgerState.setDamlStates(newState.entrySet());
     ledgerState.sendLogEvent(entryId, newLogEntry);
   }
 
