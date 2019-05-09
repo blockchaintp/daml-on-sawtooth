@@ -2,8 +2,6 @@ package com.blockchaintp.sawtooth.daml.util;
 
 import java.io.UnsupportedEncodingException;
 
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 
@@ -36,24 +34,14 @@ public final class Namespace {
   public static final String DAML_FAMILY_VERSION_1_0 = "1.0";
 
   /**
-   * Address space for duplicate command records.
+   * Address space for DamlStateValues.
    */
-  public static final String DAML_DUPLICATE_COMMAND_NS = getNameSpace() + "00";
-
-  /**
-   * Address space for contract entries.
-   */
-  public static final String DAML_CONTRACT_NS = getNameSpace() + "01";
+  public static final String DAML_STATE_VALUE_NS = getNameSpace() + "00";
 
   /**
    * Address space for Log Entries.
    */
-  public static final String DAML_LOG_ENTRY_NS = getNameSpace() + "02";
-
-  /**
-   * Address space for package entries.
-   */
-  public static final String DAML_PACKAGE_NS = getNameSpace() + "03";
+  public static final String DAML_LOG_ENTRY_NS = getNameSpace() + "01";
 
   /**
    * For a given string return its hash512, transform the encoding problems into
@@ -94,40 +82,22 @@ public final class Namespace {
   }
 
   /**
-   * Construct a context address for DamlCommandDedupKey provided.
-   * @param key the command dedup key
-   * @return the byte string address
-   */
-  public static String makeDamlCommadDedupAddress(final DamlCommandDedupKey key) {
-    return makeAddress(DAML_DUPLICATE_COMMAND_NS, key.getSubmitter(), key.getApplicationId(), key.getCommandId());
-  }
-
-  /**
-   * Construct a context address for the contract with logical id .
-   * @param contractId the contract Id
-   * @return the byte string address
-   */
-  public static String makeDamlContractAddress(final DamlContractId contractId) {
-    return makeAddress(DAML_CONTRACT_NS, String.valueOf(contractId.getNodeId()));
-  }
-
-  /**
    * Construct a context address for the ledger sync event with logical id
    * eventId.
    * @param entryId the log entry Id
    * @return the byte string address
    */
   public static String makeDamlLogEntryAddress(final DamlLogEntryId entryId) {
-    return makeAddress(DAML_LOG_ENTRY_NS, entryId.getEntryId().toStringUtf8());
+    return makeAddress(DAML_LOG_ENTRY_NS, entryId.toByteString().toStringUtf8());
   }
 
   /**
-   * Construct a context address for the package with logical id .
-   * @param packageId the logical package Id
-   * @return the byte string address
+   * Construct a context address for the given DamlStateKey.
+   * @param key DamlStateKey to be used for the address
+   * @return the string address
    */
-  public static String makeDamlPackageAddress(final String packageId) {
-    return makeAddress(DAML_PACKAGE_NS, packageId);
+  public static String makeDamlStateAddress(final DamlStateKey key) {
+    return makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8());
   }
 
   /**
@@ -136,16 +106,7 @@ public final class Namespace {
    * @return a sawtooth context address
    */
   public static String makeAddressForType(final DamlStateKey key) {
-    switch (key.getKeyCase()) {
-    case COMMAND_DEDUP:
-      return makeDamlCommadDedupAddress(key.getCommandDedup());
-    case CONTRACT_ID:
-      return makeDamlContractAddress(key.getContractId());
-    case PACKAGE_ID:
-      return makeDamlPackageAddress(key.getPackageId());
-    default:
-      return null;
-    }
+    return makeDamlStateAddress(key);
   }
 
   /**
