@@ -20,6 +20,8 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.Update;
+import com.daml.ledger.participant.state.v1.Update.Heartbeat;
+import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -42,7 +44,8 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private static final Logger LOGGER = Logger.getLogger(DamlLogEventHandler.class.getName());
   private static final String[] SUBSCRIBE_SUBJECTS = new String[] {EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
-      EventConstants.DAML_LOG_EVENT_SUBJECT};
+      EventConstants.DAML_LOG_EVENT_SUBJECT,
+      com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
 
   private Collection<EventSubscription> subscriptions;
   private Collection<String> lastBlockIds;
@@ -79,8 +82,8 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Build a handler based on the given delegate.and last known block ids.
-   * @param delegate the delegate to use
-   * @param blockIds the last known block ids for this event handler
+   * @param delegate  the delegate to use
+   * @param blockIds  the last known block ids for this event handler
    * @param transform the transformer to use
    */
   public DamlLogEventHandler(final ZMQDelegate delegate, final Collection<String> blockIds,
@@ -125,6 +128,13 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           DamlLogEntry logEntry = DamlLogEntry.parseFrom(evt.getData());
           Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
           updates.add(logEntryToUpdate);
+        } else if (evt.getEventType()
+            .equals(com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT)) {
+          String microsStr = attrMap
+              .get(com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE);
+          long microseconds = Long.valueOf(microsStr);
+          Heartbeat heartbeat = new Heartbeat(new Timestamp(microseconds));
+          updates.add(heartbeat);
         }
       }
     }
