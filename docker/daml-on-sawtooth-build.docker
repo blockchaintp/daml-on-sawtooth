@@ -1,0 +1,7 @@
+FROM maven:3-jdk-11
+
+RUN mkdir -p /project/daml-on-sawtooth
+
+WORKDIR /project/daml-on-sawtooth
+
+CMD mvn clean package 

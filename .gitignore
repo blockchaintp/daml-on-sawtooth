@@ -13,3 +13,5 @@
 **/.externalToolBuilders
 **/.metals
 
+# Exclude vscode setting
+**/.vscode
