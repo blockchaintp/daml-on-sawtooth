@@ -1,0 +1,9 @@
+FROM openjdk:8u212-jre
+
+
+COPY ./sawtooth-daml-rpc/target/sawtooth-daml-rpc-*-shaded.jar /opt
+
+WORKDIR /opt
+
+#TO-DO remember to include environmental variable for injection as arguments
+CMD java -jar sawtooth-daml-rpc-*-shaded.jar $@
