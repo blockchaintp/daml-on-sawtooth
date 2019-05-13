@@ -24,6 +24,10 @@ pipeline {
         }
     }
 
+    triggers { 
+        pollSCM('*/15 * * * *') 
+    }
+
     options {
         timestamps()
         buildDiscarder(logRotator(daysToKeepStr: '31'))
@@ -38,7 +42,6 @@ pipeline {
 
         stage('Fetch Tags') {
             steps {
-                checkout scm
                 sh 'git fetch --tag'
             }
         }
@@ -67,6 +70,11 @@ pipeline {
     post {
         always {
             sh 'docker-compose -f docker/docker-compose-build.yaml down'
+	        sh '''
+                for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}:{{.Tag}}"`; do
+                    docker rmi -f $img
+                done
+            '''
         }
         success {
             archiveArtifacts '*.tgz, *.zip'
