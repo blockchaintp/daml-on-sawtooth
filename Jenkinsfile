@@ -35,40 +35,18 @@ pipeline {
     }
 
     stages {
-        stage('Check for Signed-Off Commits') {
-            steps {
-                sh '''#!/bin/bash -l
-                    if [ -v CHANGE_URL ] ;
-                    then
-                        temp_url="$(echo $CHANGE_URL |sed s#github.com/#api.github.com/repos/#)/commits"
-                        pull_url="$(echo $temp_url |sed s#pull#pulls#)"
-                        IFS=$'\n'
-                        for m in $(curl -s "$pull_url" | grep "message") ; do
-                            if echo "$m" | grep -qi signed-off-by:
-                            then
-                              continue
-                            else
-                              echo "FAIL: Missing Signed-Off Field"
-                              echo "$m"
-                              exit 1
-                            fi
-                        done
-                        unset IFS;
-                    fi
-                '''
-            }
-        }
 
         stage('Fetch Tags') {
             steps {
+                checkout scm
                 sh 'git fetch --tag'
             }
         }
 
         stage('Build Packages') {
             steps {
-                sh 'docker-compose -f docker/compose/docker-compose-build.yaml build'
-                sh 'docker-compose -f docker/compose/docker-compose-build.yaml up'
+                sh 'docker-compose -f docker/docker-compose-build.yaml build'
+                sh 'docker-compose -f docker/docker-compose-build.yaml up --abort-on-container-exit'
             }
         }
 
@@ -88,7 +66,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker-compose -f docker/compose/docker-compose-build.yaml down'
+            sh 'docker-compose -f docker/docker-compose-build.yaml down'
         }
         success {
             archiveArtifacts '*.tgz, *.zip'
