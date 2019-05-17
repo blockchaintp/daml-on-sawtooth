@@ -18,9 +18,11 @@
 
 pipeline {
     agent {
-        node {
-            label 'master'
-            customWorkspace "workspace/${env.BUILD_TAG}"
+        ansiColor('xterm') {
+            node {
+                label 'worker'
+                customWorkspace "workspace/${env.BUILD_TAG}"
+            }
         }
     }
 
@@ -70,8 +72,11 @@ pipeline {
     post {
         always {
             sh 'docker-compose -f docker/docker-compose-build.yaml down'
+            sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID}  mvn clean'
 	        sh '''
-                for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}:{{.Tag}}"`; do
+                TAG_VERSION="`git describe --dirty`";
+                for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
+                    docker tag $img:$ISOLATION_ID $img:$TAG_VERSION
                     docker rmi -f $img
                 done
             '''

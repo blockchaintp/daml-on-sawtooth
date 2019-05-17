@@ -24,3 +24,5 @@ services:
     container_name: daml-on-sawtooth-build-local
     volumes:
       - ../:/project/daml-on-sawtooth
+      - ${HOME}/.m2/settings.xml:/root/.m2/settings.xml
+      
