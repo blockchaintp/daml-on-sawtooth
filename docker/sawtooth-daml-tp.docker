@@ -1,7 +1,7 @@
 FROM openjdk:8u212-jre
 
 
-COPY ./sawtooth-daml-rpc/target/sawtooth-daml-tp-*-shaded.jar /opt
+COPY ./sawtooth-daml-tp/target/sawtooth-daml-tp-*-shaded.jar /opt
 
 WORKDIR /opt
 

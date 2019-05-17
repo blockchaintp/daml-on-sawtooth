@@ -18,11 +18,9 @@
 
 pipeline {
     agent {
-        ansiColor('xterm') {
-            node {
-                label 'worker'
-                customWorkspace "workspace/${env.BUILD_TAG}"
-            }
+        node {
+            label 'master'
+            customWorkspace "workspace/${env.BUILD_TAG}"
         }
     }
 
@@ -31,11 +29,14 @@ pipeline {
     }
 
     options {
+        ansiColor('xterm')
         timestamps()
         buildDiscarder(logRotator(daysToKeepStr: '31'))
     }
 
     environment {
+        ORGANIZATION="dev.catenasys.com:8083/blockchaintp"
+        DOCKER_URL="https://dev.catenasys.com:8083"
         ISOLATION_ID = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
         COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
     }
@@ -52,9 +53,25 @@ pipeline {
             steps {
                 sh 'docker-compose -f docker/docker-compose-build.yaml build'
                 sh 'docker-compose -f docker/docker-compose-build.yaml up --abort-on-container-exit'
+                sh 'docker-compose -f docker-compose-installed.yaml build'
             }
         }
 
+        stage('Tag and Push Docker images') {
+            steps{
+                withCredentials([usernamePassword(credentialsId: 'btp-build-nexus', usernameVariable:'DOCKER_USER', passwordVariable:'DOCKER_PASSWORD')]) {
+                    sh "docker login -u $DOCKER_USER --password=$DOCKER_PASSWORD $DOCKER_URL"
+                    sh '''
+                        TAG_VERSION="`git describe --dirty`";
+                        for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
+                            docker tag $img:$ISOLATION_ID $ORGANIZATION/$img:$TAG_VERSION
+                            docker push $ORGANIZATION/$img:$TAG_VERSION
+                        done
+                    '''
+
+                }
+            }
+        }
 
         stage('Create Git Archive') {
             steps {
@@ -74,10 +91,8 @@ pipeline {
             sh 'docker-compose -f docker/docker-compose-build.yaml down'
             sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID}  mvn clean'
 	        sh '''
-                TAG_VERSION="`git describe --dirty`";
                 for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
-                    docker tag $img:$ISOLATION_ID $img:$TAG_VERSION
-                    docker rmi -f $img
+                    docker rmi -f $img:$ISOLATION_ID
                 done
             '''
         }
