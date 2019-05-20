@@ -15,6 +15,7 @@
 version: '2.1'
 
 services:
+
   sawtooth-daml-tp:
     build:
       context: .
@@ -28,3 +29,10 @@ services:
       dockerfile: docker/sawtooth-daml-rpc.docker
     image: sawtooth-daml-rpc:${ISOLATION_ID}
     container_name: sawtooth-daml-rpc
+
+  sawtooth-timekeeper:
+    build:
+      context: .
+      dockerfile: docker/timekeeper.docker
+    image: timekeeper:${ISOLATION_ID}
+    container_name: sawtooth-timekeeper

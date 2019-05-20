@@ -1,9 +1,9 @@
 FROM openjdk:11-jre
 
 
-COPY ./sawtooth-daml-tp/target/sawtooth-daml-tp-*-shaded.jar /opt
+COPY ./timekeeper/target/timekeeper-*-shaded.jar /opt
 
 WORKDIR /opt
 
 #TO-DO remember to include environmental variable for injection as arguments
-CMD java -jar sawtooth-daml-tp-*-shaded.jar $@
+CMD java -jar timekeeper-*-shaded.jar $@

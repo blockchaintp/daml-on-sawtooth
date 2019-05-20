@@ -1,8 +1,8 @@
 package com.blockchaintp.sawtooth.timekeeper.util;
 
-import java.io.UnsupportedEncodingException;
+import java.util.logging.Logger;
 
-import sawtooth.sdk.processor.Utils;
+import com.blockchaintp.utils.SawtoothClientUtils;
 
 /**
  * Utility class dealing with the common namespace functions and values with
@@ -10,6 +10,9 @@ import sawtooth.sdk.processor.Utils;
  * @author scealiontach
  */
 public final class Namespace {
+
+  private static final Logger LOGGER = Logger.getLogger(Namespace.class.getName());
+
   /**
    * Sawtooth Namespaces are 6 chars long.
    */
@@ -41,25 +44,11 @@ public final class Namespace {
   public static final String TIMEKEEPER_GLOBAL_RECORD = makeAddress(TIMEKEEPER_RECORD_NS, "Global Record");
 
   /**
-   * For a given string return its hash512, transform the encoding problems into
-   * RuntimeErrors.
-   * @param arg a string
-   * @return the hash512 of the string
-   */
-  public static String getHash(final String arg) {
-    try {
-      return Utils.hash512(arg.getBytes("UTF-8"));
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException("Charset UTF-8 is not found! This should never happen.", e);
-    }
-  }
-
-  /**
    * The first 6 characters of the family name hash.
    * @return The first 6 characters of the family name hash
    */
   public static String getNameSpace() {
-    return getHash(TIMEKEEPER_FAMILY_NAME).substring(0, NAMESPACE_LENGTH);
+    return SawtoothClientUtils.getHash(TIMEKEEPER_FAMILY_NAME).substring(0, NAMESPACE_LENGTH);
   }
 
   /**
@@ -69,12 +58,14 @@ public final class Namespace {
    * @return the hash of the collected address
    */
   public static String makeAddress(final String ns, final String... parts) {
-    int remainder = ADDRESS_LENGTH - ns.length();
     StringBuilder sb = new StringBuilder();
     for (String p : parts) {
       sb.append(p);
     }
-    String hash = getHash(sb.toString()).substring(remainder);
+    String hash = SawtoothClientUtils.getHash(sb.toString());
+    int begin = hash.length() - ADDRESS_LENGTH + ns.length();
+    hash = hash.substring(begin);
+    LOGGER.warning(String.format("Making name %s + %s = %s", ns, sb.toString(), hash));
     return ns + hash;
   }
 

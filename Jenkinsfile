@@ -51,8 +51,10 @@ pipeline {
 
         stage('Build Packages') {
             steps {
-                sh 'docker-compose -f docker/docker-compose-build.yaml build'
-                sh 'docker-compose -f docker/docker-compose-build.yaml up --abort-on-container-exit'
+                sh 'docker build -t daml-on-sawtooth-build-local:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
+                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
+                sh 'docker run --rm -v $HOME/.m2:/root/.m2 daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+                sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
                 sh 'docker-compose -f docker-compose-installed.yaml build'
             }
         }
