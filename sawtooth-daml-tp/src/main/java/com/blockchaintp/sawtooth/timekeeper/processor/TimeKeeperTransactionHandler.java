@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
@@ -19,6 +20,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -129,6 +131,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       TimeKeeperEvent updateEventData = TimeKeeperEvent.newBuilder().setTimeUpdate(newGlobalTs).build();
       Map<String, String> attrMap = new HashMap<>();
       attrMap.put(EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE, Long.toString(Timestamps.toMicros(newGlobalTs)));
+      LOGGER.log(Level.FINE, "New time event {}", newGlobalTs);
       state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());
     } catch (InvalidProtocolBufferException exc) {
       throw new InvalidTransactionException("Transaction has bad format " + exc.getMessage());

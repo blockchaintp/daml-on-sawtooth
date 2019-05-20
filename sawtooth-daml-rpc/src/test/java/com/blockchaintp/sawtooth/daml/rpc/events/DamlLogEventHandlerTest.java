@@ -17,7 +17,6 @@ import org.zeromq.ZMQ;
 
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.Update;
 import com.google.protobuf.ByteString;
@@ -25,7 +24,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
-import io.reactivex.Observer;
 import io.reactivex.subscribers.TestSubscriber;
 import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.protobuf.Event;
