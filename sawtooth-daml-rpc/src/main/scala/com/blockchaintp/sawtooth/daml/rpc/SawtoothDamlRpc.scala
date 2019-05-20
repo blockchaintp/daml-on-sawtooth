@@ -34,29 +34,19 @@ object SawtoothDamlRpc extends App {
         Supervision.Stop
       })
 
-  //TODO this needs to be replaced with a KeyManager that holds the participant info
+  //TODO: constants here should be replaced with CLI args
   val validatorAddress = "tcp://localhost:4004"
   val keyManager = InMemoryKeyManager.createSECP256k1()
-  val readService = new SawtoothReadService(validatorAddress)
+  val readService = new SawtoothReadService("this-ledger-id",validatorAddress)
   val writeService = new SawtoothWriteService(validatorAddress,keyManager)
  
 
-  //val ledger = new Ledger(timeModel, tsb)
   def archivesFromDar(file: File): List[Archive] = {
     DarReader[Archive](x => Try(Archive.parseFrom(x)))
       .readArchive(new ZipFile(file))
       .fold(t => throw new RuntimeException(s"Failed to parse DAR from $file", t), dar => dar.all)
   }
 
-  // Parse DAR archives given as command-line arguments and upload them
-  // to the ledger using a side-channel.
-/*  config.archiveFiles.foreach { f =>
-    archivesFromDar(f).foreach { archive =>
-      logger.info(s"Uploading archive ${archive.getHash}...")
-      ledger.uploadArchive(archive)
-    }
-  }
-*/
   readService.getLedgerInitialConditions
     .runWith(Sink.head)
     .foreach { initialConditions =>
