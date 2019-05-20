@@ -8,8 +8,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteServiceException;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
+import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
 import com.blockchaintp.sawtooth.timekeeper.util.Namespace;
 import com.blockchaintp.utils.KeyManager;
 import com.blockchaintp.utils.SawtoothClientUtils;
@@ -66,36 +66,37 @@ public final class TimeKeeperRunnable implements Runnable {
 
     try {
       sendBatch(batch);
-    } catch (SawtoothWriteServiceException exc) {
+    } catch (TimeKeeperException exc) {
       LOGGER.warn("Error updating TimeKeeper records", exc);
     }
   }
 
-  private void sendBatch(final Batch batch) throws SawtoothWriteServiceException {
+  private void sendBatch(final Batch batch) throws TimeKeeperException {
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
-    ClientBatchSubmitResponse getResponse = null;
+    ClientBatchSubmitResponse submitResponse = null;
     try {
       ByteString result = streamToValidator.getResult();
-      getResponse = ClientBatchSubmitResponse.parseFrom(result);
-      if (getResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
-        throw new SawtoothWriteServiceException();
+      submitResponse = ClientBatchSubmitResponse.parseFrom(result);
+      if (submitResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
+        throw new TimeKeeperException(String.format("Batch submit response resulted in error: %s",
+          submitResponse.getStatus()));
       }
 
     } catch (InterruptedException e) {
-      throw new SawtoothWriteServiceException(
+      throw new TimeKeeperException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));
     } catch (ValidatorConnectionError e) {
-      throw new SawtoothWriteServiceException(
+      throw new TimeKeeperException(
           String.format("Sawtooth validator connection error. Details: %s", e.getMessage()));
     } catch (InvalidProtocolBufferException e) {
-      throw new SawtoothWriteServiceException(
+      throw new TimeKeeperException(
           String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()));
     } finally {
       try {
         stream.close();
       } catch (Exception e) {
-        throw new SawtoothWriteServiceException(
+        throw new TimeKeeperException(
             String.format("Unable to close writer stream exception. Details: %s", e.getMessage()));
       }
     }
