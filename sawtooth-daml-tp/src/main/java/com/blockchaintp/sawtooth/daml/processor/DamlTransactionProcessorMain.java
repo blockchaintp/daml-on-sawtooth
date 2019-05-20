@@ -4,7 +4,6 @@ import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.processor.impl.DamlCommitterImpl;
 import com.blockchaintp.sawtooth.daml.processor.impl.DamlTransactionHandler;
-import com.blockchaintp.sawtooth.timekeeper.processor.TimeKeeperTransactionHandler;
 import com.digitalasset.daml.lf.engine.Engine;
 
 import sawtooth.sdk.processor.TransactionHandler;
@@ -29,9 +28,6 @@ public final class DamlTransactionProcessorMain {
     DamlCommitter committer = new DamlCommitterImpl(engine);
     TransactionHandler handler = new DamlTransactionHandler(committer);
     transactionProcessor.addHandler(handler);
-
-    TimeKeeperTransactionHandler tkHandler = new TimeKeeperTransactionHandler();
-    transactionProcessor.addHandler(tkHandler);
 
     Thread thread = new Thread(transactionProcessor);
     thread.start();
