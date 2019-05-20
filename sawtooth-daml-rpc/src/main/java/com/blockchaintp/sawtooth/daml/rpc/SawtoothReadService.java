@@ -8,9 +8,13 @@ import com.daml.ledger.participant.state.v1.LedgerInitialConditions;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.ReadService;
 import com.daml.ledger.participant.state.v1.Update;
+import com.digitalasset.daml.lf.data.Ref.SimpleString;
+import com.digitalasset.daml.lf.data.Time.Timestamp;
 
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
+import io.reactivex.Flowable;
+import io.reactivex.processors.UnicastProcessor;
 import scala.Option;
 import scala.Tuple2;
 
@@ -19,23 +23,27 @@ import scala.Tuple2;
  */
 public class SawtoothReadService implements ReadService {
 
-  private String url;
-  private ExecutorService executorService;
+  private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
+  private final String url;
+  private final ExecutorService executorService;
+  private final String ledgerId;
 
   /**
    * Build a ReadService based on a zmq address URL.
-   * @param zmqUrl the url of the zmq endpoint
+   * @param thisLedgerId the ledger id for this RPC
+   * @param zmqUrl       the url of the zmq endpoint
    */
-  public SawtoothReadService(final String zmqUrl) {
+  public SawtoothReadService(final String thisLedgerId, final String zmqUrl) {
+    this.ledgerId = thisLedgerId;
     this.url = zmqUrl;
     executorService = Executors.newWorkStealingPool();
   }
 
   @Override
   public final Source<LedgerInitialConditions, NotUsed> getLedgerInitialConditions() {
-    // TODO Auto-generated method stub
-
-    return null;
+    Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
+        new LedgerInitialConditions(new SimpleString(this.ledgerId), BEGINNING_OF_EPOCH)});
+    return Source.fromPublisher(f);
   }
 
   @Override

@@ -21,13 +21,10 @@ import org.mockito.stubbing.Answer;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractId;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlContractState;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
-import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 
 import net.bytebuddy.utility.RandomString;
@@ -81,27 +78,31 @@ public class DamlLedgerStateTest {
   }
 
   @Test
-  public void testGetSetDamlCommandDedup() {
+  public void testGetSetDamlState() {
     Pair<Context, Map<String, ByteString>> mockPair = getMockState();
     Context mockState = mockPair.getValue0();
     LedgerState ledgerState = new DamlLedgerState(mockState);
     String appId = RandomString.make(RANDOM_STRING_LENGTH);
     String submitter = RandomString.make(RANDOM_STRING_LENGTH);
     String commandId = RandomString.make(RANDOM_STRING_LENGTH);
-    DamlCommandDedupKey firstKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
+    DamlCommandDedupKey firstDedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
         .setCommandId(commandId).build();
-    DamlCommandDedupKey emptyKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
+    DamlStateKey firstKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
+    DamlCommandDedupKey emptyDedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
         .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
-    DamlCommandDedupValue firstVal = DamlCommandDedupValue.newBuilder().build();
+    DamlStateKey emptyKey = DamlStateKey.newBuilder().setCommandDedup(emptyDedupKey).build();
+    DamlCommandDedupValue firstDedupVal = DamlCommandDedupValue.newBuilder().build();
+    DamlStateValue firstVal = DamlStateValue.newBuilder().setCommandDedup(firstDedupVal).build();
     try {
-      ledgerState.setDamlCommandDedup(firstKey, firstVal);
-      DamlCommandDedupValue damlCommandDedup = ledgerState.getDamlCommandDedup(firstKey);
+      ledgerState.setDamlState(firstKey, firstVal);
+      DamlStateValue damlCommandDedup = ledgerState.getDamlState(firstKey);
       assertTrue(firstVal.equals(damlCommandDedup));
-      DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstKey).build();
-      Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlCommandDedups(Arrays.asList(stateKey));
-      assertTrue(firstVal.equals(retMap.get(stateKey).getCommandDedup()));
+
+      DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
+      Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlStates(Arrays.asList(stateKey));
+      assertTrue(firstVal.equals(retMap.get(stateKey)));
       try {
-        ledgerState.getDamlCommandDedup(emptyKey);
+        ledgerState.getDamlState(emptyKey);
       } catch (InvalidTransactionException exc) {
         // Expected
       } catch (InternalError exc) {
@@ -110,37 +111,6 @@ public class DamlLedgerStateTest {
     } catch (InternalError | InvalidTransactionException exc) {
       fail("No exceptions should be thrown");
     }
-  }
-
-  @Test
-  public void testGetSetDamlContract() {
-    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
-    Context mockState = mockPair.getValue0();
-    LedgerState ledgerState = new DamlLedgerState(mockState);
-
-    DamlContractId firstKey = DamlContractId.newBuilder().setEntryId(DamlLogEntryId.getDefaultInstance()).setNodeId(1)
-        .build();
-    DamlContractId emptyKey = DamlContractId.newBuilder().setEntryId(DamlLogEntryId.getDefaultInstance()).setNodeId(2)
-        .build();
-    DamlContractState firstVal = DamlContractState.getDefaultInstance();
-    try {
-      ledgerState.setDamlContract(firstKey, firstVal);
-      DamlContractState testVal = ledgerState.getDamlContract(firstKey);
-      assertTrue(firstVal.equals(testVal));
-      DamlStateKey stateKey = DamlStateKey.newBuilder().setContractId(firstKey).build();
-      Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlContracts(Arrays.asList(stateKey));
-      assertTrue(firstVal.equals(retMap.get(stateKey).getContractState()));
-      try {
-        ledgerState.getDamlContract(emptyKey);
-      } catch (InvalidTransactionException exc) {
-        // Expected
-      } catch (InternalError exc) {
-        fail(String.format("Should not have issued an {}", exc.getClass().getName()));
-      }
-    } catch (InternalError | InvalidTransactionException exc) {
-      fail("No exceptions should be thrown");
-    }
-
   }
 
   @Test
@@ -170,35 +140,6 @@ public class DamlLedgerStateTest {
     } catch (InternalError | InvalidTransactionException exc) {
       fail("No exceptions should be thrown");
     }
-  }
-
-  @Test
-  public void testGetSetDamlPackage() {
-    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
-    Context mockState = mockPair.getValue0();
-    LedgerState ledgerState = new DamlLedgerState(mockState);
-
-    String firstKey = RandomString.make(RANDOM_STRING_LENGTH);
-    String emptyKey = RandomString.make(RANDOM_STRING_LENGTH);
-    Archive firstVal = Archive.getDefaultInstance();
-    try {
-      ledgerState.setDamlPackage(firstKey, firstVal);
-      Archive testVal = ledgerState.getDamlPackage(firstKey);
-      assertTrue(firstVal.equals(testVal));
-      DamlStateKey stateKey = DamlStateKey.newBuilder().setPackageId(firstKey).build();
-      Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlPackages(Arrays.asList(stateKey));
-      assertTrue(firstVal.equals(retMap.get(stateKey).getArchive()));
-      try {
-        ledgerState.getDamlPackage(emptyKey);
-      } catch (InvalidTransactionException exc) {
-        // Expected
-      } catch (InternalError exc) {
-        fail(String.format("Should not have issued an {}", exc.getClass().getName()));
-      }
-    } catch (InternalError | InvalidTransactionException exc) {
-      fail("No exceptions should be thrown");
-    }
-
   }
 
 }
