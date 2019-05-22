@@ -7,10 +7,9 @@
   <artifactId>daml-on-sawtooth</artifactId>
   <version>0.0.1-SNAPSHOT</version>
  </parent>
- <artifactId>sawtooth-daml-tp</artifactId>
- <name>sawtooth-daml-tp</name>
- <description>Transaction Processor for DAML</description>
-
+ <artifactId>timekeeper</artifactId>
+ <name>timekeeper</name>
+ <description>TimeKeeper is a transaction sawtooth processor/handler and client which maintains a globally agreed time on the blockchain</description>
  <build>
   <plugins>
    <plugin>
@@ -29,7 +28,7 @@
       <manifest>
        <addClasspath>true</addClasspath>
        <classpathPrefix>lib/</classpathPrefix>
-       <mainClass>com.blockchaintp.sawtooth.daml.processor.DamlTransactionProcessorMain</mainClass>
+       <mainClass>com.blockchaintp.sawtooth.timekeeper.TimeKeeperTransactionProcessorMain</mainClass>
       </manifest>
      </archive>
     </configuration>
@@ -40,13 +39,20 @@
    </plugin>
   </plugins>
  </build>
-
  <dependencies>
+  <!-- Logging -->
   <dependency>
    <groupId>org.slf4j</groupId>
    <artifactId>slf4j-api</artifactId>
   </dependency>
-
+  <dependency>
+   <groupId>org.slf4j</groupId>
+   <artifactId>slf4j-jdk14</artifactId>
+  </dependency>
+  <dependency>
+   <groupId>com.google.protobuf</groupId>
+   <artifactId>protobuf-java-util</artifactId>
+  </dependency>
   <!-- Unit testing -->
   <dependency>
    <groupId>junit</groupId>
@@ -56,24 +62,16 @@
    <groupId>org.mockito</groupId>
    <artifactId>mockito-core</artifactId>
   </dependency>
-
-  <!-- DAML -->
-
-
   <!-- Hyperledger Sawtooth -->
-
+  <dependency>
+   <groupId>org.hyperledger.sawtooth</groupId>
+   <artifactId>sawtooth-sdk-transaction-processor</artifactId>
+  </dependency>
   <!-- Apache Commons -->
   <dependency>
    <groupId>commons-cli</groupId>
    <artifactId>commons-cli</artifactId>
   </dependency>
-  <dependency>
-   <groupId>org.javatuples</groupId>
-   <artifactId>javatuples</artifactId>
-   <scope>test</scope>
-  </dependency>
-
-
   <!-- BTP -->
   <dependency>
    <groupId>daml-on-sawtooth</groupId>
@@ -81,5 +79,4 @@
    <version>${project.parent.version}</version>
   </dependency>
  </dependencies>
-
 </project>

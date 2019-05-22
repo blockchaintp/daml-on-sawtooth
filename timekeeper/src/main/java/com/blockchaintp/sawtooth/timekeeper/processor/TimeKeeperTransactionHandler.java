@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
@@ -19,6 +20,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -73,6 +75,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
     try {
       TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(transactionRequest.getPayload());
       String myRecordAddr = Namespace.makeAddress(this.namespace, signerPublicKey);
+      LOGGER.warning("Getting global record state");
       Map<String, ByteString> sourceData = state
           .getState(Arrays.asList(myRecordAddr, Namespace.TIMEKEEPER_GLOBAL_RECORD));
 
@@ -82,6 +85,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       } else {
         myRecord = TimeKeeperRecord.getDefaultInstance();
       }
+      LOGGER.warning(String.format("My last time was %s", myRecord.getLastCalculatedTime()));
 
       TimeKeeperGlobalRecord globalRecord;
       if (sourceData.containsKey(Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
@@ -89,16 +93,21 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       } else {
         globalRecord = TimeKeeperGlobalRecord.getDefaultInstance();
       }
+      LOGGER.warning(String.format("Global time is %s", globalRecord.getLastCalculatedTime()));
+
       Map<String, ByteString> setMap = new HashMap<String, ByteString>();
       List<Timestamp> timeHistoryList = new ArrayList<>(myRecord.getTimeHistoryList());
       timeHistoryList.add(update.getTimeUpdate());
       timeHistoryList = prune(timeHistoryList);
-      Timestamp newCalculatedTs = getMaxTs(getMaxTs((Timestamp[]) timeHistoryList.toArray()),
-          myRecord.getLastCalculatedTime());
+
+      // Set new time to max of new time and last reported time
+      Timestamp newCalculatedTs = getMaxTs(update.getTimeUpdate(), myRecord.getLastCalculatedTime());
+      LOGGER.warning(String.format("My new time is %s", newCalculatedTs));
 
       TimeKeeperRecord.Builder newRecordBldr = TimeKeeperRecord.newBuilder(myRecord);
       newRecordBldr.clearTimeHistory().addAllTimeHistory(timeHistoryList).setLastCalculatedTime(newCalculatedTs);
       TimeKeeperRecord newRecord = newRecordBldr.build();
+      LOGGER.warning("writing participant record");
       setMap.put(myRecordAddr, newRecord.toByteString());
 
       TimeKeeperParticipant myNewParticipant = TimeKeeperParticipant.newBuilder().setLastCalculatedTime(newCalculatedTs)
@@ -106,15 +115,21 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       List<TimeKeeperParticipant> participantList = globalRecord.getParticipantList();
       List<TimeKeeperParticipant> newParticipantList = new ArrayList<>();
       List<Timestamp> participantTimes = new ArrayList<>();
+      boolean newParticipant = true;
       for (TimeKeeperParticipant p : participantList) {
         TimeKeeperParticipant addend = p;
         if (p.getParticipantPublicKey().equals(myNewParticipant.getParticipantPublicKey())) {
           addend = myNewParticipant;
+          newParticipant = false;
         } else {
           addend = p;
         }
         newParticipantList.add(addend);
         participantTimes.add(addend.getLastCalculatedTime());
+      }
+      if (newParticipant) {
+        newParticipantList.add(myNewParticipant);
+        participantTimes.add(myNewParticipant.getLastCalculatedTime());
       }
       Timestamp globalAverageTs = getAverageTimeStamp(participantTimes);
       Timestamp newGlobalTs = getMaxTs(globalAverageTs, globalRecord.getLastCalculatedTime());
@@ -124,11 +139,13 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       TimeKeeperGlobalRecord newGlobalRecord = newGlobalRecordBldr.build();
       setMap.put(Namespace.TIMEKEEPER_GLOBAL_RECORD, newGlobalRecord.toByteString());
 
+      LOGGER.warning("writing global record");
       state.setState(setMap.entrySet());
 
       TimeKeeperEvent updateEventData = TimeKeeperEvent.newBuilder().setTimeUpdate(newGlobalTs).build();
       Map<String, String> attrMap = new HashMap<>();
       attrMap.put(EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE, Long.toString(Timestamps.toMicros(newGlobalTs)));
+      LOGGER.log(Level.WARNING, String.format("New time event %s", newGlobalTs));
       state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());
     } catch (InvalidProtocolBufferException exc) {
       throw new InvalidTransactionException("Transaction has bad format " + exc.getMessage());

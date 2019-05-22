@@ -16,13 +16,23 @@ version: '2.1'
 
 services:
 
-  daml-on-sawtooth-build:
+  sawtooth-daml-tp:
     build:
       context: .
-      dockerfile: daml-on-sawtooth-build.docker
-    image: daml-on-sawtooth-build-local:${ISOLATION_ID}
-    container_name: daml-on-sawtooth-build-local
-    volumes:
-      - ../:/project/daml-on-sawtooth
-      - ${HOME}/.m2/settings.xml:/root/.m2/settings.xml
-      
+      dockerfile: docker/sawtooth-daml-tp.docker
+    image: sawtooth-daml-tp:${ISOLATION_ID}
+    container_name: sawtooth-daml-tp
+
+  sawtooth-daml-rpc:
+    build:
+      context: .
+      dockerfile: docker/sawtooth-daml-rpc.docker
+    image: sawtooth-daml-rpc:${ISOLATION_ID}
+    container_name: sawtooth-daml-rpc
+
+  sawtooth-timekeeper:
+    build:
+      context: .
+      dockerfile: docker/timekeeper.docker
+    image: timekeeper:${ISOLATION_ID}
+    container_name: sawtooth-timekeeper

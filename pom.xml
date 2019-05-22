@@ -8,17 +8,71 @@
  <name>DAML on Sawtooth</name>
  <packaging>pom</packaging>
  <description>Implementation of DAML SDK with a Sawtooth backend</description>
-
-
-
  <modules>
   <module>daml-on-sawtooth-protobufs</module>
   <module>noop-transaction-processor</module>
+  <module>timekeeper</module>
   <module>sawtooth-daml-tp</module>
   <module>sawtooth-daml-rpc</module>
   <module>sawtooth-daml-common</module>
  </modules>
-
+ <profiles>
+  <profile>
+   <id>default</id>
+   <activation>
+    <activeByDefault>true</activeByDefault>
+   </activation>
+   <build>
+    <plugins>
+     <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <version>${maven.compiler.plugin.version}</version>
+      <configuration>
+       <release>11</release>
+      </configuration>
+      <dependencies>
+       <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm</artifactId>
+        <version>6.2</version>
+       </dependency>
+      </dependencies>
+     </plugin>
+    </plugins>
+   </build>
+  </profile>
+  <profile>
+   <id>jdk8</id>
+   <activation>
+    <jdk>1.8</jdk>
+    <activeByDefault>false</activeByDefault>
+   </activation>
+   <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+     <plugin>
+      <artifactId>maven-jar-plugin</artifactId>
+      <configuration>
+       <classifier>jdk8</classifier>
+      </configuration>
+     </plugin>
+     <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <version>${maven.compiler.plugin.version}</version>
+      <configuration>
+       <source>1.8</source>
+       <target>1.8</target>
+       <testSource>1.8</testSource>
+       <testTarget>1.8</testTarget>
+      </configuration>
+     </plugin>
+    </plugins>
+   </build>
+   <properties></properties>
+  </profile>
+ </profiles>
  <properties>
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   <protobuf.version>3.6.1</protobuf.version>
@@ -28,10 +82,7 @@
   <daml.sdk.version>100.12.13</daml.sdk.version>
   <daml.bindings.version>2.3.3</daml.bindings.version>
   <scala.lang.version>2.12</scala.lang.version>
-  <java.source.version>1.8</java.source.version>
-  <java.target.version>1.8</java.target.version>
  </properties>
-
  <dependencyManagement>
   <dependencies>
    <!-- Unit testing -->
@@ -47,7 +98,6 @@
     <version>2.27.0</version>
     <scope>test</scope>
    </dependency>
-
    <!-- Hyperledger Sawtooth Dependencies -->
    <dependency>
     <groupId>org.hyperledger.sawtooth</groupId>
@@ -64,19 +114,17 @@
     <artifactId>sawtooth-sdk-transaction-processor</artifactId>
     <version>${sawtooth.sdk.version}</version>
    </dependency>
-
    <!-- DAML Dependencies -->
-
-
-
-   <!-- Scala -->
-
    <dependency>
     <groupId>com.google.protobuf</groupId>
     <artifactId>protobuf-java</artifactId>
     <version>${protobuf.version}</version>
    </dependency>
-
+   <dependency>
+    <groupId>com.google.protobuf</groupId>
+    <artifactId>protobuf-java-util</artifactId>
+    <version>${protobuf.version}</version>
+   </dependency>
    <!-- Logging -->
    <dependency>
     <groupId>org.slf4j</groupId>
@@ -88,7 +136,11 @@
     <artifactId>slf4j-log4j12</artifactId>
     <version>1.8.0-beta4</version>
    </dependency>
-
+   <dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-jdk14</artifactId>
+    <version>1.8.0-beta4</version>
+   </dependency>
    <!-- Apache Commons and Useful things -->
    <dependency>
     <groupId>commons-cli</groupId>
@@ -100,7 +152,6 @@
     <artifactId>javatuples</artifactId>
     <version>1.2</version>
    </dependency>
-
    <dependency>
     <groupId>com.daml.ledger</groupId>
     <artifactId>
@@ -123,10 +174,8 @@
     <artifactId>api-server-damlonx_${scala.lang.version}</artifactId>
     <version>${daml.sdk.version}</version>
    </dependency>
-
   </dependencies>
  </dependencyManagement>
-
  <build>
   <extensions>
    <extension>
@@ -245,16 +294,34 @@
      <groupId>org.apache.maven.plugins</groupId>
      <artifactId>maven-compiler-plugin</artifactId>
      <version>${maven.compiler.plugin.version}</version>
+    </plugin>
+    <plugin>
+     <groupId>org.apache.maven.plugins</groupId>
+     <artifactId>maven-jar-plugin</artifactId>
+     <version>2.5</version>
+    </plugin>
+
+    <plugin>
+     <groupId>org.apache.maven.plugins</groupId>
+     <artifactId>maven-assembly-plugin</artifactId>
+     <version>2.5.1</version>
      <configuration>
-      <source>${java.source.version}</source>
-      <target>${java.target.version}</target>
-      <testSource>${java.source.version}</testSource>
-      <testTarget>${java.target.version}</testTarget>
+      <descriptors>
+       <descriptor>src/main/assembly/assembly.xml</descriptor>
+      </descriptors>
      </configuration>
+     <executions>
+      <execution>
+       <id>make-assembly</id> <!-- this is used for inheritance merges -->
+       <phase>package</phase> <!-- bind to the packaging phase -->
+       <goals>
+        <goal>single</goal>
+       </goals>
+      </execution>
+     </executions>
     </plugin>
    </plugins>
   </pluginManagement>
-
  </build>
  <repositories>
   <repository>

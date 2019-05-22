@@ -35,59 +35,28 @@ object SawtoothDamlRpc extends App {
       })
 
   //TODO: constants here should be replaced with CLI args
-  val validatorAddress = "tcp://localhost:4004"
+  val validatorAddress = config.connect
   val keyManager = InMemoryKeyManager.createSECP256k1()
   val readService = new SawtoothReadService("this-ledger-id",validatorAddress)
   val writeService = new SawtoothWriteService(validatorAddress,keyManager)
  
-
-  def archivesFromDar(file: File): List[Archive] = {
-    DarReader[Archive](x => Try(Archive.parseFrom(x)))
-      .readArchive(new ZipFile(file))
-      .fold(t => throw new RuntimeException(s"Failed to parse DAR from $file", t), dar => dar.all)
-  }
-
   readService.getLedgerInitialConditions
     .runWith(Sink.head)
     .foreach { initialConditions =>
       val indexService = ReferenceIndexService(
-        participantReadService = if (config.badServer) BadReadService(readService) else readService,
+        participantReadService = readService,
         initialConditions = initialConditions
       )
 
       val server = Server(
         serverPort = config.port,
-        sslContext = config.tlsConfig.flatMap(_.server),
+//        sslContext = config.tlsConfig.flatMap(_.server),
+        sslContext = None,
         indexService = indexService,
         writeService = writeService,
       )
 
-      // If port file was provided, write out the allocated server port to it.
-      config.portFile.foreach { f =>
-        val w = new FileWriter(f)
-        w.write(s"${server.port}\n")
-        w.close
-      }
-
       // Add a hook to close the server. Invoked when Ctrl-C is pressed.
       Runtime.getRuntime.addShutdownHook(new Thread(() => server.close()))
     }(DirectExecutionContext)
-}
-
-// simulate a bad read service by returning only
-// empty transactions.
-final case class BadReadService(readService: ReadService) extends ReadService {
-  override def getLedgerInitialConditions(): Source[LedgerInitialConditions, NotUsed] =
-    readService.getLedgerInitialConditions
-
-  override def stateUpdates(beginAfter: Option[Offset]): Source[(Offset, Update), NotUsed] =
-    readService.stateUpdates(beginAfter).map {
-      case (updateId, update) =>
-        val updatePrime = update match {
-          case tx: Update.TransactionAccepted =>
-            tx.copy(transaction = GenTransaction(Map(), ImmArray.empty, Set.empty))
-          case _ => update
-        }
-        (updateId, updatePrime)
-    } 
 }

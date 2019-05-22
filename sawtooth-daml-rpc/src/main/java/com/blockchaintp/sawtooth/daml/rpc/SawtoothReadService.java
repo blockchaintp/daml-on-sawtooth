@@ -14,7 +14,6 @@ import com.digitalasset.daml.lf.data.Time.Timestamp;
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
 import io.reactivex.Flowable;
-import io.reactivex.processors.UnicastProcessor;
 import scala.Option;
 import scala.Tuple2;
 
