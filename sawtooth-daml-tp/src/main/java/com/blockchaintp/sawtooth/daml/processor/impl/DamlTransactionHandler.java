@@ -22,6 +22,7 @@ import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.platform.services.time.TimeModel;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.Timestamps;
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -88,7 +89,6 @@ public final class DamlTransactionHandler implements TransactionHandler {
     // to be known before the transaction is sent to the validator.
 
     // 3. Validate submission with DAML Engine
-
 
     recordState(ledgerState, submission, inputLogEntries, stateMap, entryId);
   }
@@ -163,9 +163,10 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return Arrays.asList(new String[] {this.namespace});
   }
 
-  private Timestamp getRecordTime() {
-    // TODO This should be replaced with the time service
-    return new Timestamp(System.currentTimeMillis());
+  private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
+    com.google.protobuf.Timestamp recordTime = ledgerState.getRecordTime();
+    long micros = Timestamps.toMicros(recordTime);
+    return new Timestamp(micros);
   }
 
   @Override
@@ -177,8 +178,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
       final Map<DamlLogEntryId, DamlLogEntry> inputLogEntries, final Map<DamlStateKey, DamlStateValue> stateMap,
       final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
 
-    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer
-        .processSubmission(getConfiguration(), entryId, getRecordTime(), submission, inputLogEntries, stateMap);
+    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
+        getConfiguration(), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
 
     DamlLogEntry newLogEntry = processSubmission._1;
     ledgerState.setDamlLogEntry(entryId, newLogEntry);

@@ -8,6 +8,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -129,7 +130,6 @@ public interface LedgerState {
    */
   void setDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError, InvalidTransactionException;
 
-
   /**
    * Record an event containing the provided log info.
    * @param entryId the id of this log entry
@@ -137,4 +137,11 @@ public interface LedgerState {
    * @throws InternalError when there is an unexpected back end error
    */
   void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError;
+
+  /**
+   * Fetch the current global record time.
+   * @return a Timestamp
+   * @throws InternalError when there is an unexpected back end error.
+   */
+  Timestamp getRecordTime() throws InternalError;
 }

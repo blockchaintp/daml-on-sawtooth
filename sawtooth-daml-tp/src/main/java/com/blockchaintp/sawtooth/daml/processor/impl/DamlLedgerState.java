@@ -1,21 +1,27 @@
 package com.blockchaintp.sawtooth.daml.processor.impl;
 
+import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
+import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -26,6 +32,8 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  * @author scealiontach
  */
 public final class DamlLedgerState implements LedgerState {
+
+  private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
 
   /**
    * The state which this class wraps and delegates to.
@@ -40,8 +48,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public DamlStateValue getDamlState(final DamlStateKey commandKey)
-      throws InternalError, InvalidTransactionException {
+  public DamlStateValue getDamlState(final DamlStateKey commandKey) throws InternalError, InvalidTransactionException {
     return getDamlStates(commandKey).get(commandKey);
   }
 
@@ -111,7 +118,6 @@ public final class DamlLedgerState implements LedgerState {
     return getDamlLogEntries(entryId).get(entryId);
   }
 
-
   @Override
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
@@ -155,5 +161,26 @@ public final class DamlLedgerState implements LedgerState {
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
     state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), entry.toByteString());
 
+  }
+
+  @Override
+  public Timestamp getRecordTime() throws InternalError {
+    try {
+      Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
+      if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
+        TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
+        return tkgr.getLastCalculatedTime();
+      } else {
+        LOGGER.warning("No global time was retrieved,assuming beginning of epoch");
+        return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
+      }
+    } catch (InvalidTransactionException exc) {
+      LOGGER.warning("No global time was retrieved,assuming beginning of epoch");
+      return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
+    } catch (InternalError | InvalidProtocolBufferException exc) {
+      InternalError err = new InternalError(exc.getMessage());
+      err.initCause(exc);
+      throw err;
+    }
   }
 }
