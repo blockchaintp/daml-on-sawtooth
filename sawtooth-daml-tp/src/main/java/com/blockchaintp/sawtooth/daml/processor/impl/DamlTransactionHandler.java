@@ -181,12 +181,11 @@ public final class DamlTransactionHandler implements TransactionHandler {
     Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
         getConfiguration(), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
 
-    DamlLogEntry newLogEntry = processSubmission._1;
-    ledgerState.setDamlLogEntry(entryId, newLogEntry);
-
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
     ledgerState.setDamlStates(newState.entrySet());
-    ledgerState.sendLogEvent(entryId, newLogEntry);
+
+    DamlLogEntry newLogEntry = processSubmission._1;
+    ledgerState.addDamlLogEntry(entryId, newLogEntry);
   }
 
   @Override

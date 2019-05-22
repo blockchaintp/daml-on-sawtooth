@@ -25,3 +25,7 @@ message SawtoothDamlTransaction {
 	bytes submission=2;
 }
 
+message DamlLogEntryIndex {
+    repeated string addresses=1;
+}
+
