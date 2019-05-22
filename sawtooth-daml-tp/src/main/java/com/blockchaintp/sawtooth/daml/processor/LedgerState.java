@@ -8,6 +8,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -109,17 +110,6 @@ public interface LedgerState {
       throws InternalError, InvalidTransactionException;
 
   /**
-   * Store a collection of log entries into the context.
-   * @param entries a collection of tuples of DamlLogEntryId and corresponding
-   *                DamlLogEntry
-   * @throws InternalError               system error
-   * @throws InvalidTransactionException an attempt to read a contract which is
-   *                                     not allowed.
-   */
-  void setDamlLogEntries(Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
-      throws InternalError, InvalidTransactionException;
-
-  /**
    * @param entryId Id of this log entry
    * @param entry   the log entry to set
    * @throws InvalidTransactionException when there is an error relating to the
@@ -127,14 +117,21 @@ public interface LedgerState {
    * @throws InternalError               when there is an unexpected back end
    *                                     error.
    */
-  void setDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError, InvalidTransactionException;
-
+  void addDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError, InvalidTransactionException;
 
   /**
    * Record an event containing the provided log info.
    * @param entryId the id of this log entry
    * @param entry   the entry itself
+   * @param offset the offset of the entry itself
    * @throws InternalError when there is an unexpected back end error
    */
-  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError;
+  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry, long offset) throws InternalError;
+
+  /**
+   * Fetch the current global record time.
+   * @return a Timestamp
+   * @throws InternalError when there is an unexpected back end error.
+   */
+  Timestamp getRecordTime() throws InternalError;
 }

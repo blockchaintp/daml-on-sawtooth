@@ -1,21 +1,28 @@
 package com.blockchaintp.sawtooth.daml.processor.impl;
 
+import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
+import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -26,6 +33,8 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  * @author scealiontach
  */
 public final class DamlLedgerState implements LedgerState {
+
+  private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
 
   /**
    * The state which this class wraps and delegates to.
@@ -40,8 +49,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public DamlStateValue getDamlState(final DamlStateKey commandKey)
-      throws InternalError, InvalidTransactionException {
+  public DamlStateValue getDamlState(final DamlStateKey commandKey) throws InternalError, InvalidTransactionException {
     return getDamlStates(commandKey).get(commandKey);
   }
 
@@ -70,7 +78,7 @@ public final class DamlLedgerState implements LedgerState {
         retMap.put(k, v);
       } catch (InvalidProtocolBufferException exc) {
         throw new InternalError(
-            String.format("Content at address={} is not parsable as DamlCommandDedupValue", e.getKey()));
+            String.format("Content at address={} is not parsable as DamlStateValue", e.getKey()));
       }
     }
     return retMap;
@@ -111,7 +119,6 @@ public final class DamlLedgerState implements LedgerState {
     return getDamlLogEntries(entryId).get(entryId);
   }
 
-
   @Override
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
@@ -120,23 +127,55 @@ public final class DamlLedgerState implements LedgerState {
     state.setState(setMap.entrySet());
   }
 
-  @Override
-  public void setDamlLogEntries(final Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
+  private String[] addDamlLogEntries(final Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
+    List<String> idList = new ArrayList<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
-      setMap.put(Namespace.makeDamlLogEntryAddress(e.getKey()), e.getValue().toByteString());
+      String address = Namespace.makeDamlLogEntryAddress(e.getKey());
+      setMap.put(address, e.getValue().toByteString());
+      idList.add(address);
     }
     state.setState(setMap.entrySet());
-
+    return idList.toArray(new String[] {});
   }
 
   @Override
-  public void setDamlLogEntry(final DamlLogEntryId entryId, final DamlLogEntry entry)
+  public void addDamlLogEntry(final DamlLogEntryId entryId, final DamlLogEntry entry)
       throws InternalError, InvalidTransactionException {
     Map<DamlLogEntryId, DamlLogEntry> setMap = new HashMap<>();
     setMap.put(entryId, entry);
-    setDamlLogEntries(setMap.entrySet());
+    String[] addresses = addDamlLogEntries(setMap.entrySet());
+    List<String> oldAddresses;
+    try {
+      Map<String, ByteString> damlLogEntryList = state.getState(Arrays.asList(Namespace.DAML_LOG_ENTRY_LIST));
+      if (damlLogEntryList.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
+        ByteString data = damlLogEntryList.get(Namespace.DAML_LOG_ENTRY_LIST);
+        try {
+          DamlLogEntryIndex index = DamlLogEntryIndex.parseFrom(data);
+          oldAddresses = index.getAddressesList();
+        } catch (InvalidProtocolBufferException exc) {
+          InternalError err = new InternalError(exc.getMessage());
+          err.initCause(exc);
+          throw err;
+        }
+      } else {
+        // entry list has never been set, initialize
+        oldAddresses = new ArrayList<>();
+      }
+    } catch (InvalidTransactionException exc) {
+      // entry list has never been set, initialize
+      oldAddresses = new ArrayList<>();
+    }
+    List<String> newIndexAddresses = new ArrayList<>();
+    newIndexAddresses.addAll(oldAddresses);
+    newIndexAddresses.addAll(Arrays.asList(addresses));
+    DamlLogEntryIndex newIndex = DamlLogEntryIndex.newBuilder().clearAddresses().addAllAddresses(newIndexAddresses)
+        .build();
+    Map<String, ByteString> indexSetMap = new HashMap<>();
+    indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, newIndex.toByteString());
+    state.setState(indexSetMap.entrySet());
+    sendLogEvent(entryId, entry, newIndexAddresses.size());
   }
 
   @Override
@@ -150,10 +189,32 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry) throws InternalError {
+  public void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry, final long offset)
+      throws InternalError {
     Map<String, String> attrMap = new HashMap<>();
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
+    attrMap.put(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE, Long.toString(offset));
     state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), entry.toByteString());
+  }
 
+  @Override
+  public Timestamp getRecordTime() throws InternalError {
+    try {
+      Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
+      if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
+        TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
+        return tkgr.getLastCalculatedTime();
+      } else {
+        LOGGER.warning("No global time was retrieved,assuming beginning of epoch");
+        return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
+      }
+    } catch (InvalidTransactionException exc) {
+      LOGGER.warning("No global time was retrieved,assuming beginning of epoch");
+      return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
+    } catch (InternalError | InvalidProtocolBufferException exc) {
+      InternalError err = new InternalError(exc.getMessage());
+      err.initCause(exc);
+      throw err;
+    }
   }
 }

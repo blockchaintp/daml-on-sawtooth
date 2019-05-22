@@ -94,6 +94,7 @@ public class SawtoothWriteService implements WriteService {
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils
         .submissionToDamlStateAddress(transactionToSubmission);
     inputAddresses.addAll(submissionToDamlStateAddress.values());
+    inputAddresses.add(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD);
 
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils
         .submissionToLogAddressMap(transactionToSubmission);

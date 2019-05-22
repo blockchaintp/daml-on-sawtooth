@@ -36,7 +36,7 @@ object Cli {
       .text("Server port. If not set, a random port is allocated.")
     opt[String]("connect")
       .text("validator connection end point, e.g.tcp://validator:4004")
-      .action(pemConfig)
+      .action((v, c) => c.copy(connect = v))
     opt[String]("pem")
       .optional()
       .text("TLS: The pem file to be used as the private key.")

@@ -16,7 +16,6 @@ import com.blockchaintp.utils.SawtoothClientUtils;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
-import com.google.protobuf.util.JsonFormat;
 
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
@@ -68,12 +67,11 @@ public final class TimeKeeperRunnable implements Runnable {
     Batch batch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(updateTransaction));
 
     try {
-      LOGGER.warn("Sending a time update {}", JsonFormat.printer().print(batch));
+      LOGGER.info(String.format("Sending a participant time update %s says %s", this.keyManager.getPublicKeyInHex(),
+          ts.toString()));
       sendBatch(batch);
     } catch (TimeKeeperException exc) {
       LOGGER.warn("Error updating TimeKeeper records", exc);
-    } catch (InvalidProtocolBufferException exc) {
-      LOGGER.warn("Invalid Batch", exc);
     }
   }
 
@@ -84,13 +82,12 @@ public final class TimeKeeperRunnable implements Runnable {
     try {
       ByteString result = streamToValidator.getResult();
       submitResponse = ClientBatchSubmitResponse.parseFrom(result);
-      LOGGER.warn("Batch submitted");
+      LOGGER.debug(String.format("Batch submitted %s", batch.getHeaderSignature()));
       if (submitResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
         LOGGER.warn(String.format("Batch submit response resulted in error: %s", submitResponse.getStatus()));
         throw new TimeKeeperException(
             String.format("Batch submit response resulted in error: %s", submitResponse.getStatus()));
       }
-
     } catch (InterruptedException e) {
       throw new TimeKeeperException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));

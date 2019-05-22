@@ -25,6 +25,11 @@ public final class EventConstants {
    */
   public static final String SAWTOOTH_BLOCK_COMMIT_SUBJECT = "sawtooth/block-commit";
 
+  /**
+   * Attribute of the current value of the offset counter for this event.
+   */
+  public static final String DAML_OFFSET_EVENT_ATTRIBUTE = "offset-counter";
+
   private EventConstants() {
 
   }

@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import java.util.logging.Level;
 
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
@@ -20,7 +19,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
-
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -75,7 +73,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
     try {
       TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(transactionRequest.getPayload());
       String myRecordAddr = Namespace.makeAddress(this.namespace, signerPublicKey);
-      LOGGER.warning("Getting global record state");
+      LOGGER.fine("Getting global record state");
       Map<String, ByteString> sourceData = state
           .getState(Arrays.asList(myRecordAddr, Namespace.TIMEKEEPER_GLOBAL_RECORD));
 
@@ -85,7 +83,6 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       } else {
         myRecord = TimeKeeperRecord.getDefaultInstance();
       }
-      LOGGER.warning(String.format("My last time was %s", myRecord.getLastCalculatedTime()));
 
       TimeKeeperGlobalRecord globalRecord;
       if (sourceData.containsKey(Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
@@ -93,7 +90,6 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       } else {
         globalRecord = TimeKeeperGlobalRecord.getDefaultInstance();
       }
-      LOGGER.warning(String.format("Global time is %s", globalRecord.getLastCalculatedTime()));
 
       Map<String, ByteString> setMap = new HashMap<String, ByteString>();
       List<Timestamp> timeHistoryList = new ArrayList<>(myRecord.getTimeHistoryList());
@@ -102,12 +98,12 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
 
       // Set new time to max of new time and last reported time
       Timestamp newCalculatedTs = getMaxTs(update.getTimeUpdate(), myRecord.getLastCalculatedTime());
-      LOGGER.warning(String.format("My new time is %s", newCalculatedTs));
+      LOGGER.info(String.format("%s's last time was %s, new time is %s", signerPublicKey,
+          myRecord.getLastCalculatedTime(), newCalculatedTs));
 
       TimeKeeperRecord.Builder newRecordBldr = TimeKeeperRecord.newBuilder(myRecord);
       newRecordBldr.clearTimeHistory().addAllTimeHistory(timeHistoryList).setLastCalculatedTime(newCalculatedTs);
       TimeKeeperRecord newRecord = newRecordBldr.build();
-      LOGGER.warning("writing participant record");
       setMap.put(myRecordAddr, newRecord.toByteString());
 
       TimeKeeperParticipant myNewParticipant = TimeKeeperParticipant.newBuilder().setLastCalculatedTime(newCalculatedTs)
@@ -139,13 +135,13 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       TimeKeeperGlobalRecord newGlobalRecord = newGlobalRecordBldr.build();
       setMap.put(Namespace.TIMEKEEPER_GLOBAL_RECORD, newGlobalRecord.toByteString());
 
-      LOGGER.warning("writing global record");
       state.setState(setMap.entrySet());
 
       TimeKeeperEvent updateEventData = TimeKeeperEvent.newBuilder().setTimeUpdate(newGlobalTs).build();
       Map<String, String> attrMap = new HashMap<>();
       attrMap.put(EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE, Long.toString(Timestamps.toMicros(newGlobalTs)));
-      LOGGER.log(Level.WARNING, String.format("New time event %s", newGlobalTs));
+      LOGGER.info(
+          String.format("New global time event previous=%s now=%s", globalRecord.getLastCalculatedTime(), newGlobalTs));
       state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());
     } catch (InvalidProtocolBufferException exc) {
       throw new InvalidTransactionException("Transaction has bad format " + exc.getMessage());

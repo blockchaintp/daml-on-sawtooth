@@ -28,7 +28,7 @@ public final class DamlTransactionProcessorMain {
     DamlCommitter committer = new DamlCommitterImpl(engine);
     TransactionHandler handler = new DamlTransactionHandler(committer);
     transactionProcessor.addHandler(handler);
-
+    LOGGER.info("Added handler " + DamlTransactionHandler.class.getName());
     Thread thread = new Thread(transactionProcessor);
     thread.start();
     try {
