@@ -1,9 +1,12 @@
 FROM openjdk:11-jre
 
-
-COPY ./timekeeper/target/timekeeper-*-shaded.jar /opt
+COPY ./timekeeper/target/timekeeper-*-bin.zip /opt
 
 WORKDIR /opt
 
-#TO-DO remember to include environmental variable for injection as arguments
-CMD java -jar timekeeper-*-shaded.jar $@
+RUN unzip -x timekeeper-*-bin.zip && rm -f timekeeper-*-bin.zip && mv timekeeper-* timekeeper
+
+WORKDIR /opt/timekeeper
+RUN chmod 755 entrypoint.sh
+
+ENTRYPOINT /opt/timekeeper/entrypoint.sh $@

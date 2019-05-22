@@ -69,20 +69,24 @@ services:
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
     container_name: sawtooth-daml-tp
-    command: "java -jar sawtooth-daml-tp-0.0.1-SNAPSHOT-shaded.jar tcp://validator:4004"
+    command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
     depends_on:
       - validator
 
   daml-rpc:
     image: sawtooth-daml-rpc:${ISOLATION_ID}
     container_name: sawtooth-daml-rpc
-    command: "java -jar sawtooth-daml-rpc-0.0.1-SNAPSHOT-shaded.jar tcp://validator:4004 /dev/null"
+    expose:
+      - 9000
+    ports:
+      - "9000:9000"
+    command: "/opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 --connect tcp://validator:4004"
     depends_on:
       - validator
 
   timekeeper:
     image: timekeeper:${ISOLATION_ID}
     container_name: timekeeper
-    command: "java -jar timekeeper-0.0.1-SNAPSHOT-shaded.jar tcp://validator:4004"
+    command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
     depends_on:
       - validator

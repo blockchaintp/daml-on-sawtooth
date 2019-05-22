@@ -27,18 +27,16 @@ object Cli {
         Some(TlsConfiguration(enabled = true, None, None, Some(new File(path)))))(c =>
         Some(c.copy(trustCertCollectionFile = Some(new File(path))))))
 
-  private val cmdArgParser = new scopt.OptionParser[Config]("sawtooth-daml") {
+  private val cmdArgParser = new scopt.OptionParser[Config]("sawtooth-daml-rpc") {
     head(
-      "A DAML Ledger API server backed by a Hyperledger Sawtooth blockchain network.\n" +
-        "Due to its lack of persistence it is not meant for production, but to serve as a blueprint for other DAML Ledger API server implementations.")
+      "A DAML Ledger API server backed by a Hyperledger Sawtooth blockchain network.\n")
     opt[Int]("port")
       .optional()
       .action((p, c) => c.copy(port = p))
       .text("Server port. If not set, a random port is allocated.")
-    opt[File]("port-file")
-      .optional()
-      .action((f, c) => c.copy(portFile = Some(f)))
-      .text("File to write the allocated port number to. Used to inform clients in CI about the allocated port.")
+    opt[String]("connect")
+      .text("validator connection end point, e.g.tcp://validator:4004")
+      .action(pemConfig)
     opt[String]("pem")
       .optional()
       .text("TLS: The pem file to be used as the private key.")
@@ -51,14 +49,6 @@ object Cli {
       .optional()
       .text("TLS: The crt file to be used as the the trusted root CA.")
       .action(cacrtConfig)
-    opt[Unit]("bad-server")
-      .optional()
-      .action((_, c) => c.copy(badServer = true))
-      .text("Simulate a badly behaving server that returns empty transactions. Defaults to false.")
-    arg[File]("<archive>...")
-      .unbounded()
-      .action((f, c) => c.copy(archiveFiles = f :: c.archiveFiles))
-      .text("DAR files to load. Scenarios are ignored. The servers starts with an empty ledger by default.")
   }
 
   def parse(args: Array[String]): Option[Config] =

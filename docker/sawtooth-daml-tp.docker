@@ -1,9 +1,13 @@
 FROM openjdk:11-jre
 
 
-COPY ./sawtooth-daml-tp/target/sawtooth-daml-tp-*-shaded.jar /opt
+COPY ./sawtooth-daml-tp/target/sawtooth-daml-tp-*-bin.zip /opt
 
 WORKDIR /opt
 
-#TO-DO remember to include environmental variable for injection as arguments
-CMD java -jar sawtooth-daml-tp-*-shaded.jar $@
+RUN unzip -x sawtooth-daml-tp-*-bin.zip && rm -f sawtooth-daml-tp-*-bin.zip && mv sawtooth-daml-tp-* sawtooth-daml-tp
+
+WORKDIR /opt/sawtooth-daml-tp
+RUN chmod 755 entrypoint.sh
+
+ENTRYPOINT /opt/sawtooth-daml-tp/entrypoint.sh $@
