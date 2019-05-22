@@ -40,7 +40,7 @@ services:
         sawtooth keygen && \
         sawset genesis && \
         sawadm genesis config-genesis.batch && \
-        sawtooth-validator -vvv \
+        sawtooth-validator -v \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
@@ -38,6 +39,8 @@ import scala.Tuple2;
  */
 public final class DamlTransactionHandler implements TransactionHandler {
 
+  private static final Logger LOGGER = Logger.getLogger(DamlTransactionHandler.class.getName());
+
   private final DamlCommitter committer;
   private final String familyName;
   private final String namespace;
@@ -59,7 +62,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   @Override
   public void apply(final TpProcessRequest tpProcessRequest, final Context state)
       throws InvalidTransactionException, InternalError {
-
+    LOGGER.fine(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
     basicRequestChecks(tpProcessRequest);
 
     LedgerState ledgerState = new DamlLedgerState(state);
@@ -82,15 +85,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
     Map<DamlLogEntryId, DamlLogEntry> inputLogEntries = buildLogEntryMap(ledgerState, txHeader, submission);
 
-    // 2. from the submission compute the transaction deltas ( contracts to be
-    // removed in txDelta.inputs, contracts to be added in txDelta.outputs )
-    // At this point all contract_ids may be assumed to be absolute, in fact they
-    // need to be since all inputs and outputs need
-    // to be known before the transaction is sent to the validator.
-
-    // 3. Validate submission with DAML Engine
-
     recordState(ledgerState, submission, inputLogEntries, stateMap, entryId);
+    LOGGER.fine(String.format("Finished processing transaction %s", tpProcessRequest.getSignature()));
   }
 
   /**
@@ -120,12 +116,13 @@ public final class DamlTransactionHandler implements TransactionHandler {
     if (!header.getFamilyVersion().contentEquals(this.version)) {
       throw new InvalidTransactionException("Version does not match");
     }
-
   }
 
   private Map<DamlLogEntryId, DamlLogEntry> buildLogEntryMap(final LedgerState ledgerState,
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InternalError, InvalidTransactionException {
+    LOGGER.fine(String.format("Fetching DamlLog for this transaction"));
+
     List<String> inputList = txHeader.getInputsList();
     Map<DamlLogEntryId, String> inputLogEntryKeys = KeyValueUtils.submissionToLogAddressMap(submission);
 
@@ -139,6 +136,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Map<DamlStateKey, DamlStateValue> buildStateMap(final LedgerState ledgerState,
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
+    LOGGER.fine(String.format("Fetching DamlState for this transaction"));
     Map<DamlStateKey, String> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
 
     List<String> inputList = txHeader.getInputsList();
@@ -147,7 +145,6 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
 
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
-
     return inputStates;
   }
 
@@ -177,6 +174,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private void recordState(final LedgerState ledgerState, final DamlSubmission submission,
       final Map<DamlLogEntryId, DamlLogEntry> inputLogEntries, final Map<DamlStateKey, DamlStateValue> stateMap,
       final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
+    LOGGER.fine(String.format("Recording state at %s", entryId));
 
     Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
         getConfiguration(), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);

@@ -78,7 +78,7 @@ public final class DamlLedgerState implements LedgerState {
         retMap.put(k, v);
       } catch (InvalidProtocolBufferException exc) {
         throw new InternalError(
-            String.format("Content at address={} is not parsable as DamlCommandDedupValue", e.getKey()));
+            String.format("Content at address={} is not parsable as DamlStateValue", e.getKey()));
       }
     }
     return retMap;
@@ -195,7 +195,6 @@ public final class DamlLedgerState implements LedgerState {
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
     attrMap.put(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE, Long.toString(offset));
     state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), entry.toByteString());
-
   }
 
   @Override

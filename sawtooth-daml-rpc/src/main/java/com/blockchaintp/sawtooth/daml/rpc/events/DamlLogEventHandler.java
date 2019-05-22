@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.reactivestreams.Publisher;
@@ -67,7 +66,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    */
   public DamlLogEventHandler(final String zmqUrl) {
     this(new ZmqStream(zmqUrl));
-    LOGGER.warning(String.format("Connecting to validator at %s", zmqUrl));
+    LOGGER.info(String.format("Connecting to validator at %s", zmqUrl));
   }
 
   /**
@@ -80,8 +79,8 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Build a handler based on the given delegate.and last known block ids.
-   * @param argStream   the delegate to use
-   * @param blockIds the last known block ids for this event handler
+   * @param argStream the delegate to use
+   * @param blockIds  the last known block ids for this event handler
    */
   public DamlLogEventHandler(final Stream argStream, final Collection<String> blockIds) {
     this(argStream, blockIds, new ParticipantStateLogEntryTransformer());
@@ -125,7 +124,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       Map<String, String> attrMap = eventAttributeMap(evt);
       if (evt.getEventType().equals(EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT)) {
         blockNum = Long.parseLong(attrMap.get(EventConstants.SAWTOOTH_BLOCK_NUM_EVENT_ATTRIBUTE));
-        LOGGER.warning(String.format("Received block-commit block_num=%s", blockNum));
+        LOGGER.fine(String.format("Received block-commit block_num=%s", blockNum));
       }
     }
     for (Event evt : evtList.getEventsList()) {
@@ -140,7 +139,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         Offset offset = new Offset(new long[] {blockNum, offsetCounter});
         Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
         tuplesToReturn.add(updateTuple);
-        LOGGER.warning(String.format("Received update offset=%s", offset));
+        LOGGER.info(String.format("Sending update at offset=%s", offset));
       }
     }
     // Only send heartbeats if we haven't sent anything
@@ -160,7 +159,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
             tuplesToReturn.clear();
           }
           tuplesToReturn.add(updateTuple);
-          LOGGER.warning(String.format("Received heartbeat offset=%s", hbOffset));
+          LOGGER.info(String.format("Sending heartbeat at offset=%s", hbOffset));
 
         }
       }
@@ -178,7 +177,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   @Override
   public final int handle(final ZLoop loop, final PollItem item, final Object arg) {
-    LOGGER.log(Level.WARNING, "Handling message...");
+    LOGGER.fine("Handling message...");
 
     ZMsg msg = ZMsg.recvMsg(item.getSocket());
     Iterator<ZFrame> multiPartMessage = msg.iterator();
@@ -189,14 +188,14 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         Message message = Message.parseFrom(frame.getData());
         processMessage(message);
       } catch (InvalidProtocolBufferException exc) {
-        LOGGER.log(Level.WARNING, exc.getMessage());
+        LOGGER.warning(exc.getMessage());
       }
     }
     return 0;
   }
 
   protected final void processMessage(final Message message) throws InvalidProtocolBufferException {
-    LOGGER.log(Level.WARNING, "Process message...");
+    LOGGER.fine("Process message...");
 
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       EventList evtList = EventList.parseFrom(message.getContent());
@@ -205,7 +204,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         this.processor.onNext(u);
       }
     } else {
-      LOGGER.log(Level.WARNING, "Unexpected message type: {}", message.getMessageType());
+      LOGGER.warning(String.format("Unexpected message type: %s", message.getMessageType()));
     }
   }
 
@@ -217,14 +216,14 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       try {
         receivedMsg = this.stream.receive(DEFAULT_TIMEOUT);
       } catch (TimeoutException exc) {
-        LOGGER.log(Level.FINEST, "Timeout waiting for message");
+        LOGGER.fine("Timeout waiting for message");
         receivedMsg = null;
       }
       if (receivedMsg != null) {
         try {
           processMessage(receivedMsg);
         } catch (InvalidProtocolBufferException exc) {
-          LOGGER.log(Level.WARNING, "Error unmarshalling message of type: {}", receivedMsg.getMessageType());
+          LOGGER.warning(String.format("Error unmarshalling message of type: %s", receivedMsg.getMessageType()));
         }
       }
     }
@@ -237,7 +236,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     ClientEventsSubscribeRequest cesReq = ClientEventsSubscribeRequest.newBuilder().addAllSubscriptions(subscriptions)
         .addAllLastKnownBlockIds(lastBlockIds).build();
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
-    LOGGER.warning("Waiting for subscription response...");
+    LOGGER.info("Waiting for subscription response...");
     try {
       ByteString result = null;
       while (result == null) {
@@ -247,7 +246,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           LOGGER.warning("Still waiting for subscription response...");
         }
       }
-      LOGGER.warning("Subscription response received...");
+      LOGGER.info("Subscription response received...");
 
     } catch (InterruptedException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
@@ -262,7 +261,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST, ceuReq.toByteString());
     try {
       resp.getResult();
-      LOGGER.warning("Unsubscribed...");
+      LOGGER.info("Unsubscribed...");
     } catch (InterruptedException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
     }

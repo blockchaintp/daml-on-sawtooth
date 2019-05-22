@@ -1,7 +1,5 @@
 package com.blockchaintp.sawtooth.timekeeper.util;
 
-import java.util.logging.Logger;
-
 import com.blockchaintp.utils.SawtoothClientUtils;
 
 /**
@@ -10,8 +8,6 @@ import com.blockchaintp.utils.SawtoothClientUtils;
  * @author scealiontach
  */
 public final class Namespace {
-
-  private static final Logger LOGGER = Logger.getLogger(Namespace.class.getName());
 
   /**
    * Sawtooth Namespaces are 6 chars long.
@@ -65,7 +61,6 @@ public final class Namespace {
     String hash = SawtoothClientUtils.getHash(sb.toString());
     int begin = hash.length() - ADDRESS_LENGTH + ns.length();
     hash = hash.substring(begin);
-    LOGGER.warning(String.format("Making name %s + %s = %s", ns, sb.toString(), hash));
     return ns + hash;
   }
 
