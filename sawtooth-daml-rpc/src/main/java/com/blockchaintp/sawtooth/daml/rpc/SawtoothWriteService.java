@@ -52,23 +52,32 @@ public class SawtoothWriteService implements WriteService {
 
   private KeyManager keyManager;
 
+  private SawtoothTransactionsTracer sawtoothTransactionsTracer;
+
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
    * @param implementation of a ZMQ stream.
-   * @param kmgr           the keyManager for this service
+   * @param kmgr           the keyManager for this service.
+   * @param txnTracer      a RESTFul interface to push record of sawtooth transactions.
    */
-  public SawtoothWriteService(final Stream implementation, final KeyManager kmgr) {
-    this.stream = implementation;
-    this.keyManager = kmgr;
+  public SawtoothWriteService(final Stream implementation,
+                              final KeyManager kmgr,
+                              final SawtoothTransactionsTracer txnTracer) {
+     this.stream  = implementation;
+     this.keyManager = kmgr;
+     this.sawtoothTransactionsTracer = txnTracer;
   }
 
   /**
    * Constructor a SawtoothWriteService instance from an address.
    * @param validatorAddress in String format e.g. "http://localhost:3030".
-   * @param kmgr             the keyManager for this service
+   * @param kmgr             the keyManager for this service.
+   * @param txnTracer        a RESTFul interface to push record of sawtooth transactions.
    */
-  public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr) {
-    this(new ZmqStream(validatorAddress), kmgr);
+  public SawtoothWriteService(final String validatorAddress,
+                              final KeyManager kmgr,
+                              final SawtoothTransactionsTracer txnTracer) {
+    this(new ZmqStream(validatorAddress), kmgr, txnTracer);
   }
 
   @Override
@@ -106,6 +115,9 @@ public class SawtoothWriteService implements WriteService {
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), payload.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
+
+    // Push to TraceTransaction class
+    this.sawtoothTransactionsTracer.putWriteTransactions(sawtoothBatch.toString());
 
     try {
       sendToValidator(sawtoothBatch);

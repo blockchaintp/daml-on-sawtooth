@@ -37,9 +37,12 @@ object SawtoothDamlRpc extends App {
   //TODO: constants here should be replaced with CLI args
   logger.error(s"Connecting to "+config.connect)
   val validatorAddress = config.connect
+  val swTxnTracer = new SawtoothTransactionsTracer(5051)
+  swTxnTracer.initializeRestEndpoints()
+  
   val keyManager = InMemoryKeyManager.createSECP256k1()
   val readService = new SawtoothReadService("this-ledger-id",validatorAddress)
-  val writeService = new SawtoothWriteService(validatorAddress,keyManager)
+  val writeService = new SawtoothWriteService(validatorAddress,keyManager, swTxnTracer)
  
   readService.getLedgerInitialConditions
     .runWith(Sink.head)
