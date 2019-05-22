@@ -65,6 +65,12 @@
    <version>3.7.1</version>
   </dependency>
 
+  <!-- Java Spark -->
+  <dependency>
+    <groupId>com.sparkjava</groupId>
+    <artifactId>spark-core</artifactId>
+  </dependency>
+
   <!-- Unit testing -->
   <dependency>
    <groupId>junit</groupId>
