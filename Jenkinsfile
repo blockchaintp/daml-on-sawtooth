@@ -24,10 +24,6 @@ pipeline {
         }
     }
 
-    triggers { 
-        pollSCM('*/15 * * * *') 
-    }
-
     options {
         ansiColor('xterm')
         timestamps()
@@ -51,8 +47,11 @@ pipeline {
 
         stage('Build Packages') {
             steps {
-                sh 'docker-compose -f docker/docker-compose-build.yaml build'
-                sh 'docker-compose -f docker/docker-compose-build.yaml up --abort-on-container-exit'
+                sh 'docker build -t daml-on-sawtooth-build:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
+                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
+                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B deploy'
+                sh 'docker run --rm -v $HOME/.m2:/root/.m2 daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+                sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
                 sh 'docker-compose -f docker-compose-installed.yaml build'
             }
         }
@@ -73,7 +72,7 @@ pipeline {
             }
         }
 
-        stage('Create Git Archive') {
+        stage('Create Archives') {
             steps {
                 sh '''
                     REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
@@ -81,6 +80,8 @@ pipeline {
                     git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
                     git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
                 '''
+                archiveArtifacts artifacts: '**/target/*.zip'
+                archiveArtifacts artifacts: '**/target/*.jar'
             }
         }
 
@@ -88,8 +89,9 @@ pipeline {
 
     post {
         always {
+            junit '**/target/surefire-reports/**/*.xml'
             sh 'docker-compose -f docker/docker-compose-build.yaml down'
-            sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID}  mvn clean'
+            sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn clean'
 	        sh '''
                 for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
                     docker rmi -f $img:$ISOLATION_ID

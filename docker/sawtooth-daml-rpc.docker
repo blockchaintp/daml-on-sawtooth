@@ -1,9 +1,12 @@
-FROM openjdk:8u212-jre
+FROM openjdk:11-jre
 
 
-COPY ./sawtooth-daml-rpc/target/sawtooth-daml-rpc-*-shaded.jar /opt
+COPY ./sawtooth-daml-rpc/target/sawtooth-daml-rpc-*-bin.zip /opt
 
 WORKDIR /opt
+RUN unzip -x sawtooth-daml-rpc-*-bin.zip && rm -f sawtooth-daml-rpc-*-bin.zip && mv sawtooth-daml-rpc-* sawtooth-daml-rpc
 
+WORKDIR /opt/sawtooth-daml-rpc
+RUN chmod 755 entrypoint.sh
 #TO-DO remember to include environmental variable for injection as arguments
-CMD java -jar sawtooth-daml-rpc-*-shaded.jar $@
+ENTRYPOINT /opt/sawtooth-daml-rpc/entrypoint.sh $@
