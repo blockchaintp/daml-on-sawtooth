@@ -31,7 +31,7 @@ public final class TimeKeeperTransactionProcessorMain {
     ScheduledExecutorService clockExecutor = Executors.newSingleThreadScheduledExecutor();
 
     Stream stream = new ZmqStream(args[0]);
-    KeyManager kmgr = InMemoryKeyManager.createSECP256k1();
+    KeyManager kmgr = InMemoryKeyManager.create();
     final long period = 1;
     final TimeUnit periodUnit = TimeUnit.MINUTES;
     clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, periodUnit);

@@ -10,10 +10,11 @@ import com.digitalasset.ledger.api.tls.TlsConfiguration
 final case class Config(
     port: Int,
     connect: String,
+    keystore: String,
     tlsConfig: Option[TlsConfiguration]
 )
 
 object Config {
   def default: Config =
-    new Config(0, "tcp://localhost:4004", None)
+    new Config(0, "tcp://localhost:4004", "/etc/daml/keystore",None)
 }
