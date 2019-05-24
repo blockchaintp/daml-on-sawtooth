@@ -1,68 +1,76 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
- xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
- <modelVersion>4.0.0</modelVersion>
- <parent>
-  <groupId>daml-on-sawtooth</groupId>
-  <artifactId>daml-on-sawtooth</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
- </parent>
- <artifactId>sawtooth-daml-common</artifactId>
- <name>sawtooth-daml-common</name>
- <description>Common libraries and utilities for DAML on Sawtooth</description>
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>daml-on-sawtooth</groupId>
+    <artifactId>daml-on-sawtooth</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <artifactId>sawtooth-daml-common</artifactId>
+  <name>sawtooth-daml-common</name>
+  <description>Common libraries and utilities for DAML on Sawtooth</description>
 
- <build>
-  <plugins>
-   <plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-compiler-plugin</artifactId>
-   </plugin>
-   <plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-checkstyle-plugin</artifactId>
-   </plugin>
-  </plugins>
- </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jxr-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 
- <dependencies>
-  <dependency>
-   <groupId>org.slf4j</groupId>
-   <artifactId>slf4j-api</artifactId>
-  </dependency>
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
 
-  <!-- Unit testing -->
-  <dependency>
-   <groupId>junit</groupId>
-   <artifactId>junit</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>org.mockito</groupId>
-   <artifactId>mockito-core</artifactId>
-  </dependency>
+    <!-- Unit testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+    </dependency>
 
-  <!-- DAML -->
-  <dependency>
-   <groupId>com.daml.ledger</groupId>
-   <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
-  </dependency>
+    <!-- DAML -->
+    <dependency>
+      <groupId>com.daml.ledger</groupId>
+      <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
+    </dependency>
 
-  <!-- BTP -->
-  <dependency>
-   <groupId>daml-on-sawtooth</groupId>
-   <artifactId>daml-on-sawtooth-protobufs</artifactId>
-   <version>${project.parent.version}</version>
-  </dependency>
+    <!-- BTP -->
+    <dependency>
+      <groupId>daml-on-sawtooth</groupId>
+      <artifactId>daml-on-sawtooth-protobufs</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
 
-  <!-- Hyperledger Sawtooth -->
-  <dependency>
-   <groupId>org.hyperledger.sawtooth</groupId>
-   <artifactId>sawtooth-sdk-signing</artifactId>
-  </dependency>
-  <dependency>
-   <groupId>org.hyperledger.sawtooth</groupId>
-   <artifactId>sawtooth-sdk-transaction-processor</artifactId>
-  </dependency>
+    <!-- Hyperledger Sawtooth -->
+    <dependency>
+      <groupId>org.hyperledger.sawtooth</groupId>
+      <artifactId>sawtooth-sdk-signing</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.sawtooth</groupId>
+      <artifactId>sawtooth-sdk-transaction-processor</artifactId>
+    </dependency>
 
 
- </dependencies>
+  </dependencies>
 </project>

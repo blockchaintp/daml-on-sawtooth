@@ -145,7 +145,10 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       LOGGER.info("New global time event previous={} now={}", globalRecord.getLastCalculatedTime(), newGlobalTs);
       state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());
     } catch (InvalidProtocolBufferException exc) {
-      throw new InvalidTransactionException("Transaction has bad format " + exc.getMessage());
+      InvalidTransactionException ite = new InvalidTransactionException(
+          "Transaction has bad format " + exc.getMessage());
+      ite.initCause(exc);
+      throw ite;
     }
   }
 

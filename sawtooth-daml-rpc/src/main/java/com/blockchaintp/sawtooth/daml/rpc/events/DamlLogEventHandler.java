@@ -150,7 +150,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       }
     }
     // Only send heartbeats if we haven't sent anything
-    if (tuplesToReturn.size() <= 0) {
+    if (tuplesToReturn.isEmpty()) {
       for (Event evt : evtList.getEventsList()) {
         Map<String, String> attrMap = eventAttributeMap(evt);
         if (evt.getEventType()
@@ -162,7 +162,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           Offset hbOffset = new Offset(new long[] {blockNum, 0});
           Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
           // Only send the most recent heartbeat
-          if (tuplesToReturn.size() > 0) {
+          if (!tuplesToReturn.isEmpty()) {
             tuplesToReturn.clear();
           }
           tuplesToReturn.add(updateTuple);

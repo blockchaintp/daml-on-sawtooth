@@ -58,25 +58,25 @@ public class SawtoothWriteService implements WriteService {
    * Construct a SawtoothWriteService instance from a concrete stream.
    * @param implementation of a ZMQ stream.
    * @param kmgr           the keyManager for this service.
-   * @param txnTracer      a RESTFul interface to push record of sawtooth transactions.
+   * @param txnTracer      a RESTFul interface to push record of sawtooth
+   *                       transactions.
    */
-  public SawtoothWriteService(final Stream implementation,
-                              final KeyManager kmgr,
-                              final SawtoothTransactionsTracer txnTracer) {
-     this.stream  = implementation;
-     this.keyManager = kmgr;
-     this.sawtoothTransactionsTracer = txnTracer;
+  public SawtoothWriteService(final Stream implementation, final KeyManager kmgr,
+      final SawtoothTransactionsTracer txnTracer) {
+    this.stream = implementation;
+    this.keyManager = kmgr;
+    this.sawtoothTransactionsTracer = txnTracer;
   }
 
   /**
    * Constructor a SawtoothWriteService instance from an address.
    * @param validatorAddress in String format e.g. "http://localhost:3030".
    * @param kmgr             the keyManager for this service.
-   * @param txnTracer        a RESTFul interface to push record of sawtooth transactions.
+   * @param txnTracer        a RESTFul interface to push record of sawtooth
+   *                         transactions.
    */
-  public SawtoothWriteService(final String validatorAddress,
-                              final KeyManager kmgr,
-                              final SawtoothTransactionsTracer txnTracer) {
+  public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr,
+      final SawtoothTransactionsTracer txnTracer) {
     this(new ZmqStream(validatorAddress), kmgr, txnTracer);
   }
 
@@ -139,20 +139,13 @@ public class SawtoothWriteService implements WriteService {
 
     } catch (InterruptedException e) {
       throw new SawtoothWriteServiceException(
-          String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));
+          String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()), e);
     } catch (ValidatorConnectionError e) {
       throw new SawtoothWriteServiceException(
-          String.format("Sawtooth validator connection error. Details: %s", e.getMessage()));
+          String.format("Sawtooth validator connection error. Details: %s", e.getMessage()), e);
     } catch (InvalidProtocolBufferException e) {
       throw new SawtoothWriteServiceException(
-          String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()));
-    } finally {
-      try {
-        stream.close();
-      } catch (Exception e) {
-        throw new SawtoothWriteServiceException(
-            String.format("Unable to close writer stream exception. Details: %s", e.getMessage()));
-      }
+          String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()), e);
     }
   }
 

@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class SawtoothTransactionsTracer {
 
-  private static final int DEFAULT_POLL_INTERVAL = 100;
-
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothTransactionsTracer.class);
 
   private final ConcurrentLinkedDeque<String> writeTransactionsBuffer;
@@ -65,7 +63,7 @@ public final class SawtoothTransactionsTracer {
    * @param portNumber for the RestFul server.
    */
   public SawtoothTransactionsTracer(final int portNumber) {
-    LOGGER.info("RESTFul server starts with Port: " + String.valueOf(portNumber));
+    LOGGER.info("RESTFul server starts with Port: {}", portNumber);
     writeTransactionsBuffer = new ConcurrentLinkedDeque<String>();
     readTransactionsBuffer = new ConcurrentLinkedDeque<String>();
     port(portNumber);
@@ -95,7 +93,7 @@ public final class SawtoothTransactionsTracer {
    * @param writeTxn element.
    */
   public void putWriteTransactions(final String writeTxn) {
-    LOGGER.info("Adding item to write tracer: " + writeTxn);
+    LOGGER.info("Adding item to write tracer: {}", writeTxn);
     this.writeTransactionsBuffer.offer(writeTxn);
   }
 
@@ -104,7 +102,7 @@ public final class SawtoothTransactionsTracer {
    * @param readTxn element.
    */
   public void putReadTransactions(final String readTxn) {
-    LOGGER.info("Adding item to read tracer: " + readTxn);
+    LOGGER.info("Adding item to read tracer: {}", readTxn);
     this.readTransactionsBuffer.offer(readTxn);
   }
 }

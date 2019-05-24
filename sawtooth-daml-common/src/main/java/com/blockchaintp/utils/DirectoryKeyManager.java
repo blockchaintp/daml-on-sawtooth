@@ -126,11 +126,10 @@ public final class DirectoryKeyManager implements KeyManager {
   }
 
   private void scanDirectory() throws IOException {
-    if (!keystorePath.exists()) {
-      if (!keystorePath.mkdirs()) {
-        throw new IOException("failed to mkdir " + keystorePath);
-      }
+    if (!keystorePath.exists() && !keystorePath.mkdirs()) {
+      throw new IOException("failed to mkdir " + keystorePath);
     }
+
     File[] children = this.keystorePath.listFiles();
     List<File> keyDirectories = new ArrayList<>();
     for (File f : children) {

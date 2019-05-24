@@ -67,8 +67,7 @@ public final class TimeKeeperRunnable implements Runnable {
     Batch batch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(updateTransaction));
 
     try {
-      LOGGER.info(String.format("Sending a participant time update %s says %s", this.keyManager.getPublicKeyInHex(),
-          ts.toString()));
+      LOGGER.info("Sending a participant time update {} says {}", this.keyManager.getPublicKeyInHex(), ts.toString());
       sendBatch(batch);
     } catch (TimeKeeperException exc) {
       LOGGER.warn("Error updating TimeKeeper records", exc);
@@ -82,19 +81,27 @@ public final class TimeKeeperRunnable implements Runnable {
     try {
       ByteString result = streamToValidator.getResult();
       submitResponse = ClientBatchSubmitResponse.parseFrom(result);
-      LOGGER.debug(String.format("Batch submitted %s", batch.getHeaderSignature()));
+      LOGGER.debug("Batch submitted {}", batch.getHeaderSignature());
       if (submitResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
-        LOGGER.warn(String.format("Batch submit response resulted in error: %s", submitResponse.getStatus()));
+        LOGGER.warn("Batch submit response resulted in error: {}", submitResponse.getStatus());
         throw new TimeKeeperException(
             String.format("Batch submit response resulted in error: %s", submitResponse.getStatus()));
       }
     } catch (InterruptedException e) {
-      throw new TimeKeeperException(
+      TimeKeeperException tke = new TimeKeeperException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));
+      tke.initCause(e);
+      throw tke;
     } catch (ValidatorConnectionError e) {
-      throw new TimeKeeperException(String.format("Sawtooth validator connection error. Details: %s", e.getMessage()));
+      TimeKeeperException tke = new TimeKeeperException(
+          String.format("Sawtooth validator connection error. Details: %s", e.getMessage()));
+      tke.initCause(e);
+      throw tke;
     } catch (InvalidProtocolBufferException e) {
-      throw new TimeKeeperException(String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()));
+      TimeKeeperException tke = new TimeKeeperException(
+          String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()));
+      tke.initCause(e);
+      throw tke;
     }
   }
 
