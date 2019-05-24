@@ -20,7 +20,7 @@ public interface DamlCommitter {
 
   /**
    * Delegate method to the KeyValueCommitting class, but also providing some
-   * useful java<->scala type tidying.
+   * useful java to scala and vice versa type tidying.
    * @param config          the current configuration of the Daml ledger
    * @param entryId         the proposed entry id for the log entry resulting from
    *                        this call

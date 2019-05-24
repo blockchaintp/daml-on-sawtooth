@@ -209,7 +209,6 @@
           <version>3.0.0</version>
           <executions>
             <execution>
-              <phase>validate</phase>
               <goals>
                 <goal>jxr</goal>
               </goals>
@@ -230,7 +229,6 @@
           <executions>
             <execution>
               <id>validate</id>
-              <phase>validate</phase>
               <goals>
                 <goal>check</goal>
               </goals>
@@ -268,7 +266,6 @@
           </configuration>
           <executions>
             <execution>
-              <phase>validate</phase>
               <goals>
                 <goal>check</goal>
               </goals>
@@ -292,7 +289,6 @@
           </configuration>
           <executions>
             <execution>
-              <phase>generate-sources</phase>
               <goals>
                 <goal>compile</goal>
               </goals>
@@ -316,9 +312,13 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>3.1.0</version>
+          <configuration>
+            <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
+          </configuration>
           <executions>
             <execution>
               <id>attach-javadocs</id>
+              <phase>package</phase>
               <goals>
                 <goal>jar</goal>
               </goals>
@@ -332,7 +332,6 @@
           <executions>
             <execution>
               <id>sign-artifacts</id>
-              <phase>verify</phase>
               <goals>
                 <goal>sign</goal>
               </goals>
@@ -360,8 +359,8 @@
           </configuration>
           <executions>
             <execution>
-              <id>make-assembly</id> <!-- this is used for inheritance merges -->
-              <phase>package</phase> <!-- bind to the packaging phase -->
+              <id>make-assembly</id>
+              <phase>package</phase>
               <goals>
                 <goal>single</goal>
               </goals>
@@ -370,7 +369,27 @@
         </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+    </plugins>
   </build>
+
   <repositories>
     <repository>
       <id>da-repository</id>
