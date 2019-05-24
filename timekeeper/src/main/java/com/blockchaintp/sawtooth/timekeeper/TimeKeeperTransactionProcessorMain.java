@@ -3,7 +3,9 @@ package com.blockchaintp.sawtooth.timekeeper;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.timekeeper.processor.TimeKeeperTransactionHandler;
 import com.blockchaintp.utils.InMemoryKeyManager;
@@ -20,7 +22,7 @@ import sawtooth.sdk.processor.TransactionProcessor;
  */
 public final class TimeKeeperTransactionProcessorMain {
 
-  private static final Logger LOGGER = Logger.getLogger(TimeKeeperTransactionProcessorMain.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(TimeKeeperTransactionProcessorMain.class);
 
   /**
    * A basic main method for this transaction processor.
@@ -32,8 +34,8 @@ public final class TimeKeeperTransactionProcessorMain {
 
     Stream stream = new ZmqStream(args[0]);
     KeyManager kmgr = InMemoryKeyManager.create();
-    final long period = 1;
-    final TimeUnit periodUnit = TimeUnit.MINUTES;
+    final long period = 20;
+    final TimeUnit periodUnit = TimeUnit.SECONDS;
     clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, periodUnit);
 
     TransactionProcessor transactionProcessor = new TransactionProcessor(args[0]);
@@ -46,7 +48,7 @@ public final class TimeKeeperTransactionProcessorMain {
       thread.join();
       clockExecutor.shutdownNow();
     } catch (InterruptedException exc) {
-      LOGGER.warning("TransactionProcessor was interrupted");
+      LOGGER.warn("TransactionProcessor was interrupted");
     }
   }
 

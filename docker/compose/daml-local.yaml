@@ -78,8 +78,10 @@ services:
     container_name: sawtooth-daml-rpc
     expose:
       - 9000
+      - 5051
     ports:
       - "9000:9000"
+      - "5051:5051"
     command: "/opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 --connect tcp://validator:4004"
     depends_on:
       - validator

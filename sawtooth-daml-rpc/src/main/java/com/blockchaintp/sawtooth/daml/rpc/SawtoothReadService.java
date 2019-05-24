@@ -26,6 +26,7 @@ public class SawtoothReadService implements ReadService {
   private final String url;
   private final ExecutorService executorService;
   private final String ledgerId;
+  private final SawtoothTransactionsTracer trace;
 
   /**
    * Build a ReadService based on a zmq address URL.
@@ -35,7 +36,21 @@ public class SawtoothReadService implements ReadService {
   public SawtoothReadService(final String thisLedgerId, final String zmqUrl) {
     this.ledgerId = thisLedgerId;
     this.url = zmqUrl;
-    executorService = Executors.newWorkStealingPool();
+    this.executorService = Executors.newWorkStealingPool();
+    this.trace = null;
+  }
+
+  /**
+   * Build a ReadService based on a zmq address URL.
+   * @param thisLedgerId the ledger id for this RPC
+   * @param zmqUrl       the url of the zmq endpoint
+   * @param tracer       a transaction tracer
+   */
+  public SawtoothReadService(final String thisLedgerId, final String zmqUrl, final SawtoothTransactionsTracer tracer) {
+    this.ledgerId = thisLedgerId;
+    this.url = zmqUrl;
+    this.trace = tracer;
+    this.executorService = Executors.newWorkStealingPool();
   }
 
   @Override
@@ -53,6 +68,9 @@ public class SawtoothReadService implements ReadService {
       return null;
     } else {
       DamlLogEventHandler dleHandler = new DamlLogEventHandler(url);
+      if (this.trace != null) {
+        dleHandler.setTracer(this.trace);
+      }
       executorService.submit(dleHandler);
       return Source.fromPublisher(dleHandler.getPublisher());
     }
