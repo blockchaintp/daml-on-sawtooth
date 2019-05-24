@@ -27,7 +27,6 @@
      <plugin>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-compiler-plugin</artifactId>
-      <version>${maven.compiler.plugin.version}</version>
       <configuration>
        <release>11</release>
       </configuration>
@@ -75,7 +74,7 @@
  </profiles>
  <properties>
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  <protobuf.version>3.6.1</protobuf.version>
+  <protobuf.version>3.7.1</protobuf.version>
   <checkstyle.path>checkstyle.xml</checkstyle.path>
   <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
   <sawtooth.sdk.version>v0.1.2-SNAPSHOT</sawtooth.sdk.version>
@@ -135,11 +134,6 @@
    <dependency>
     <groupId>org.slf4j</groupId>
     <artifactId>slf4j-api</artifactId>
-    <version>1.8.0-beta4</version>
-   </dependency>
-   <dependency>
-    <groupId>org.slf4j</groupId>
-    <artifactId>slf4j-log4j12</artifactId>
     <version>1.8.0-beta4</version>
    </dependency>
    <dependency>
