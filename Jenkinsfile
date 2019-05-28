@@ -17,12 +17,7 @@
 
 
 pipeline {
-    agent {
-        node {
-            label 'master'
-            customWorkspace "workspace/${env.BUILD_TAG}"
-        }
-    }
+    agent any
 
     options {
         ansiColor('xterm')
@@ -41,17 +36,19 @@ pipeline {
 
         stage('Fetch Tags') {
             steps {
-                sh 'git fetch --tag'
+              sh 'git fetch --tags'
             }
         }
 
         stage('Build Packages') {
             steps {
                 sh 'docker build -t daml-on-sawtooth-build:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
-                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
-                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B deploy'
-                sh 'docker run --rm -v $HOME/.m2:/root/.m2 daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-                sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+                configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
+                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B deploy'
+                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+                  sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+                }
                 sh 'docker-compose -f docker-compose-installed.yaml build'
             }
         }
