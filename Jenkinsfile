@@ -1,6 +1,6 @@
 #!groovy
 
-// Copyright 2017 Intel Corporation
+// Copyright 2017 Blockchain Technology Partners
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,15 +28,23 @@ pipeline {
     environment {
         ORGANIZATION="dev.catenasys.com:8083/blockchaintp"
         DOCKER_URL="https://dev.catenasys.com:8083"
-        ISOLATION_ID = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
-        COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
+        ISOLATION_ID = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
+        COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
     }
 
     stages {
 
         stage('Fetch Tags') {
             steps {
-              sh 'git fetch --tags'
+              checkout([$class: 'GitSCM', branches: [[name: "*/${GIT_BRANCH}"]],
+                  doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [],
+                  userRemoteConfigs: [[credentialsId: 'ffda1588-87f4-4faf-9955-ef6681ca0e13',noTags:false, url: "${GIT_URL}"]],
+                  extensions: [
+                       [$class: 'CloneOption',
+                        shallow: false,
+                        noTags: false,
+                        timeout: 60]
+                  ]])
             }
         }
 
