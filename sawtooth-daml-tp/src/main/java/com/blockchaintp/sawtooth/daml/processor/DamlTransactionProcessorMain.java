@@ -1,6 +1,7 @@
 package com.blockchaintp.sawtooth.daml.processor;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.daml.processor.impl.DamlCommitterImpl;
 import com.blockchaintp.sawtooth.daml.processor.impl.DamlTransactionHandler;
@@ -15,7 +16,7 @@ import sawtooth.sdk.processor.TransactionProcessor;
  */
 public final class DamlTransactionProcessorMain {
 
-  private static final Logger LOGGER = Logger.getLogger(DamlTransactionProcessorMain.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionProcessorMain.class);
 
   /**
    * A basic main method for this transaction processor.
@@ -28,13 +29,13 @@ public final class DamlTransactionProcessorMain {
     DamlCommitter committer = new DamlCommitterImpl(engine);
     TransactionHandler handler = new DamlTransactionHandler(committer);
     transactionProcessor.addHandler(handler);
-    LOGGER.info("Added handler " + DamlTransactionHandler.class.getName());
+    LOGGER.info("Added handler {}", DamlTransactionHandler.class.getName());
     Thread thread = new Thread(transactionProcessor);
     thread.start();
     try {
       thread.join();
     } catch (InterruptedException exc) {
-      LOGGER.warning("TransactionProcessor was interrupted");
+      LOGGER.warn("TransactionProcessor was interrupted");
     }
   }
 

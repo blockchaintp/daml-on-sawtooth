@@ -15,6 +15,7 @@ import org.zeromq.ZLoop;
 import org.zeromq.ZMQ.PollItem;
 import org.zeromq.ZMsg;
 
+import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -24,6 +25,7 @@ import com.daml.ledger.participant.state.v1.Update.Heartbeat;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 
 import io.reactivex.processors.UnicastProcessor;
 import sawtooth.sdk.messaging.Future;
@@ -59,6 +61,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private Stream stream;
   private LogEntryTransformer transformer;
+  private SawtoothTransactionsTracer tracer = null;
 
   /**
    * Build a handler for the given zmqUrl.
@@ -117,6 +120,10 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private Collection<Tuple2<Offset, Update>> eventToUpdates(final EventList evtList)
       throws InvalidProtocolBufferException {
+    if (this.tracer != null) {
+      String jsonOut = JsonFormat.printer().print(evtList);
+      this.tracer.putReadTransactions(jsonOut);
+    }
     Collection<Tuple2<Offset, Update>> tuplesToReturn = new ArrayList<>();
 
     long blockNum = 0;
@@ -143,7 +150,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       }
     }
     // Only send heartbeats if we haven't sent anything
-    if (tuplesToReturn.size() <= 0) {
+    if (tuplesToReturn.isEmpty()) {
       for (Event evt : evtList.getEventsList()) {
         Map<String, String> attrMap = eventAttributeMap(evt);
         if (evt.getEventType()
@@ -155,7 +162,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           Offset hbOffset = new Offset(new long[] {blockNum, 0});
           Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
           // Only send the most recent heartbeat
-          if (tuplesToReturn.size() > 0) {
+          if (!tuplesToReturn.isEmpty()) {
             tuplesToReturn.clear();
           }
           tuplesToReturn.add(updateTuple);
@@ -265,6 +272,14 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     } catch (InterruptedException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
     }
+  }
+
+  /**
+   * Set a tracer for this event handler.
+   * @param trace the tracer
+   */
+  public final void setTracer(final SawtoothTransactionsTracer trace) {
+    this.tracer = trace;
   }
 
 }

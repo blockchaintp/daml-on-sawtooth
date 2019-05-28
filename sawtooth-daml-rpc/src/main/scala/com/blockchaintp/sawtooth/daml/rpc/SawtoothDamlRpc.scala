@@ -15,7 +15,7 @@ import com.digitalasset.daml.lf.data.ImmArray
 import com.digitalasset.daml.lf.transaction.GenTransaction
 import com.digitalasset.daml_lf.DamlLf.Archive
 import com.digitalasset.platform.common.util.DirectExecutionContext
-import com.blockchaintp.utils.InMemoryKeyManager
+import com.blockchaintp.utils.DirectoryKeyManager
 import org.slf4j.LoggerFactory
  
 import scala.util.Try
@@ -38,10 +38,9 @@ object SawtoothDamlRpc extends App {
   logger.error(s"Connecting to "+config.connect)
   val validatorAddress = config.connect
   val swTxnTracer = new SawtoothTransactionsTracer(5051)
-  swTxnTracer.initializeRestEndpoints()
   
-  val keyManager = InMemoryKeyManager.createSECP256k1()
-  val readService = new SawtoothReadService("this-ledger-id",validatorAddress)
+  val keyManager = DirectoryKeyManager.create(config.keystore)
+  val readService = new SawtoothReadService("this-ledger-id",validatorAddress,swTxnTracer)
   val writeService = new SawtoothWriteService(validatorAddress,keyManager, swTxnTracer)
  
   readService.getLedgerInitialConditions

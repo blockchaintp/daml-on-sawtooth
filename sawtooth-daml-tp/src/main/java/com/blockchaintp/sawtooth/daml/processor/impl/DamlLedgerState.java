@@ -77,8 +77,10 @@ public final class DamlLedgerState implements LedgerState {
         DamlStateValue v = DamlStateValue.parseFrom(e.getValue());
         retMap.put(k, v);
       } catch (InvalidProtocolBufferException exc) {
-        throw new InternalError(
+        InternalError ie = new InternalError(
             String.format("Content at address={} is not parsable as DamlStateValue", e.getKey()));
+        ie.initCause(exc);
+        throw ie;
       }
     }
     return retMap;
@@ -108,7 +110,10 @@ public final class DamlLedgerState implements LedgerState {
         DamlLogEntry v = DamlLogEntry.parseFrom(e.getValue());
         retMap.put(k, v);
       } catch (InvalidProtocolBufferException exc) {
-        throw new InternalError(String.format("Content at address={} is not parsable as DamlLogEntry", e.getKey()));
+        InternalError ie = new InternalError(
+            String.format("Content at address={} is not parsable as DamlLogEntry", e.getKey()));
+        ie.initCause(exc);
+        throw ie;
       }
     }
     return retMap;

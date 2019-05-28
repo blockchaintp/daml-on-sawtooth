@@ -1,13 +1,20 @@
 package com.blockchaintp.noop;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import sawtooth.sdk.processor.TransactionProcessor;;
+import sawtooth.sdk.processor.TransactionProcessor;
 
 /**
  * A transaction processor which blindly accepts or denies transactions without
@@ -15,6 +22,9 @@ import sawtooth.sdk.processor.TransactionProcessor;;
  * @author scealiontach
  */
 public class NoOpTransactionProcessor {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(NoOpTransactionProcessor.class);
+
   private static final int ACCEPT_ALL = 1;
   @SuppressWarnings("unused")
   private static final int INVALID_ALL = 2;
@@ -24,7 +34,7 @@ public class NoOpTransactionProcessor {
 
   }
 
-  private static CommandLine parseArgs(final String[] args) throws ParseException {
+  private static CommandLine parseArgs(final String... args) throws ParseException {
     Options options = new Options();
     Option validatorOption = Option.builder("c").required(true).longOpt("connect").hasArg().type(String.class)
         .argName("validator-address").desc("Address and port to connect to the validator, e.g. tcp://localhost:4004")
@@ -62,13 +72,16 @@ public class NoOpTransactionProcessor {
 
       NoOpTransactionHandler transactionHandler = new NoOpTransactionHandler(namespace, version, strategy);
       processor.addHandler(transactionHandler);
-      Thread t = new Thread(processor);
-      t.start();
+      ExecutorService pool = Executors.newSingleThreadExecutor();
+      Future<?> submit = pool.submit(processor);
+      submit.get();
 
     } catch (ParseException e) {
-      e.printStackTrace();
+      LOGGER.error("Error parsing command", e);
+    } catch (InterruptedException exc) {
+      LOGGER.warn("Interrupted while waiting for processing to complete", exc);
+    } catch (ExecutionException exc) {
+      LOGGER.warn("Failed to start processor", exc);
     }
-
   }
-
 }

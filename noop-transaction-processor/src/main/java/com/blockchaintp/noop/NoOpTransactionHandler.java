@@ -45,8 +45,8 @@ public final class NoOpTransactionHandler implements TransactionHandler {
 
   /**
    * A transaction handler which does nothing with the data.
-   * @param targetNs the target namespace
-   * @param targetVer the target version
+   * @param targetNs   the target namespace
+   * @param targetVer  the target version
    * @param txStrategy the strategy to respond to transactions with
    */
   public NoOpTransactionHandler(final String targetNs, final String targetVer, final int txStrategy) {
