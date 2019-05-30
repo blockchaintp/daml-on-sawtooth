@@ -1,6 +1,6 @@
 #!groovy
 
-// Copyright 2017 Intel Corporation
+// Copyright 2017 Blockchain Technology Partners
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,12 +17,7 @@
 
 
 pipeline {
-    agent {
-        node {
-            label 'master'
-            customWorkspace "workspace/${env.BUILD_TAG}"
-        }
-    }
+    agent any
 
     options {
         ansiColor('xterm')
@@ -33,25 +28,35 @@ pipeline {
     environment {
         ORGANIZATION="dev.catenasys.com:8083/blockchaintp"
         DOCKER_URL="https://dev.catenasys.com:8083"
-        ISOLATION_ID = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
-        COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
+        ISOLATION_ID = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
+        COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
     }
 
     stages {
 
         stage('Fetch Tags') {
             steps {
-                sh 'git fetch --tag'
+              checkout([$class: 'GitSCM', branches: [[name: "*/${GIT_BRANCH}"]],
+                  doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [],
+                  userRemoteConfigs: [[credentialsId: 'ffda1588-87f4-4faf-9955-ef6681ca0e13',noTags:false, url: "${GIT_URL}"]],
+                  extensions: [
+                       [$class: 'CloneOption',
+                        shallow: false,
+                        noTags: false,
+                        timeout: 60]
+                  ]])
             }
         }
 
         stage('Build Packages') {
             steps {
                 sh 'docker build -t daml-on-sawtooth-build:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
-                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
-                sh 'docker run --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B deploy'
-                sh 'docker run --rm -v $HOME/.m2:/root/.m2 daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-                sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+                configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
+                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B deploy'
+                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+                  sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+                }
                 sh 'docker-compose -f docker-compose-installed.yaml build'
             }
         }
