@@ -17,84 +17,102 @@
 
 
 pipeline {
-    agent any
+  agent any
 
-    options {
-        ansiColor('xterm')
-        timestamps()
-        buildDiscarder(logRotator(daysToKeepStr: '31'))
+  options {
+    ansiColor('xterm')
+    timestamps()
+    buildDiscarder(logRotator(daysToKeepStr: '31'))
+  }
+
+  environment {
+    ORGANIZATION="dev.catenasys.com:8083/blockchaintp"
+    DOCKER_URL="https://dev.catenasys.com:8083"
+    ISOLATION_ID = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
+    COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
+  }
+
+  stages {
+    stage('Fetch Tags') {
+      steps {
+        checkout([$class: 'GitSCM', branches: [[name: "*/${GIT_BRANCH}"]],
+            doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [],
+            userRemoteConfigs: [[credentialsId: 'ffda1588-87f4-4faf-9955-ef6681ca0e13',noTags:false, url: "${GIT_URL}"]],
+            extensions: [
+                  [$class: 'CloneOption',
+                  shallow: false,
+                  noTags: false,
+                  timeout: 60]
+            ]])
+      }
     }
 
-    environment {
-        ORGANIZATION="dev.catenasys.com:8083/blockchaintp"
-        DOCKER_URL="https://dev.catenasys.com:8083"
-        ISOLATION_ID = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
-        COMPOSE_PROJECT_NAME = sh(returnStdout: true, script: 'echo $BUILD_TAG | sha256sum | cut -c1-64').trim()
+    stage('Build') {
+      steps {
+        sh 'docker build -t daml-on-sawtooth-build:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean compile'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+        }
+      }
     }
 
-    stages {
-
-        stage('Fetch Tags') {
-            steps {
-              checkout([$class: 'GitSCM', branches: [[name: "*/${GIT_BRANCH}"]],
-                  doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [],
-                  userRemoteConfigs: [[credentialsId: 'ffda1588-87f4-4faf-9955-ef6681ca0e13',noTags:false, url: "${GIT_URL}"]],
-                  extensions: [
-                       [$class: 'CloneOption',
-                        shallow: false,
-                        noTags: false,
-                        timeout: 60]
-                  ]])
-            }
+    stage('Test') {
+      steps {
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B test'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
         }
-
-        stage('Build Packages') {
-            steps {
-                sh 'docker build -t daml-on-sawtooth-build:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
-                configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean package'
-                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B deploy'
-                  sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-                  sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
-                }
-                sh 'docker-compose -f docker-compose-installed.yaml build'
-            }
-        }
-
-        stage('Create Archives') {
-            steps {
-                sh '''
-                    REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
-                    VERSION=`git describe --dirty`
-                    git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
-                    git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
-                '''
-                archiveArtifacts artifacts: '**/target/*.zip'
-                archiveArtifacts artifacts: '**/target/*.jar'
-            }
-        }
-
+      }
     }
 
-    post {
-        always {
-            junit '**/target/surefire-reports/**/*.xml'
-            sh 'docker-compose -f docker/docker-compose-build.yaml down'
-            sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn clean'
-	        sh '''
-                for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
-                    docker rmi -f $img:$ISOLATION_ID
-                done
-            '''
+    stage('Package') {
+      steps {
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B package'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
         }
-        success {
-            archiveArtifacts '*.tgz, *.zip'
-        }
-        aborted {
-            error "Aborted, exiting now"
-        }
-        failure {
-            error "Failed, exiting now"
-        }
+        sh 'docker-compose -f docker-compose-installed.yaml build'
+      }
     }
+
+    stage('Create Archives') {
+      steps {
+        sh '''
+            REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
+            VERSION=`git describe --dirty`
+            git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
+            git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
+        '''
+        archiveArtifacts artifacts: '**/target/*.zip'
+        archiveArtifacts artifacts: '**/target/*.jar'
+      }
+    }
+
+  }
+
+  post {
+      always {
+        junit '**/target/surefire-reports/**/*.xml'
+        sh 'docker-compose -f docker/docker-compose-build.yaml down'
+        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn clean'
+        sh '''
+          for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
+            docker rmi -f $img:$ISOLATION_ID
+          done
+        '''
+      }
+      success {
+          archiveArtifacts '*.tgz, *.zip'
+      }
+      aborted {
+          error "Aborted, exiting now"
+      }
+      failure {
+          error "Failed, exiting now"
+      }
+  }
 }
