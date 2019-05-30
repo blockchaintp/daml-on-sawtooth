@@ -61,22 +61,6 @@ pipeline {
             }
         }
 
-        stage('Tag and Push Docker images') {
-            steps{
-                withCredentials([usernamePassword(credentialsId: 'btp-build-nexus', usernameVariable:'DOCKER_USER', passwordVariable:'DOCKER_PASSWORD')]) {
-                    sh "docker login -u $DOCKER_USER --password=$DOCKER_PASSWORD $DOCKER_URL"
-                    sh '''
-                        TAG_VERSION="`git describe --dirty`";
-                        for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
-                            docker tag $img:$ISOLATION_ID $ORGANIZATION/$img:$TAG_VERSION
-                            docker push $ORGANIZATION/$img:$TAG_VERSION
-                        done
-                    '''
-
-                }
-            }
-        }
-
         stage('Create Archives') {
             steps {
                 sh '''
