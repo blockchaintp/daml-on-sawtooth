@@ -1,0 +1,39 @@
+version: '3'
+services:
+  router:
+    image: binocarlos/noxy
+    ports:
+      - 80:80
+    depends_on:
+      - api
+      - frontend
+    environment:
+      - NOXY_DEFAULT_HOST=frontend
+      - NOXY_DEFAULT_PORT=8080
+      - NOXY_DEFAULT_WS=1
+      - NOXY_API_FRONT=/api/v1
+      - NOXY_API_HOST=api
+  frontend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    entrypoint: bash -c 'if [ -n "$MANUALRUN" ]; then tail -f /dev/null; else yarn run develop; fi'
+    environment:
+      - NODE_ENV=development
+      - MANUALRUN
+    volumes:
+      - ./src:/app/frontend/src
+      - ./config:/app/frontend/config
+      - ./dist:/app/frontend/dist
+  api:
+    build:
+      context: ./mock-api
+      dockerfile: Dockerfile
+    entrypoint: bash -c 'if [ -n "$MANUALRUN" ]; then tail -f /dev/null; else yarn run start; fi'
+    environment:
+      - NODE_ENV=development
+      - MANUALRUN
+    volumes:
+      - ./mock-api/src:/app/api/src

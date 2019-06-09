@@ -13,5 +13,11 @@
 **/.externalToolBuilders
 **/.metals
 
+# Exclude macOS system
+.DS_Store
+
 # Exclude vscode setting
 **/.vscode
+
+# Exclude direnv envrc
+.envrc

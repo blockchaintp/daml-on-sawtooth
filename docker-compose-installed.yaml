@@ -16,6 +16,23 @@ version: '2.1'
 
 services:
 
+  tracer-ui:
+    build:
+      context: ./tracer-ui
+      dockerfile: Dockerfile
+    image: tracer-ui:${ISOLATION_ID}
+    container_name: tracer-ui
+    ports:
+      - 8080:8080
+    entrypoint: bash -c 'if [ -n "$MANUALRUN" ]; then tail -f /dev/null; else yarn run develop; fi'
+    environment:
+      - NODE_ENV=development
+      - MANUALRUN
+    volumes:
+      - ./tracer-ui/src:/app/frontend/src
+      - ./tracer-ui/config:/app/frontend/config
+      - ./tracer-ui/dist:/app/frontend/dist
+
   sawtooth-daml-tp:
     build:
       context: .

@@ -1,0 +1,15 @@
+#!/bin/bash -x
+
+if [ -z "$1" -o -z "$2" -o -z "$3" ]; then 
+	echo "SYNTAX: $0 <isolation_id> <organization> <tag>"
+else
+	ISOLATION_ID=$1
+	ORGANIZATION=$2
+	TAG=$3
+fi
+
+
+for img in $(docker images --filter reference=*:${ISOLATION_ID} --format {{.Repository}}) ; do 
+	docker tag $img:$ISOLATION_ID $ORGANIZATION/$img:$TAG
+	docker push $ORGANIZATION/$img:$TAG
+done
