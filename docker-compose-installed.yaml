@@ -24,10 +24,9 @@ services:
     container_name: tracer-ui
     ports:
       - 8080:8080
-    entrypoint: bash -c 'if [ -n "$MANUALRUN" ]; then tail -f /dev/null; else yarn run develop; fi'
+    entrypoint: bash -c 'yarn run develop'
     environment:
       - NODE_ENV=development
-      - MANUALRUN
     volumes:
       - ./tracer-ui/src:/app/frontend/src
       - ./tracer-ui/config:/app/frontend/config
