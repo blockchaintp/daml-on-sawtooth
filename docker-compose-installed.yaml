@@ -16,6 +16,21 @@ version: '2.1'
 
 services:
 
+  router:
+    image: binocarlos/noxy
+    ports:
+      - 80:80
+    depends_on:
+      - sawtooth-daml-rpc
+      - tracer-ui
+    environment:
+      - NOXY_DEFAULT_HOST=tracer-ui
+      - NOXY_DEFAULT_PORT=8080
+      - NOXY_DEFAULT_WS=1
+      - NOXY_API_FRONT=/transactions
+      - NOXY_API_HOST=sawtooth-daml-rpc
+      - NOXY_API_PORT=5051
+
   tracer-ui:
     build:
       context: ./tracer-ui
