@@ -163,11 +163,9 @@ public final class SawtoothWriteService implements WriteService {
 
     DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
     String packageAddress = Namespace.makeAddressForType(packageKey);
-    LOGGER.info("package address=" + packageAddress);
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
     String logEntryAddress = Namespace.makeAddressForType(damlLogEntryId);
-    LOGGER.info("log entry address=" + logEntryAddress);
 
     Collection<String> outputAddresses = new ArrayList<>();
     outputAddresses.add(packageAddress);
