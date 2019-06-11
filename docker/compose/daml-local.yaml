@@ -82,7 +82,10 @@ services:
     ports:
       - "9000:9000"
       - "5051:5051"
-    command: "/opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 --connect tcp://validator:4004"
+    entrypoint: "bash -c \"\
+      /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
+        --connect tcp://validator:4004 \
+        `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     depends_on:
       - validator
 

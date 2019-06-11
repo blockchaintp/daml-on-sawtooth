@@ -52,6 +52,11 @@ object Cli {
       .optional()
       .text("TLS: The crt file to be used as the the trusted root CA.")
       .action(cacrtConfig)
+    arg[File]("<archive>...")
+      .optional()
+      .unbounded()
+      .action((f, c) => c.copy(archiveFiles = f :: c.archiveFiles))
+      .text("DAR files to load. Scenarios are ignored. The servers starts with an empty ledger by default, but archives are persistent.")
   }
 
   def parse(args: Array[String]): Option[Config] =

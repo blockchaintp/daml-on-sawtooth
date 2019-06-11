@@ -65,7 +65,7 @@ public final class DamlLedgerState implements LedgerState {
     List<String> addresses = new ArrayList<>();
     Map<String, DamlStateKey> addressToKey = new HashMap<>();
     for (DamlStateKey k : keys) {
-      String address = Namespace.makeDamlStateAddress(k);
+      String address = Namespace.makeAddressForType(k);
       addresses.add(address);
       addressToKey.put(address, k);
     }
@@ -98,7 +98,7 @@ public final class DamlLedgerState implements LedgerState {
     List<String> addresses = new ArrayList<>();
     Map<String, DamlLogEntryId> addressToKey = new HashMap<>();
     for (DamlLogEntryId k : keys) {
-      String address = Namespace.makeDamlLogEntryAddress(k);
+      String address = Namespace.makeAddressForType(k);
       addresses.add(address);
       addressToKey.put(address, k);
     }
@@ -128,7 +128,7 @@ public final class DamlLedgerState implements LedgerState {
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
-    setMap.put(Namespace.makeDamlStateAddress(key), val.toByteString());
+    setMap.put(Namespace.makeAddressForType(key), val.toByteString());
     state.setState(setMap.entrySet());
   }
 
@@ -137,7 +137,7 @@ public final class DamlLedgerState implements LedgerState {
     Map<String, ByteString> setMap = new HashMap<>();
     List<String> idList = new ArrayList<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
-      String address = Namespace.makeDamlLogEntryAddress(e.getKey());
+      String address = Namespace.makeAddressForType(e.getKey());
       setMap.put(address, e.getValue().toByteString());
       idList.add(address);
     }
@@ -188,7 +188,7 @@ public final class DamlLedgerState implements LedgerState {
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
     for (Entry<DamlStateKey, DamlStateValue> e : entries) {
-      setMap.put(Namespace.makeDamlStateAddress(e.getKey()), e.getValue().toByteString());
+      setMap.put(Namespace.makeAddressForType(e.getKey()), e.getValue().toByteString());
     }
     state.setState(setMap.entrySet());
   }
@@ -210,7 +210,7 @@ public final class DamlLedgerState implements LedgerState {
         TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
         return tkgr.getLastCalculatedTime();
       } else {
-        LOGGER.warning("No global time was retrieved,assuming beginning of epoch");
+        LOGGER.info("No global time has been set,assuming beginning of epoch");
         return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
       }
     } catch (InvalidTransactionException exc) {
