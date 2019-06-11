@@ -29,5 +29,12 @@
         <exclude>*-sources.jar</exclude>
       </excludes>
     </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/dar</directory>
+      <outputDirectory>dar</outputDirectory>
+      <includes>
+        <include>*.dar</include>
+      </includes>
+    </fileSet>
   </fileSets>
 </assembly>

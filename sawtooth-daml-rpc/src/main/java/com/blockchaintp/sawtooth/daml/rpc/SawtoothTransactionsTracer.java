@@ -93,7 +93,7 @@ public final class SawtoothTransactionsTracer {
    * @param writeTxn element.
    */
   public void putWriteTransactions(final String writeTxn) {
-    LOGGER.info("Adding item to write tracer: {}", writeTxn);
+    LOGGER.debug("Adding item to write tracer: {}", writeTxn);
     this.writeTransactionsBuffer.offer(writeTxn);
   }
 
@@ -102,7 +102,7 @@ public final class SawtoothTransactionsTracer {
    * @param readTxn element.
    */
   public void putReadTransactions(final String readTxn) {
-    LOGGER.info("Adding item to read tracer: {}", readTxn);
+    LOGGER.debug("Adding item to read tracer: {}", readTxn);
     this.readTransactionsBuffer.offer(readTxn);
   }
 }
