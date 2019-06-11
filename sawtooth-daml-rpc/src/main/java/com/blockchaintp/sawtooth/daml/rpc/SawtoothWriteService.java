@@ -3,6 +3,7 @@ package com.blockchaintp.sawtooth.daml.rpc;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ import com.digitalasset.daml.lf.transaction.GenTransaction;
 import com.digitalasset.daml.lf.value.Value.ContractId;
 import com.digitalasset.daml.lf.value.Value.NodeId;
 import com.digitalasset.daml.lf.value.Value.VersionedValue;
+import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -44,7 +46,7 @@ import scala.collection.JavaConverters;
  * A implementation of Sawtooth write service. This is responsible for writing
  * Daml submission to to Sawtooth validator.
  */
-public class SawtoothWriteService implements WriteService {
+public final class SawtoothWriteService implements WriteService {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothWriteService.class);
 
@@ -81,7 +83,7 @@ public class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public final void submitTransaction(final SubmitterInfo submitterInfo, final TransactionMeta transactionMeta,
+  public void submitTransaction(final SubmitterInfo submitterInfo, final TransactionMeta transactionMeta,
       final GenTransaction<NodeId, ContractId, VersionedValue<ContractId>> transaction) {
 
     DamlSubmission transactionToSubmission = KeyValueSubmission.transactionToSubmission(submitterInfo, transactionMeta,
@@ -99,6 +101,7 @@ public class SawtoothWriteService implements WriteService {
       String addr = Namespace.makeAddressForType(dk);
       outputAddresses.add(addr);
     }
+    outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils
         .submissionToDamlStateAddress(transactionToSubmission);
@@ -108,6 +111,7 @@ public class SawtoothWriteService implements WriteService {
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils
         .submissionToLogAddressMap(transactionToSubmission);
     inputAddresses.addAll(submissionToLogAddressMap.values());
+    inputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(transactionToSubmission.toByteString()).setLogEntryId(damlLogEntryId.toByteString()).build();
@@ -149,4 +153,42 @@ public class SawtoothWriteService implements WriteService {
     }
   }
 
+  /**
+   * Create and submit a sawtooth transaction which uploads the provided archive.
+   * @param archive the archive to upload.
+   */
+  public void uploadArchive(final Archive archive) {
+    DamlSubmission archiveSubmission = KeyValueSubmission.archiveToSubmission(archive);
+    String packageId = archive.getHash();
+
+    DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
+    String packageAddress = Namespace.makeAddressForType(packageKey);
+    LOGGER.info("package address=" + packageAddress);
+    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
+        .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
+    String logEntryAddress = Namespace.makeAddressForType(damlLogEntryId);
+    LOGGER.info("log entry address=" + logEntryAddress);
+
+    Collection<String> outputAddresses = new ArrayList<>();
+    outputAddresses.add(packageAddress);
+    outputAddresses.add(logEntryAddress);
+    outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
+
+    SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
+        .setSubmission(archiveSubmission.toByteString()).setLogEntryId(damlLogEntryId.toByteString()).build();
+
+    Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
+        Namespace.DAML_FAMILY_VERSION_1_0, Collections.emptyList(), outputAddresses, Arrays.asList(),
+        payload.toByteString());
+    Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
+
+    // Push to TraceTransaction class
+    this.sawtoothTransactionsTracer.putWriteTransactions(sawtoothBatch.toString());
+
+    try {
+      sendToValidator(sawtoothBatch);
+    } catch (SawtoothWriteServiceException e) {
+      LOGGER.error(e.getMessage());
+    }
+  }
 }

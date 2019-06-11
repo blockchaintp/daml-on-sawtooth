@@ -43,7 +43,7 @@ public final class Namespace {
   /**
    * Address for a list of addresses for Log Entries.
    */
-  public static final String DAML_LOG_ENTRY_LIST  = getNameSpace() + "01";
+  public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "00");
 
   /**
    * The first 6 characters of the family name hash.
