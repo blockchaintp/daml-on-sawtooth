@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+if [ -z "$1" ]; then
+	echo No image tag provided! 
+	exit 1
+else 
+	export TAG=$1
+	echo Cleaning images with tag $TAG
+fi
+
+for img in `docker images |grep ${TAG} | awk '{ print $1":"$2 }'`; do
+	docker rmi $img
+done

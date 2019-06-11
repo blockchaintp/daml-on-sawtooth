@@ -74,13 +74,13 @@ public final class SawtoothTransactionsTracer {
    * Initialising RESTful end points.
    */
   private void initializeRestEndpoints() {
-    get("/writeTxns", (req, res) -> {
+    get("/transactions/write", (req, res) -> {
       String text = this.takeWriteTransactionsBufferInJson();
       res.body(text);
       res.type("application/json");
       return text;
     });
-    get("/readTxns", (req, res) -> {
+    get("/transactions/read", (req, res) -> {
       String text = this.takeReadTransactionsBufferInJson();
       res.body(text);
       res.type("application/json");

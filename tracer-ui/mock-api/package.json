@@ -1,0 +1,14 @@
+{
+  "name": "tracer-ui-mock-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "mock api for the tracer service",
+  "scripts": {
+    "serve": "node src/index.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.0",
+    "pino": "^5.12.5"
+  }
+}
