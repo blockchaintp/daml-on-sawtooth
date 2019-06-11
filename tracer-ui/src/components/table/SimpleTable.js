@@ -105,7 +105,9 @@ class SimpleTable extends React.Component {
                       fields.map((field, i) => {
                         return (
                           <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
-                            { dataRow[field.name] }
+                            { 
+                              JSON.stringify(dataRow[field.name])
+                            }
                           </TableCell>
                         )
                       })

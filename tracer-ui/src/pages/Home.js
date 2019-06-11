@@ -7,11 +7,8 @@ import Tab from '@material-ui/core/Tab';
 import SimpleTable from 'components/table/SimpleTable'
 
 const transactionFields =[{
-  title: 'Payload',
-  name: 'name',
-}, {
-  title: 'Created',
-  name: 'created',
+  title: 'Event Type',
+  name: 'events',
 }]
 
 const styles = theme => ({

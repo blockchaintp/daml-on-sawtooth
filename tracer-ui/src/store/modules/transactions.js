@@ -38,7 +38,7 @@ const reducers = {
 
 const loaders = {
 
-  loadTransactions: (type) => axios.get(api.url(`/transactions/${type}`))
+  loadTransactions: (type) => axios.get(api.url(`/${type}`))
     .then(api.process),
     
 }

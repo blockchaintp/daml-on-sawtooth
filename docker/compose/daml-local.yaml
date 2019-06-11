@@ -29,7 +29,7 @@ services:
       - NOXY_DEFAULT_PORT=8080
       - NOXY_DEFAULT_WS=1
       - NOXY_API_FRONT=/transactions
-      - NOXY_API_HOST=daml-rpc
+      - NOXY_API_HOST=sawtooth-daml-rpc
       - NOXY_API_PORT=5051
 
   tracer-ui:

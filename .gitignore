@@ -21,3 +21,16 @@
 
 # Exclude direnv envrc
 .envrc
+
+#Backups
+*.bak
+*.gho
+*.ori
+*.orig
+*.tmp
+
+#General Linux
+*~
+
+# direnv
+**/.envrc
