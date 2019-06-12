@@ -105,6 +105,7 @@ public final class SawtoothWriteService implements WriteService {
       String addr = Namespace.makeAddressForType(dk);
       outputAddresses.add(addr);
     }
+    outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils
