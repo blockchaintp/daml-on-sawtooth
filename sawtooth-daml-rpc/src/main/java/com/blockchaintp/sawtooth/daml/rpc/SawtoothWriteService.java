@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
+import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
 import com.daml.ledger.participant.state.v1.WriteService;
@@ -83,7 +86,8 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public void submitTransaction(final SubmitterInfo submitterInfo, final TransactionMeta transactionMeta,
+  public CompletionStage<SubmissionResult> submitTransaction(final SubmitterInfo submitterInfo,
+      final TransactionMeta transactionMeta,
       final GenTransaction<NodeId, ContractId, VersionedValue<ContractId>> transaction) {
 
     DamlSubmission transactionToSubmission = KeyValueSubmission.transactionToSubmission(submitterInfo, transactionMeta,
@@ -101,6 +105,7 @@ public final class SawtoothWriteService implements WriteService {
       String addr = Namespace.makeAddressForType(dk);
       outputAddresses.add(addr);
     }
+    outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils
@@ -125,8 +130,12 @@ public final class SawtoothWriteService implements WriteService {
 
     try {
       sendToValidator(sawtoothBatch);
+      CompletionStage<SubmissionResult> cs = CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
+      return cs;
     } catch (SawtoothWriteServiceException e) {
       LOGGER.error(e.getMessage());
+      CompletionStage<SubmissionResult> cs = CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
+      return cs;
     }
   }
 

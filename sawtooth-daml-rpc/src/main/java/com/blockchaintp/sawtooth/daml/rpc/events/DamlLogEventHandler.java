@@ -134,6 +134,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         LOGGER.fine(String.format("Received block-commit block_num=%s", blockNum));
       }
     }
+    long updateCounter = 1;
     for (Event evt : evtList.getEventsList()) {
       Map<String, String> attrMap = eventAttributeMap(evt);
       if (evt.getEventType().equals(EventConstants.DAML_LOG_EVENT_SUBJECT)) {
@@ -143,7 +144,8 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         DamlLogEntryId id = DamlLogEntryId.newBuilder().setEntryId(entryIdVal).build();
         DamlLogEntry logEntry = DamlLogEntry.parseFrom(evt.getData());
         Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
-        Offset offset = new Offset(new long[] {blockNum, offsetCounter});
+        Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
+        updateCounter++;
         Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
         tuplesToReturn.add(updateTuple);
         LOGGER.info(String.format("Sending update at offset=%s", offset));
