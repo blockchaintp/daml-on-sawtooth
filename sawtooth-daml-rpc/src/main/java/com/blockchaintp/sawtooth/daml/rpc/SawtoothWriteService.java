@@ -34,8 +34,6 @@ import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import io.reactivex.internal.operators.completable.CompletableCreate;
-import io.reactivex.internal.operators.completable.CompletableFromSingle;
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
