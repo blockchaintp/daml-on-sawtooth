@@ -8,6 +8,9 @@ import TableCell from '@material-ui/core/TableCell'
 import TableHead from '@material-ui/core/TableHead'
 import TablePagination from '@material-ui/core/TablePagination'
 import TableRow from '@material-ui/core/TableRow'
+import List from '@material-ui/core/List'
+import ListItem from '@material-ui/core/ListItem'
+import ListItemText from '@material-ui/core/ListItemText';
 
 const styles = theme => {
   return {
@@ -91,36 +94,58 @@ class SimpleTable extends React.Component {
             }
             <TableBody>
               {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(dataRow => {
-                return (
-                  <TableRow
-                    hover
-                    onClick={event => {
-                      if(!onRowClick) return
-                      onRowClick(event, dataRow.id)
-                    }}
-                    tabIndex={-1}
-                    key={dataRow.id}
-                  >
-                    {
-                      fields.map((field, i) => {
-                        return (
-                          <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
-                            { 
-                              JSON.stringify(dataRow[field.name])
-                            }
+                return dataRow.events.map((event)=>{
+                  return (
+                    <TableRow
+                      hover
+                      onClick={event => {
+                        if(!onRowClick) return
+                        onRowClick(event, dataRow.id)
+                      }}
+                      tabIndex={-1}
+                      key={Math.floor(Math.random()*10000)}
+                    >
+                      {
+                        fields.map((field, i) => {
+                          if ( i == 0 ){
+                            return (
+                              <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
+                                {
+                                  event.eventType
+                                }
+                              </TableCell>
+                            )
+                          }else{
+                            return (
+                              <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
+                                <List className={ classes.autoCell }>
+                                {
+                                  event.attributes.map((attribute)=>{
+                                    return(
+                                      <ListItem className={ classes.autoCell }>
+                                        <ListItemText className={ classes.autoCell }>
+                                          { attribute.key + ' : ' + attribute.value }
+                                        </ListItemText>
+                                      </ListItem>
+                                    )
+                                  })
+                                }
+                                </List>
+                              </TableCell>
+                            )
+                          }
+                        })
+                      }
+                      {
+                        getActions ? (
+                          <TableCell align='right'>
+                            { getActions(dataRow) }
                           </TableCell>
-                        )
-                      })
-                    }
-                    {
-                      getActions ? (
-                        <TableCell align='right'>
-                          { getActions(dataRow) }
-                        </TableCell>
-                      ) : null
-                    }
-                  </TableRow>
-                );
+                        ) : null
+                      }
+                    </TableRow>
+                  );
+                })
               })}
             </TableBody>
           </Table>

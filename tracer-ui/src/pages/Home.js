@@ -8,7 +8,8 @@ import SimpleTable from 'components/table/SimpleTable'
 
 const transactionFields =[{
   title: 'Event Type',
-  name: 'events',
+},{
+  title: 'Attributes',
 }]
 
 const styles = theme => ({
