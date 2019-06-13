@@ -268,8 +268,8 @@
           <version>3.12.0</version>
           <configuration>
             <rulesets>
-              <ruleset>/rulesets/java/maven-pmd-plugin-default.xml</ruleset>
-              <ruleset>/category/java/bestpractices.xml</ruleset>
+<!--               <ruleset>/rulesets/java/maven-pmd-plugin-default.xml</ruleset>
+              <ruleset>/category/java/bestpractices.xml</ruleset> -->
               <ruleset>/category/java/security.xml</ruleset>
             </rulesets>
             <linkXref>false</linkXref>
