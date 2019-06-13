@@ -23,6 +23,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
+import com.daml.ledger.participant.state.v1.PartyAllocationResult;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
@@ -44,6 +45,7 @@ import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
 import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
+import scala.Option;
 import scala.collection.JavaConverters;
 
 /**
@@ -200,6 +202,13 @@ public final class SawtoothWriteService implements WriteService {
     } catch (SawtoothWriteServiceException e) {
       LOGGER.error(e.getMessage());
     }
+  }
+
+  @Override
+  public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
+      final Option<String> displayName) {
+    // TODO Implement this, for now report unsupported
+    return CompletableFuture.completedStage(new PartyAllocationResult.NotSupported$());
   }
 
 }

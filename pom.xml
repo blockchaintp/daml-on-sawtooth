@@ -77,7 +77,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <protobuf.version>3.7.1</protobuf.version>
     <sawtooth.sdk.version>v0.1.2-SNAPSHOT</sawtooth.sdk.version>
-    <daml.sdk.version>100.12.22</daml.sdk.version>
+    <daml.sdk.version>100.12.24</daml.sdk.version>
     <daml.bindings.version>2.3.3</daml.bindings.version>
     <scala.lang.version>2.12</scala.lang.version>
   </properties>
