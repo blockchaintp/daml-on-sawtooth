@@ -14,6 +14,7 @@ package com.blockchaintp.sawtooth.daml.processor.impl;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -43,6 +44,7 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
+import scala.Option;
 import scala.Tuple2;
 
 /**
@@ -93,7 +95,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throw ite;
     }
 
-    Map<DamlStateKey, DamlStateValue> stateMap = buildStateMap(ledgerState, txHeader, submission);
+    Map<DamlStateKey, Option<DamlStateValue>> stateMap = buildStateMap(ledgerState, txHeader, submission);
 
     Map<DamlLogEntryId, DamlLogEntry> inputLogEntries = buildLogEntryMap(ledgerState, txHeader, submission);
 
@@ -145,7 +147,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return inputLogEntries;
   }
 
-  private Map<DamlStateKey, DamlStateValue> buildStateMap(final LedgerState ledgerState,
+  private Map<DamlStateKey, Option<DamlStateValue>> buildStateMap(final LedgerState ledgerState,
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
     LOGGER.fine(String.format("Fetching DamlState for this transaction"));
@@ -157,7 +159,15 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
 
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
-    return inputStates;
+    Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
+    for (DamlStateKey k : inputDamlStateKeys.keySet()) {
+      if (inputStates.containsKey(k)) {
+        inputStatesWithOption.put(k, Option.apply(inputStates.get(k)));
+      } else {
+        inputStatesWithOption.put(k, Option.empty());
+      }
+    }
+    return inputStatesWithOption;
   }
 
   private Configuration getConfiguration() {
@@ -184,7 +194,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   private void recordState(final LedgerState ledgerState, final DamlSubmission submission,
-      final Map<DamlLogEntryId, DamlLogEntry> inputLogEntries, final Map<DamlStateKey, DamlStateValue> stateMap,
+      final Map<DamlLogEntryId, DamlLogEntry> inputLogEntries, final Map<DamlStateKey, Option<DamlStateValue>> stateMap,
       final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
     LOGGER.fine(String.format("Recording state at %s", entryId));
 
