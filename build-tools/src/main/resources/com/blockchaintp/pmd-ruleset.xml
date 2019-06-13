@@ -23,8 +23,6 @@
   <rule ref="category/java/codestyle.xml/ExtendsObject" />
   <rule ref="category/java/codestyle.xml/ForLoopShouldBeWhileLoop" />
   <rule ref="category/java/codestyle.xml/TooManyStaticImports" />
-  <rule
-    ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName" />
   <rule ref="category/java/codestyle.xml/UnnecessaryModifier" />
   <rule ref="category/java/codestyle.xml/UnnecessaryReturn" />
   <rule ref="category/java/codestyle.xml/UselessParentheses" />
