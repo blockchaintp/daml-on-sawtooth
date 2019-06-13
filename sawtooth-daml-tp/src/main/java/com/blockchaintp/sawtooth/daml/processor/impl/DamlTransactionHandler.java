@@ -17,6 +17,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
+import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
@@ -72,7 +73,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     DamlLogEntryId entryId;
     try {
       tx = SawtoothDamlTransaction.parseFrom(tpProcessRequest.getPayload());
-      entryId = DamlLogEntryId.parseFrom(tx.getLogEntryId());
+      entryId = KeyValueCommitting.unpackDamlLogEntryId(tx.getLogEntryId());
       submission = KeyValueSubmission.unpackDamlSubmission(tx.getSubmission());
     } catch (InvalidProtocolBufferException e) {
       InvalidTransactionException ite = new InvalidTransactionException(

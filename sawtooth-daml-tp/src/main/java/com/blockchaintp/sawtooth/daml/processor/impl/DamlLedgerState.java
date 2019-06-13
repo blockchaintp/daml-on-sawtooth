@@ -16,6 +16,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
+import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -73,15 +74,8 @@ public final class DamlLedgerState implements LedgerState {
     Map<DamlStateKey, DamlStateValue> retMap = new HashMap<>();
     for (Map.Entry<String, ByteString> e : stateMap.entrySet()) {
       DamlStateKey k = addressToKey.get(e.getKey());
-      try {
-        DamlStateValue v = DamlStateValue.parseFrom(e.getValue());
-        retMap.put(k, v);
-      } catch (InvalidProtocolBufferException exc) {
-        InternalError ie = new InternalError(
-            String.format("Content at address={} is not parsable as DamlStateValue", e.getKey()));
-        ie.initCause(exc);
-        throw ie;
-      }
+      DamlStateValue v = KeyValueCommitting.unpackDamlStateValue(e.getValue());
+      retMap.put(k, v);
     }
     return retMap;
   }
@@ -106,15 +100,8 @@ public final class DamlLedgerState implements LedgerState {
     Map<DamlLogEntryId, DamlLogEntry> retMap = new HashMap<>();
     for (Map.Entry<String, ByteString> e : stateMap.entrySet()) {
       DamlLogEntryId k = addressToKey.get(e.getKey());
-      try {
-        DamlLogEntry v = DamlLogEntry.parseFrom(e.getValue());
-        retMap.put(k, v);
-      } catch (InvalidProtocolBufferException exc) {
-        InternalError ie = new InternalError(
-            String.format("Content at address={} is not parsable as DamlLogEntry", e.getKey()));
-        ie.initCause(exc);
-        throw ie;
-      }
+      DamlLogEntry v = KeyValueCommitting.unpackDamlLogEntry(e.getValue());
+      retMap.put(k, v);
     }
     return retMap;
   }
@@ -128,7 +115,7 @@ public final class DamlLedgerState implements LedgerState {
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
-    setMap.put(Namespace.makeAddressForType(key), val.toByteString());
+    setMap.put(Namespace.makeAddressForType(key), KeyValueCommitting.packDamlStateValue(val));
     state.setState(setMap.entrySet());
   }
 
@@ -138,7 +125,7 @@ public final class DamlLedgerState implements LedgerState {
     List<String> idList = new ArrayList<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
       String address = Namespace.makeAddressForType(e.getKey());
-      setMap.put(address, e.getValue().toByteString());
+      setMap.put(address, KeyValueCommitting.packDamlLogEntry(e.getValue()));
       idList.add(address);
     }
     state.setState(setMap.entrySet());
@@ -188,7 +175,7 @@ public final class DamlLedgerState implements LedgerState {
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
     for (Entry<DamlStateKey, DamlStateValue> e : entries) {
-      setMap.put(Namespace.makeAddressForType(e.getKey()), e.getValue().toByteString());
+      setMap.put(Namespace.makeAddressForType(e.getKey()), KeyValueCommitting.packDamlStateValue(e.getValue()));
     }
     state.setState(setMap.entrySet());
   }
@@ -199,7 +186,8 @@ public final class DamlLedgerState implements LedgerState {
     Map<String, String> attrMap = new HashMap<>();
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
     attrMap.put(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE, Long.toString(offset));
-    state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), entry.toByteString());
+    state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(),
+        KeyValueCommitting.packDamlLogEntry(entry));
   }
 
   @Override
