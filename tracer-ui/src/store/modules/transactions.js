@@ -22,7 +22,9 @@ const reducers = {
       type,
       data,
     } = action.payload
-    state.transactions[type] = data
+    const existingData = state.transactions[type]
+    const newData = data.concat(existingData)
+    state.transactions[type] = newData
   },
   setWriteTransactions: (state, action) => {
     state.writeTransactions = action.payload

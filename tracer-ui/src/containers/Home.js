@@ -11,10 +11,6 @@ import Home from 'pages/Home'
     readTransactions: selectors.transactions.read(state),
     writeTransactions: selectors.transactions.write(state),
   }),
-  {
-    increment: counterActions.increment,
-    decrement: counterActions.decrement,
-  },
 )
 class HomeContainer extends React.Component {
 
