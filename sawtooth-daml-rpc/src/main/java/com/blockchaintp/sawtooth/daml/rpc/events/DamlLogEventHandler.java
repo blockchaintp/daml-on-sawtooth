@@ -19,6 +19,7 @@ import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.Update;
 import com.daml.ledger.participant.state.v1.Update.Heartbeat;
@@ -142,7 +143,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         long offsetCounter = Long.parseLong(attrMap.get(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE));
         ByteString entryIdVal = ByteString.copyFromUtf8(entryIdStr);
         DamlLogEntryId id = DamlLogEntryId.newBuilder().setEntryId(entryIdVal).build();
-        DamlLogEntry logEntry = DamlLogEntry.parseFrom(evt.getData());
+        DamlLogEntry logEntry = KeyValueCommitting.unpackDamlLogEntry(evt.getData());
         Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
         Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
         updateCounter++;

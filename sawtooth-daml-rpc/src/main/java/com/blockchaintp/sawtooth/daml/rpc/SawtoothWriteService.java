@@ -21,7 +21,9 @@ import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
+import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
+import com.daml.ledger.participant.state.v1.PartyAllocationResult;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
@@ -43,6 +45,7 @@ import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
 import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
+import scala.Option;
 import scala.collection.JavaConverters;
 
 /**
@@ -119,7 +122,8 @@ public final class SawtoothWriteService implements WriteService {
     inputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
-        .setSubmission(transactionToSubmission.toByteString()).setLogEntryId(damlLogEntryId.toByteString()).build();
+        .setSubmission(KeyValueSubmission.packDamlSubmission(transactionToSubmission))
+        .setLogEntryId(KeyValueCommitting.packDamlLogEntryId(damlLogEntryId)).build();
 
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), payload.toByteString());
@@ -182,7 +186,8 @@ public final class SawtoothWriteService implements WriteService {
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
-        .setSubmission(archiveSubmission.toByteString()).setLogEntryId(damlLogEntryId.toByteString()).build();
+        .setSubmission(KeyValueSubmission.packDamlSubmission(archiveSubmission))
+        .setLogEntryId(KeyValueCommitting.packDamlLogEntryId(damlLogEntryId)).build();
 
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, Collections.emptyList(), outputAddresses, Arrays.asList(),
@@ -198,4 +203,12 @@ public final class SawtoothWriteService implements WriteService {
       LOGGER.error(e.getMessage());
     }
   }
+
+  @Override
+  public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
+      final Option<String> displayName) {
+    // TODO Implement this, for now report unsupported
+    return CompletableFuture.completedStage(new PartyAllocationResult.NotSupported$());
+  }
+
 }
