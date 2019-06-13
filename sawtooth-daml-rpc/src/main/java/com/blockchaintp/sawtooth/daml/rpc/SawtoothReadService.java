@@ -15,13 +15,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.blockchaintp.sawtooth.daml.rpc.events.DamlLogEventHandler;
+import com.daml.ledger.participant.state.backport.TimeModel;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.daml.ledger.participant.state.v1.LedgerInitialConditions;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.ReadService;
 import com.daml.ledger.participant.state.v1.Update;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
-import com.digitalasset.platform.services.time.TimeModel;
 
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
@@ -67,6 +67,7 @@ public class SawtoothReadService implements ReadService {
 
   @Override
   public final Source<LedgerInitialConditions, NotUsed> getLedgerInitialConditions() {
+    // TODO this should be fetched from the chain
     Flowable<LedgerInitialConditions> f = Flowable
         .fromArray(new LedgerInitialConditions[] {new LedgerInitialConditions(this.ledgerId,
             new Configuration(TimeModel.reasonableDefault()), BEGINNING_OF_EPOCH)});
@@ -75,7 +76,6 @@ public class SawtoothReadService implements ReadService {
 
   @Override
   public final Source<Tuple2<Offset, Update>, NotUsed> stateUpdates(final Option<Offset> beginAfter) {
-
     if (beginAfter.isDefined()) {
       // then we create a catch-up processor for this guy
       return null;

@@ -58,6 +58,7 @@ import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
 import scala.Option;
 import scala.collection.JavaConverters;
+import scala.collection.immutable.List;
 
 /**
  * A implementation of Sawtooth write service. This is responsible for writing
@@ -73,18 +74,22 @@ public final class SawtoothWriteService implements WriteService {
 
   private SawtoothTransactionsTracer sawtoothTransactionsTracer;
 
+  private final String participantId;
+
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
    * @param implementation of a ZMQ stream.
    * @param kmgr           the keyManager for this service.
    * @param txnTracer      a RESTFul interface to push record of sawtooth
    *                       transactions.
+   * @param participant    a string identifying this participant
    */
   public SawtoothWriteService(final Stream implementation, final KeyManager kmgr,
-      final SawtoothTransactionsTracer txnTracer) {
+      final SawtoothTransactionsTracer txnTracer, final String participant) {
     this.stream = implementation;
     this.keyManager = kmgr;
     this.sawtoothTransactionsTracer = txnTracer;
+    this.participantId = participant;
   }
 
   /**
@@ -93,10 +98,11 @@ public final class SawtoothWriteService implements WriteService {
    * @param kmgr             the keyManager for this service.
    * @param txnTracer        a RESTFul interface to push record of sawtooth
    *                         transactions.
+   * @param participant    a string identifying this participant
    */
   public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr,
-      final SawtoothTransactionsTracer txnTracer) {
-    this(new ZmqStream(validatorAddress), kmgr, txnTracer);
+      final SawtoothTransactionsTracer txnTracer, final String participant) {
+    this(new ZmqStream(validatorAddress), kmgr, txnTracer, participant);
   }
 
   @Override
@@ -177,22 +183,33 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  /**
-   * Create and submit a sawtooth transaction which uploads the provided archive.
-   * @param archive the archive to upload.
-   */
-  public void uploadArchive(final Archive archive) {
-    DamlSubmission archiveSubmission = KeyValueSubmission.archiveToSubmission(archive);
-    String packageId = archive.getHash();
+  @Override
+  public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
+      final Option<String> displayName) {
+    // TODO Implement this, for now report unsupported
+    return CompletableFuture.completedStage(new PartyAllocationResult.NotSupported$());
+  }
 
-    DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
-    String packageAddress = Namespace.makeAddressForType(packageKey);
+  @Override
+  public CompletionStage<SubmissionResult> uploadPublicPackages(final List<Archive> archives,
+      final String sourceDescription) {
+    DamlSubmission archiveSubmission = KeyValueSubmission.archivesToSubmission(archives, sourceDescription,
+        this.getParticipantId());
+    Collection<Archive> archiveColl = JavaConverters.asJavaCollection(archives);
+    ArrayList<String> packageAddresses = new ArrayList<>();
+    for (Archive arch : archiveColl) {
+      String packageId = arch.getHash();
+      DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
+      String address = Namespace.makeAddressForType(packageKey);
+      packageAddresses.add(address);
+    }
+    // String packageId = archive.getHash();
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
     String logEntryAddress = Namespace.makeAddressForType(damlLogEntryId);
 
     Collection<String> outputAddresses = new ArrayList<>();
-    outputAddresses.add(packageAddress);
+    outputAddresses.addAll(packageAddresses);
     outputAddresses.add(logEntryAddress);
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
@@ -213,13 +230,11 @@ public final class SawtoothWriteService implements WriteService {
     } catch (SawtoothWriteServiceException e) {
       LOGGER.error(e.getMessage());
     }
+    return CompletableFuture.completedFuture(new SubmissionResult.Acknowledged$());
   }
 
-  @Override
-  public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
-      final Option<String> displayName) {
-    // TODO Implement this, for now report unsupported
-    return CompletableFuture.completedStage(new PartyAllocationResult.NotSupported$());
+  private String getParticipantId() {
+    return this.participantId;
   }
 
 }

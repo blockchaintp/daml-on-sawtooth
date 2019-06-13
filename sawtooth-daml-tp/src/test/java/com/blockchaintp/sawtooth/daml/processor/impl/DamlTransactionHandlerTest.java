@@ -33,6 +33,7 @@ import org.mockito.stubbing.Answer;
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
@@ -87,7 +88,6 @@ public class DamlTransactionHandlerTest {
 
       });
     } catch (InternalError | InvalidTransactionException e) {
-      // TODO Auto-generated catch block
       throw new RuntimeException("Shouldn't ever get an exception when building the mock");
     }
     return Pair.with(s, stateMap);
@@ -183,7 +183,9 @@ public class DamlTransactionHandlerTest {
         .setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).build();
     Archive archive = Archive.getDefaultInstance();
     DamlStateKey archiveKey = DamlStateKey.newBuilder().setPackageId(RandomString.make(RANDOM_STRING_LENGTH)).build();
-    DamlSubmission submission = DamlSubmission.newBuilder().setArchive(Archive.getDefaultInstance()).build();
+    DamlSubmission submission = DamlSubmission.newBuilder()
+        .setPackageUploadEntry(DamlPackageUploadEntry.newBuilder().addArchives(Archive.getDefaultInstance()).build())
+        .build();
     TpProcessRequest transactionRequest = TpProcessRequest.newBuilder().setHeader(txHeader)
         .setPayload(submission.toByteString()).build();
     Pair<Context, Map<String, ByteString>> p = getMockState();
