@@ -51,8 +51,10 @@ object SawtoothDamlRpc extends App {
   val swTxnTracer = new SawtoothTransactionsTracer(5051)
   
   val keyManager = DirectoryKeyManager.create(config.keystore)
+  // This should be a more arbitrary identifier, which is set via CLI, 
+  val participantId = keyManager.getPublicKeyInHex()
   val readService = new SawtoothReadService("this-ledger-id",validatorAddress,swTxnTracer)
-  val writeService = new SawtoothWriteService(validatorAddress,keyManager, swTxnTracer)
+  val writeService = new SawtoothWriteService(validatorAddress,keyManager, swTxnTracer, participantId)
  
   //val ledger = new Ledger(timeModel, tsb)
   def archivesFromDar(file: File): List[Archive] = {
@@ -64,10 +66,11 @@ object SawtoothDamlRpc extends App {
   // Parse DAR archives given as command-line arguments and upload them
   // to the ledger using a side-channel.
   config.archiveFiles.foreach { f =>
-    archivesFromDar(f).foreach { archive =>
+    val archives = archivesFromDar(f)
+    archives.foreach { archive =>
       logger.info(s"Uploading archive ${archive.getHash}...")
-      writeService.uploadArchive(archive)
     }
+    writeService.uploadPublicPackages(archives, "uploaded on startup by participant")
   }
 
   readService.getLedgerInitialConditions
