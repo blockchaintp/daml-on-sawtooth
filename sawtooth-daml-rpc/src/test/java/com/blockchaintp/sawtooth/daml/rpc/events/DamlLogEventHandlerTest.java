@@ -38,7 +38,6 @@ public class DamlLogEventHandlerTest {
 //    try {
 //      when(mockResp.getResult(any())).thenReturn(myMessage.toByteString());
 //    } catch (InterruptedException | TimeoutException | ValidatorConnectionError exc) {
-//      // TODO Auto-generated catch block
 //      exc.printStackTrace();
 //    }
 //    when(stream.send(any(), any())).thenReturn(mock(Future.class));

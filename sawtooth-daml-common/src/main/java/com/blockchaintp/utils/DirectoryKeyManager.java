@@ -59,7 +59,8 @@ public final class DirectoryKeyManager implements KeyManager {
   private DirectoryKeyManager(final String path, final String algoName) throws IOException {
     this.algorithmName = algoName;
     this.keystorePath = new File(path);
-    if (this.keystorePath.isDirectory()) {
+    this.keystorePath.mkdirs();
+    if (!this.keystorePath.isDirectory()) {
       throw new RuntimeException(String.format("keyStorePath is not a directory: %s", this.keystorePath));
     }
     this.privateKeyMap = new HashMap<>();
