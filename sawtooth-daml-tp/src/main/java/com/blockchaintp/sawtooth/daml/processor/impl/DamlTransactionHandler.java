@@ -166,7 +166,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
     for (Entry<DamlStateKey, DamlStateValue> e : inputStates.entrySet()) {
-      LOGGER.info(String.format("Get state %s = %s", e.getKey(), e.getValue().getValueCase().toString().length()));
+      LOGGER.info(String.format("Get state %s = %s", e.getKey(), e.getValue().toByteString().size()));
     }
 
     Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
