@@ -28,6 +28,7 @@ import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.utils.KeyManager;
 import com.blockchaintp.utils.SawtoothClientUtils;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
@@ -123,10 +124,18 @@ public final class SawtoothWriteService implements WriteService {
     for (DamlStateKey dk : damlStateKeys) {
       String addr = Namespace.makeAddressForType(dk);
       outputAddresses.add(addr);
-      LOGGER.info(String.format("Adding output address %s for key %s", addr,dk));
+      LOGGER.info(String.format("Adding output address %s for key %s", addr, dk));
     }
     outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
+    // Have to add all the input address to output addresses since
+    // some are missed on the KeyValueSubmission.transactionOutputs
+    outputAddresses.addAll(inputAddresses);
+    // Have to add dedupStateKey since that is missed in transactionOutputs
+    DamlCommandDedupKey dedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(submitterInfo.applicationId())
+        .setCommandId(submitterInfo.commandId()).setSubmitter(submitterInfo.submitter()).build();
+    DamlStateKey dedupStateKey = DamlStateKey.newBuilder().setCommandDedup(dedupKey).build();
+    outputAddresses.add(Namespace.makeAddressForType(dedupStateKey));
 
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils
         .submissionToDamlStateAddress(transactionToSubmission);
