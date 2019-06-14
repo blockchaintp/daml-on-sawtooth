@@ -204,6 +204,7 @@ public final class DamlLedgerState implements LedgerState {
   @Override
   public Timestamp getRecordTime() throws InternalError {
     try {
+      LOGGER.info(String.format("Fetching global time %s", TIMEKEEPER_GLOBAL_RECORD));
       Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
       if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
         TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
@@ -213,7 +214,7 @@ public final class DamlLedgerState implements LedgerState {
         return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
       }
     } catch (InvalidTransactionException exc) {
-      LOGGER.warning("No global time was retrieved,assuming beginning of epoch");
+      LOGGER.warning(String.format("Error fetching global time, assuming beginning of epoch %s", exc.getMessage()));
       return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
     } catch (InternalError | InvalidProtocolBufferException exc) {
       InternalError err = new InternalError(exc.getMessage());
