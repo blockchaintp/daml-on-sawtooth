@@ -85,8 +85,12 @@ public final class DamlLedgerState implements LedgerState {
     Map<DamlStateKey, DamlStateValue> retMap = new HashMap<>();
     for (Map.Entry<String, ByteString> e : stateMap.entrySet()) {
       DamlStateKey k = addressToKey.get(e.getKey());
-      DamlStateValue v = KeyValueCommitting.unpackDamlStateValue(e.getValue());
-      retMap.put(k, v);
+      if (e.getValue().size() > 0) {
+        DamlStateValue v = KeyValueCommitting.unpackDamlStateValue(e.getValue());
+        retMap.put(k, v);
+      } else {
+        LOGGER.warning(String.format("Skipping key %s since size=0", k));
+      }
     }
     return retMap;
   }

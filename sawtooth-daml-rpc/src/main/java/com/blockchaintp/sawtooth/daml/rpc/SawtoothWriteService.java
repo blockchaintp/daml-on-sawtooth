@@ -123,6 +123,7 @@ public final class SawtoothWriteService implements WriteService {
     for (DamlStateKey dk : damlStateKeys) {
       String addr = Namespace.makeAddressForType(dk);
       outputAddresses.add(addr);
+      LOGGER.info(String.format("Adding output address %s for key %s", addr,dk));
     }
     outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
