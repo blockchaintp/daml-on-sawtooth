@@ -210,6 +210,7 @@ public final class SawtoothWriteService implements WriteService {
     Collection<String> inputAddresses = new ArrayList<>();
     inputAddresses.add(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD);
     inputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
+    inputAddresses.addAll(packageAddresses);
 
     Collection<String> outputAddresses = new ArrayList<>();
     outputAddresses.addAll(packageAddresses);
