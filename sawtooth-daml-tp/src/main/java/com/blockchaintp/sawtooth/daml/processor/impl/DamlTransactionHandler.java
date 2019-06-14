@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
@@ -157,13 +158,20 @@ public final class DamlTransactionHandler implements TransactionHandler {
     if (!inputList.containsAll(inputDamlStateKeys.values())) {
       throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
     }
-
+    if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
+      throw new InvalidTransactionException(String.format("TIMEKEEPER_GLOBAL_RECORD not declared as input"));
+    }
+    if (!inputList.contains(Namespace.DAML_LOG_ENTRY_LIST)) {
+      throw new InvalidTransactionException(String.format("DAML_LOG_ENTRY_LIST not declared as input"));
+    }
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
     Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
     for (DamlStateKey k : inputDamlStateKeys.keySet()) {
       if (inputStates.containsKey(k)) {
+        LOGGER.info(String.format("Fetched %s = %s", k, inputStates.get(k)));
         inputStatesWithOption.put(k, Option.apply(inputStates.get(k)));
       } else {
+        LOGGER.info(String.format("Fetched %s = empty", k));
         inputStatesWithOption.put(k, Option.empty());
       }
     }
@@ -202,6 +210,9 @@ public final class DamlTransactionHandler implements TransactionHandler {
         getConfiguration(), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
 
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
+    for (Entry<DamlStateKey, DamlStateValue> e : newState.entrySet()) {
+      LOGGER.info(String.format("Fetched %s = %s", e.getKey(), e.getValue()));
+    }
     ledgerState.setDamlStates(newState.entrySet());
 
     DamlLogEntry newLogEntry = processSubmission._1;
