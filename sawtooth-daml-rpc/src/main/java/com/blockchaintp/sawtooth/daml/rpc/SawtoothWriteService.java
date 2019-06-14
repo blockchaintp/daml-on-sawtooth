@@ -128,9 +128,7 @@ public final class SawtoothWriteService implements WriteService {
     }
     outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
-    // Have to add all the input address to output addresses since
-    // some are missed on the KeyValueSubmission.transactionOutputs
-    outputAddresses.addAll(inputAddresses);
+
     // Have to add dedupStateKey since that is missed in transactionOutputs
     DamlCommandDedupKey dedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(submitterInfo.applicationId())
         .setCommandId(submitterInfo.commandId()).setSubmitter(submitterInfo.submitter()).build();
@@ -146,6 +144,9 @@ public final class SawtoothWriteService implements WriteService {
         .submissionToLogAddressMap(transactionToSubmission);
     inputAddresses.addAll(submissionToLogAddressMap.values());
     inputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
+    // Have to add all the input address to output addresses since
+    // some are missed on the KeyValueSubmission.transactionOutputs
+    outputAddresses.addAll(inputAddresses);
 
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(KeyValueSubmission.packDamlSubmission(transactionToSubmission))
