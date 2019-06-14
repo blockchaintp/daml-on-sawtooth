@@ -165,10 +165,18 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throw new InvalidTransactionException(String.format("DAML_LOG_ENTRY_LIST not declared as input"));
     }
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
+    for (Entry<DamlStateKey, DamlStateValue> e : inputStates.entrySet()) {
+      LOGGER.info(String.format("Get state %s = %s", e.getKey(), e.getValue().getValueCase().toString().length()));
+    }
+
     Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
     for (DamlStateKey k : inputDamlStateKeys.keySet()) {
       if (inputStates.containsKey(k)) {
-        LOGGER.info(String.format("Fetched %s = %s", k, inputStates.get(k)));
+        LOGGER.info(String.format("Fetched %s potentially not empty", k));
+        Option<DamlStateValue> option = Option.apply(inputStates.get(k));
+        if (option.isEmpty()) {
+          LOGGER.info(String.format("Fetched %s will read as empty!", k));
+        }
         inputStatesWithOption.put(k, Option.apply(inputStates.get(k)));
       } else {
         LOGGER.info(String.format("Fetched %s = empty", k));
@@ -211,7 +219,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
     for (Entry<DamlStateKey, DamlStateValue> e : newState.entrySet()) {
-      LOGGER.info(String.format("Fetched %s = %s", e.getKey(), e.getValue()));
+      LOGGER.info(String.format("Set state %s = %s", e.getKey(), e.getValue().getValueCase().toString().length()));
     }
     ledgerState.setDamlStates(newState.entrySet());
 
