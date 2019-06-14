@@ -14,7 +14,6 @@ package com.blockchaintp.sawtooth.daml.rpc;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -98,7 +97,7 @@ public final class SawtoothWriteService implements WriteService {
    * @param kmgr             the keyManager for this service.
    * @param txnTracer        a RESTFul interface to push record of sawtooth
    *                         transactions.
-   * @param participant    a string identifying this participant
+   * @param participant      a string identifying this participant
    */
   public SawtoothWriteService(final String validatorAddress, final KeyManager kmgr,
       final SawtoothTransactionsTracer txnTracer, final String participant) {
@@ -208,6 +207,9 @@ public final class SawtoothWriteService implements WriteService {
         .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
     String logEntryAddress = Namespace.makeAddressForType(damlLogEntryId);
 
+    Collection<String> inputAddresses = new ArrayList<>();
+    inputAddresses.add(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD);
+
     Collection<String> outputAddresses = new ArrayList<>();
     outputAddresses.addAll(packageAddresses);
     outputAddresses.add(logEntryAddress);
@@ -218,8 +220,7 @@ public final class SawtoothWriteService implements WriteService {
         .setLogEntryId(KeyValueCommitting.packDamlLogEntryId(damlLogEntryId)).build();
 
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
-        Namespace.DAML_FAMILY_VERSION_1_0, Collections.emptyList(), outputAddresses, Arrays.asList(),
-        payload.toByteString());
+        Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), payload.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
 
     // Push to TraceTransaction class
