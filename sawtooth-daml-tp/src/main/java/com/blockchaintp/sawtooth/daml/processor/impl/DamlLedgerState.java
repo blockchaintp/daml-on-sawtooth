@@ -70,7 +70,7 @@ public final class DamlLedgerState implements LedgerState {
     this.state = aState;
   }
 
-  private ByteString getMultipartState(List<String> addrList) throws InternalError, InvalidTransactionException {
+  private ByteString getMultipartState(final List<String> addrList) throws InternalError, InvalidTransactionException {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       for (String addr : addrList) {
@@ -181,7 +181,7 @@ public final class DamlLedgerState implements LedgerState {
     List<String> idList = new ArrayList<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
       List<String> addrList = Namespace.makeMultipartDamlLogAddress(e.getKey());
-      setMultipartState(addrList, KeyValueCommitting.packDamlLogEntry(e.getValue()));
+      setMultipartState(addrList, compressByteString(KeyValueCommitting.packDamlLogEntry(e.getValue())));
       idList.addAll(addrList);
     }
     return idList.toArray(new String[] {});
