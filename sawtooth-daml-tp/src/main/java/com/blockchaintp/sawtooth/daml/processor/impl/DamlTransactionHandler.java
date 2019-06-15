@@ -152,11 +152,13 @@ public final class DamlTransactionHandler implements TransactionHandler {
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
     LOGGER.info(String.format("Fetching DamlState for this transaction"));
-    Map<DamlStateKey, String> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
+    Map<DamlStateKey, List<String>> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
 
     List<String> inputList = txHeader.getInputsList();
-    if (!inputList.containsAll(inputDamlStateKeys.values())) {
-      throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
+    for (List<String> addrs: inputDamlStateKeys.values()) {
+      if (!inputList.containsAll(addrs)) {
+        throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
+      }
     }
     if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
       throw new InvalidTransactionException(String.format("TIMEKEEPER_GLOBAL_RECORD not declared as input"));
@@ -224,8 +226,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
       LOGGER.info(
           String.format("Set state at %s(%s), address=%s, size(%s)", e.getKey(), e.getValue().getValueCase().toString(),
               Namespace.makeAddressForType(e.getKey()), e.getValue().toByteString().size()));
+      ledgerState.setDamlState(e.getKey(), e.getValue());
     }
-    ledgerState.setDamlStates(newState.entrySet());
 
     DamlLogEntry newLogEntry = processSubmission._1;
     LOGGER.info(String.format("Recording log at %s, addreess=%s", entryId, Namespace.makeAddressForType(entryId),
