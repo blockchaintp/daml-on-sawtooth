@@ -13,6 +13,8 @@ package com.blockchaintp.sawtooth.daml.processor.impl;
 
 import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -21,17 +23,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
-import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
@@ -45,6 +50,8 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  * @author scealiontach
  */
 public final class DamlLedgerState implements LedgerState {
+
+  private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
 
@@ -81,7 +88,7 @@ public final class DamlLedgerState implements LedgerState {
       addresses.add(address);
       addressToKey.put(address, k);
     }
-    Map<String, ByteString> stateMap = state.getState(addresses);
+    Map<String, ByteString> stateMap = uncompressMap(state.getState(addresses));
     Map<DamlStateKey, DamlStateValue> retMap = new HashMap<>();
     for (Map.Entry<String, ByteString> e : stateMap.entrySet()) {
       DamlStateKey k = addressToKey.get(e.getKey());
@@ -111,7 +118,7 @@ public final class DamlLedgerState implements LedgerState {
       addresses.add(address);
       addressToKey.put(address, k);
     }
-    Map<String, ByteString> stateMap = state.getState(addresses);
+    Map<String, ByteString> stateMap = uncompressMap(state.getState(addresses));
     Map<DamlLogEntryId, DamlLogEntry> retMap = new HashMap<>();
     for (Map.Entry<String, ByteString> e : stateMap.entrySet()) {
       DamlLogEntryId k = addressToKey.get(e.getKey());
@@ -131,7 +138,7 @@ public final class DamlLedgerState implements LedgerState {
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
     setMap.put(Namespace.makeAddressForType(key), KeyValueCommitting.packDamlStateValue(val));
-    state.setState(setMap.entrySet());
+    state.setState(compressMap(setMap).entrySet());
   }
 
   private String[] addDamlLogEntries(final Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
@@ -143,7 +150,7 @@ public final class DamlLedgerState implements LedgerState {
       setMap.put(address, KeyValueCommitting.packDamlLogEntry(e.getValue()));
       idList.add(address);
     }
-    state.setState(setMap.entrySet());
+    state.setState(compressMap(setMap).entrySet());
     return idList.toArray(new String[] {});
   }
 
@@ -155,7 +162,8 @@ public final class DamlLedgerState implements LedgerState {
     String[] addresses = addDamlLogEntries(setMap.entrySet());
     List<String> oldAddresses;
     try {
-      Map<String, ByteString> damlLogEntryList = state.getState(Arrays.asList(Namespace.DAML_LOG_ENTRY_LIST));
+      Map<String, ByteString> damlLogEntryList = uncompressMap(
+          state.getState(Arrays.asList(Namespace.DAML_LOG_ENTRY_LIST)));
       if (damlLogEntryList.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
         ByteString data = damlLogEntryList.get(Namespace.DAML_LOG_ENTRY_LIST);
         try {
@@ -181,7 +189,7 @@ public final class DamlLedgerState implements LedgerState {
         .build();
     Map<String, ByteString> indexSetMap = new HashMap<>();
     indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, newIndex.toByteString());
-    state.setState(indexSetMap.entrySet());
+    state.setState(compressMap(indexSetMap).entrySet());
     sendLogEvent(entryId, entry, newIndexAddresses.size());
   }
 
@@ -192,7 +200,7 @@ public final class DamlLedgerState implements LedgerState {
     for (Entry<DamlStateKey, DamlStateValue> e : entries) {
       setMap.put(Namespace.makeAddressForType(e.getKey()), KeyValueCommitting.packDamlStateValue(e.getValue()));
     }
-    state.setState(setMap.entrySet());
+    state.setState(compressMap(setMap).entrySet());
   }
 
   @Override
@@ -226,4 +234,74 @@ public final class DamlLedgerState implements LedgerState {
       throw err;
     }
   }
+
+  private ByteString compressByteString(final ByteString input) throws InternalError {
+    Deflater deflater = new Deflater();
+    deflater.setLevel(Deflater.BEST_SPEED);
+    byte[] inputBytes = input.toByteArray();
+
+    deflater.setInput(inputBytes);
+    deflater.finish();
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length);) {
+      byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
+      while (!deflater.finished()) {
+        int bCount = deflater.deflate(buffer);
+        baos.write(buffer, 0, bCount);
+      }
+      deflater.end();
+
+      ByteString bs = ByteString.copyFrom(baos.toByteArray());
+      LOGGER.info(String.format("Compressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+      return bs;
+    } catch (IOException exc) {
+      LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      throw new InternalError(exc.getMessage());
+    }
+  }
+
+  private ByteString uncompressByteString(final ByteString compressedInput) throws InternalError {
+    Inflater inflater = new Inflater();
+    byte[] inputBytes = compressedInput.toByteArray();
+    inflater.setInput(inputBytes);
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length)) {
+      byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
+      try {
+        while (!inflater.finished()) {
+          int bCount = inflater.inflate(buffer);
+          baos.write(buffer, 0, bCount);
+        }
+        inflater.end();
+
+        ByteString bs = ByteString.copyFrom(baos.toByteArray());
+        LOGGER.info(
+            String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+        return bs;
+      } catch (DataFormatException exc) {
+        LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
+        throw new InternalError(exc.getMessage());
+      }
+    } catch (IOException exc) {
+      LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      throw new InternalError(exc.getMessage());
+    }
+  }
+
+  private Map<String, ByteString> compressMap(final Map<String, ByteString> uncompressedMap) throws InternalError {
+    Map<String, ByteString> compressedMap = new HashMap<>();
+    for (Entry<String, ByteString> e : uncompressedMap.entrySet()) {
+      compressedMap.put(e.getKey(), compressByteString(e.getValue()));
+    }
+    return compressedMap;
+  }
+
+  private Map<String, ByteString> uncompressMap(final Map<String, ByteString> compressedMap) throws InternalError {
+    Map<String, ByteString> uncompressedMap = new HashMap<>();
+    for (Entry<String, ByteString> e : compressedMap.entrySet()) {
+      uncompressedMap.put(e.getKey(), uncompressByteString(e.getValue()));
+    }
+    return uncompressedMap;
+  }
+
 }

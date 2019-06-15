@@ -107,7 +107,7 @@ public class DamlLedgerStateTest {
     try {
       ledgerState.setDamlState(firstKey, firstVal);
       DamlStateValue damlCommandDedup = ledgerState.getDamlState(firstKey);
-      assertTrue(firstVal.equals(damlCommandDedup));
+      assertTrue(String.format("%s != %s", firstVal,damlCommandDedup),firstVal.equals(damlCommandDedup));
 
       DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
       Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlStates(Arrays.asList(stateKey));
