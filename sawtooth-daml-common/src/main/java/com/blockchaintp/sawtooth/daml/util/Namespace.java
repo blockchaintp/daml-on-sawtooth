@@ -95,7 +95,7 @@ public final class Namespace {
    * @param entryId the log entry Id
    * @return the byte string address
    */
-  public static String makeDamlLogEntryAddress(final DamlLogEntryId entryId) {
+  protected static String makeDamlLogEntryAddress(final DamlLogEntryId entryId) {
     return makeAddress(DAML_LOG_ENTRY_NS, entryId.toByteString().toStringUtf8());
   }
 
@@ -104,14 +104,28 @@ public final class Namespace {
    * @param key DamlStateKey to be used for the address
    * @return the string address
    */
-  public static String makeDamlStateAddress(final DamlStateKey key) {
+  protected static String makeDamlStateAddress(final DamlStateKey key) {
     return makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8());
   }
 
   /**
+   * Construct a multipart context address for the given DamlLogEntryId.
+   * @param key DamlState Key to be used for the address
+   * @return the list of string address
+   */
+  public static List<String> makeMultipartDamlLogAddress(final DamlLogEntryId key) {
+    List<String> addrList = new ArrayList<>();
+    for (int i = 0; i < DAML_STATE_MAX_LEAVES; i++) {
+      addrList.add(makeAddress(DAML_LOG_ENTRY_NS, key.toByteString().toStringUtf8(), Integer.toString(i)));
+    }
+    return addrList;
+  }
+
+  
+  /**
    * Construct a multipart context address for the given DamlStateKey.
    * @param key DamlState Key to be used for the address
-   * @return the string address
+   * @return the list of string address
    */
   public static List<String> makeMultipartDamlStateAddress(final DamlStateKey key) {
     List<String> addrList = new ArrayList<>();
@@ -126,7 +140,7 @@ public final class Namespace {
    * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
-  public static String makeAddressForType(final DamlStateKey key) {
+  protected static String makeAddressForType(final DamlStateKey key) {
     return makeDamlStateAddress(key);
   }
 
@@ -136,7 +150,7 @@ public final class Namespace {
    * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
-  public static String makeAddressForType(final DamlLogEntryId key) {
+  protected static String makeAddressForType(final DamlLogEntryId key) {
     return makeDamlLogEntryAddress(key);
   }
 

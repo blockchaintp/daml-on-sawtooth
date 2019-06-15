@@ -70,9 +70,7 @@ public final class DamlLedgerState implements LedgerState {
     this.state = aState;
   }
 
-  @Override
-  public DamlStateValue getDamlState(final DamlStateKey key) throws InternalError, InvalidTransactionException {
-    List<String> addrList = Namespace.makeMultipartDamlStateAddress(key);
+  private ByteString getMultipartState(List<String> addrList) throws InternalError, InvalidTransactionException {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       for (String addr : addrList) {
@@ -82,14 +80,20 @@ public final class DamlLedgerState implements LedgerState {
       }
       ByteString compressed = ByteString.copyFrom(baos.toByteArray());
       if (compressed.size() == 0) {
-        return null;
+        return ByteString.EMPTY;
       } else {
-        DamlStateValue retVal = KeyValueCommitting.unpackDamlStateValue(uncompressByteString(compressed));
-        return retVal;
+        return uncompressByteString(compressed);
       }
     } catch (IOException exc) {
       throw new InternalError(exc.getMessage());
     }
+  }
+
+  @Override
+  public DamlStateValue getDamlState(final DamlStateKey key) throws InternalError, InvalidTransactionException {
+    List<String> addrList = Namespace.makeMultipartDamlStateAddress(key);
+    ByteString bs = getMultipartState(addrList);
+    return KeyValueCommitting.unpackDamlStateValue(bs);
   }
 
   @Override
@@ -122,40 +126,30 @@ public final class DamlLedgerState implements LedgerState {
   @Override
   public Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(final DamlLogEntryId... keys)
       throws InternalError, InvalidTransactionException {
-    List<String> addresses = new ArrayList<>();
-    Map<String, DamlLogEntryId> addressToKey = new HashMap<>();
-    for (DamlLogEntryId k : keys) {
-      String address = Namespace.makeAddressForType(k);
-      addresses.add(address);
-      addressToKey.put(address, k);
-    }
-    Map<String, ByteString> stateMap = uncompressMap(state.getState(addresses));
     Map<DamlLogEntryId, DamlLogEntry> retMap = new HashMap<>();
-    for (Map.Entry<String, ByteString> e : stateMap.entrySet()) {
-      DamlLogEntryId k = addressToKey.get(e.getKey());
-      DamlLogEntry v = KeyValueCommitting.unpackDamlLogEntry(e.getValue());
-      retMap.put(k, v);
+    for (DamlLogEntryId k : keys) {
+      DamlLogEntry e = getDamlLogEntry(k);
+      retMap.put(k, e);
     }
     return retMap;
   }
 
   @Override
   public DamlLogEntry getDamlLogEntry(final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
-    return getDamlLogEntries(entryId).get(entryId);
+    List<String> addrList = Namespace.makeMultipartDamlLogAddress(entryId);
+    ByteString bs = getMultipartState(addrList);
+    DamlLogEntry e = KeyValueCommitting.unpackDamlLogEntry(bs);
+    return e;
   }
 
-  @Override
-  public void setDamlState(final DamlStateKey key, final DamlStateValue val)
-      throws InternalError, InvalidTransactionException {
-    ByteString packDamlStateValue = compressByteString(KeyValueCommitting.packDamlStateValue(val));
-    List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
-
-    if (packDamlStateValue.size() > (Namespace.DAML_STATE_MAX_LEAVES * MAX_VALUE_SIZE)) {
-      throw new InvalidTransactionException(String.format("Value for %s is greater than max_value_size=%s", key,
-          Namespace.DAML_STATE_MAX_LEAVES * MAX_VALUE_SIZE));
+  private void setMultipartState(final List<String> leafAddresses, final ByteString data)
+      throws InvalidTransactionException, InternalError {
+    if (data.size() > (Namespace.DAML_STATE_MAX_LEAVES * MAX_VALUE_SIZE)) {
+      throw new InvalidTransactionException(
+          String.format("Value is greater than max_value_size=%s", Namespace.DAML_STATE_MAX_LEAVES * MAX_VALUE_SIZE));
     }
 
-    try (ByteArrayInputStream bais = new ByteArrayInputStream(packDamlStateValue.toByteArray())) {
+    try (ByteArrayInputStream bais = new ByteArrayInputStream(data.toByteArray())) {
       for (String lAddr : leafAddresses) {
         byte[] readBuf;
         try {
@@ -171,18 +165,25 @@ public final class DamlLedgerState implements LedgerState {
       LOGGER.severe("ByteArrayInputStream.close() has thrown an IOException, this should never happen!");
       throw new InternalError(exc.getMessage());
     }
+
+  }
+
+  @Override
+  public void setDamlState(final DamlStateKey key, final DamlStateValue val)
+      throws InternalError, InvalidTransactionException {
+    ByteString packDamlStateValue = compressByteString(KeyValueCommitting.packDamlStateValue(val));
+    List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
+    setMultipartState(leafAddresses, packDamlStateValue);
   }
 
   private String[] addDamlLogEntries(final Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
       throws InternalError, InvalidTransactionException {
-    Map<String, ByteString> setMap = new HashMap<>();
     List<String> idList = new ArrayList<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
-      String address = Namespace.makeAddressForType(e.getKey());
-      setMap.put(address, KeyValueCommitting.packDamlLogEntry(e.getValue()));
-      idList.add(address);
+      List<String> addrList = Namespace.makeMultipartDamlLogAddress(e.getKey());
+      setMultipartState(addrList, KeyValueCommitting.packDamlLogEntry(e.getValue()));
+      idList.addAll(addrList);
     }
-    state.setState(compressMap(setMap).entrySet());
     return idList.toArray(new String[] {});
   }
 
