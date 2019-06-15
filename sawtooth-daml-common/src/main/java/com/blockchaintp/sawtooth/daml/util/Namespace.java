@@ -57,7 +57,7 @@ public final class Namespace {
   /**
    * Address for a list of addresses for Log Entries.
    */
-  public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "00");
+  public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "daml-log-entry-list");
 
   /**
    * Maximum number of leaf addresses for a DamlStateKey.

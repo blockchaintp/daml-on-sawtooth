@@ -31,6 +31,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEntry;
@@ -66,9 +67,6 @@ public class DamlTransactionHandlerTest {
             if (null != value) {
               results.put(a, value);
             }
-          }
-          if (results.size() != addresses.size()) {
-            throw new InvalidTransactionException("Returned fewer results than expected");
           }
           return results;
         }

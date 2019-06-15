@@ -135,7 +135,7 @@ public class DamlLedgerStateTest {
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntry firstVal = DamlLogEntry.getDefaultInstance();
     try {
-      ledgerState.addDamlLogEntry(firstKey, firstVal);
+      ledgerState.addDamlLogEntry(firstKey, firstVal, new ArrayList<String>());
       DamlLogEntry testVal = ledgerState.getDamlLogEntry(firstKey);
       assertTrue(firstVal.equals(testVal));
       // DamlStateKey stateKey = DamlStateKey.newBuilder().set

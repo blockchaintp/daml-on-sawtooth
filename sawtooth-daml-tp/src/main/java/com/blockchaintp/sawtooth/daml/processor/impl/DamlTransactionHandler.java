@@ -100,7 +100,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
     Map<DamlLogEntryId, DamlLogEntry> inputLogEntries = buildLogEntryMap(ledgerState, txHeader, submission);
 
-    recordState(ledgerState, submission, inputLogEntries, stateMap, entryId);
+    List<String> currentLogEntryList = ledgerState.getLogEntryIndex();
+    recordState(ledgerState, submission, inputLogEntries, stateMap, entryId, currentLogEntryList);
     LOGGER.info(String.format("Finished processing transaction %s", tpProcessRequest.getSignature()));
   }
 
@@ -155,7 +156,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     Map<DamlStateKey, List<String>> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
 
     List<String> inputList = txHeader.getInputsList();
-    for (List<String> addrs: inputDamlStateKeys.values()) {
+    for (List<String> addrs : inputDamlStateKeys.values()) {
       if (!inputList.containsAll(addrs)) {
         throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
       }
@@ -171,8 +172,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
     Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
     for (DamlStateKey k : inputDamlStateKeys.keySet()) {
       if (inputStates.containsKey(k)) {
-        LOGGER.info(
-            String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(), Namespace.makeMultipartDamlStateAddress(k)));
+        LOGGER.info(String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(),
+            Namespace.makeMultipartDamlStateAddress(k)));
         Option<DamlStateValue> option = Option.apply(inputStates.get(k));
         if (option.isEmpty()) {
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
@@ -216,7 +217,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   private void recordState(final LedgerState ledgerState, final DamlSubmission submission,
       final Map<DamlLogEntryId, DamlLogEntry> inputLogEntries, final Map<DamlStateKey, Option<DamlStateValue>> stateMap,
-      final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
+      final DamlLogEntryId entryId, final List<String> currentLogEntryList)
+      throws InternalError, InvalidTransactionException {
 
     Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
         getConfiguration(), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
@@ -230,9 +232,10 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
 
     DamlLogEntry newLogEntry = processSubmission._1;
-    LOGGER.info(String.format("Recording log at %s, addreess=%s", entryId, Namespace.makeMultipartDamlLogAddress(entryId),
-        newLogEntry.toByteString().size()));
-    ledgerState.addDamlLogEntry(entryId, newLogEntry);
+    LOGGER.info(String.format("Recording log at %s, address=%s", entryId,
+        Namespace.makeMultipartDamlLogAddress(entryId), newLogEntry.toByteString().size()));
+    List<String> newLogEntryList = ledgerState.addDamlLogEntry(entryId, newLogEntry, currentLogEntryList);
+    ledgerState.updateLogEntryIndex(newLogEntryList);
   }
 
   @Override
