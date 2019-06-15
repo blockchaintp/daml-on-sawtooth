@@ -119,11 +119,10 @@ public final class SawtoothWriteService implements WriteService {
     Collection<DamlStateKey> damlStateKeys = JavaConverters.asJavaCollection(transactionOutputs);
 
     Collection<String> outputAddresses = new ArrayList<>();
-    Collection<String> inputAddresses = new ArrayList<>();
 
     for (DamlStateKey dk : damlStateKeys) {
-      String addr = Namespace.makeAddressForType(dk);
-      outputAddresses.add(addr);
+      java.util.List<String> addr = Namespace.makeMultipartDamlStateAddress(dk);
+      outputAddresses.addAll(addr);
       LOGGER.info(String.format("Adding output address %s for key %s", addr, dk));
     }
     outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
@@ -133,11 +132,14 @@ public final class SawtoothWriteService implements WriteService {
     DamlCommandDedupKey dedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(submitterInfo.applicationId())
         .setCommandId(submitterInfo.commandId()).setSubmitter(submitterInfo.submitter()).build();
     DamlStateKey dedupStateKey = DamlStateKey.newBuilder().setCommandDedup(dedupKey).build();
-    outputAddresses.add(Namespace.makeAddressForType(dedupStateKey));
+    outputAddresses.addAll(Namespace.makeMultipartDamlStateAddress(dedupStateKey));
 
-    Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils
+    Collection<String> inputAddresses = new ArrayList<>();
+    Map<DamlStateKey, java.util.List<String>> submissionToDamlStateAddress = KeyValueUtils
         .submissionToDamlStateAddress(transactionToSubmission);
-    inputAddresses.addAll(submissionToDamlStateAddress.values());
+    for (java.util.List<String> addrs : submissionToDamlStateAddress.values()) {
+      inputAddresses.addAll(addrs);
+    }
     inputAddresses.add(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD);
 
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils

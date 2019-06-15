@@ -11,6 +11,9 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -56,6 +59,8 @@ public final class Namespace {
    */
   public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "00");
 
+  public static final int DAML_STATE_MAX_LEAVES = 10;
+
   /**
    * The first 6 characters of the family name hash.
    * @return The first 6 characters of the family name hash
@@ -98,6 +103,19 @@ public final class Namespace {
    */
   public static String makeDamlStateAddress(final DamlStateKey key) {
     return makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8());
+  }
+
+  /**
+   * Construct a multipart context address for the given DamlStateKey.
+   * @param key DamlState Key to be used for the address
+   * @return the string address
+   */
+  public static List<String> makeMultipartDamlStateAddress(final DamlStateKey key) {
+    List<String> addrList = new ArrayList<>();
+    for (int i = 0; i < DAML_STATE_MAX_LEAVES; i++) {
+      addrList.add(makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8(), Integer.toString(i)));
+    }
+    return addrList;
   }
 
   /**
