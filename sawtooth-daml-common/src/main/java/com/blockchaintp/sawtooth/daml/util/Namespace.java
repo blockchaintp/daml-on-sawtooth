@@ -59,6 +59,9 @@ public final class Namespace {
    */
   public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "00");
 
+  /**
+   * Maximum number of leaf addresses for a DamlStateKey
+   */
   public static final int DAML_STATE_MAX_LEAVES = 10;
 
   /**
