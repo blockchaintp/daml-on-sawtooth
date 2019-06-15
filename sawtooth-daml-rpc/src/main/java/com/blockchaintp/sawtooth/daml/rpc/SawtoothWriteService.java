@@ -212,8 +212,8 @@ public final class SawtoothWriteService implements WriteService {
     for (Archive arch : archiveColl) {
       String packageId = arch.getHash();
       DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
-      String address = Namespace.makeAddressForType(packageKey);
-      packageAddresses.add(address);
+      java.util.List<String> address = Namespace.makeMultipartDamlStateAddress(packageKey);
+      packageAddresses.addAll(address);
     }
     // String packageId = archive.getHash();
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
