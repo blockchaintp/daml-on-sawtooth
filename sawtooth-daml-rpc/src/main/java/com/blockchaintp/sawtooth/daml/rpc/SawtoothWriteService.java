@@ -144,7 +144,10 @@ public final class SawtoothWriteService implements WriteService {
 
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils
         .submissionToLogAddressMap(transactionToSubmission);
-    inputAddresses.addAll(submissionToLogAddressMap.values());
+    for (DamlLogEntryId e: submissionToLogAddressMap.keySet()) {
+      java.util.List<String> logAddresses = Namespace.makeMultipartDamlLogAddress(e);
+      inputAddresses.addAll(logAddresses);
+    }
     inputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
     // Have to add all the input address to output addresses since
     // some are missed on the KeyValueSubmission.transactionOutputs
