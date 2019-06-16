@@ -175,14 +175,17 @@ public final class DamlTransactionHandler implements TransactionHandler {
         LOGGER.info(String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(),
             Namespace.makeMultipartDamlStateAddress(k)));
         Option<DamlStateValue> option = Option.apply(inputStates.get(k));
-        if (option.isEmpty()) {
+        if (inputStates.get(k).toByteString().size() == 0) {
+          if (k.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+            option = Option.empty();
+          }
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
               Namespace.makeMultipartDamlStateAddress(k)));
         } else {
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=%s", k, k.getKeyCase().toString(),
               Namespace.makeMultipartDamlStateAddress(k), inputStates.get(k).toByteString().size()));
+          inputStatesWithOption.put(k, option);
         }
-        inputStatesWithOption.put(k, option);
       } else {
         LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
             Namespace.makeMultipartDamlStateAddress(k)));
