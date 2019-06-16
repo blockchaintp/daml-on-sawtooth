@@ -33,6 +33,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -79,8 +80,12 @@ public final class DamlLedgerState implements LedgerState {
         Map<String, ByteString> addrMap = state.getState(List.of(addr));
         LOGGER.info(String.format("Get address %s size=", addr, addrMap.get(addr).size()));
         // All addresses are set or none are
-        if (addressIdx == 0 && !addrMap.containsKey(addr)) {
-          return null;
+        if (addressIdx == 0) {
+          if (!addrMap.containsKey(addr) || addrMap.get(addr).equals(ByteString.EMPTY)) {
+            return null;
+          } else {
+            addressIdx++;
+          }
         } else {
           addressIdx++;
         }
@@ -104,6 +109,9 @@ public final class DamlLedgerState implements LedgerState {
     ByteString bs = getMultipartState(addrList);
     if (bs == null) {
       return null;
+    }
+    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+      return DamlStateValue.newBuilder().setCommandDedup(DamlCommandDedupValue.newBuilder().build()).build();
     }
     return KeyValueCommitting.unpackDamlStateValue(bs);
   }
@@ -204,7 +212,14 @@ public final class DamlLedgerState implements LedgerState {
   @Override
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
-    ByteString packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
+    ByteString packDamlStateValue;
+    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+      LOGGER.info("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
+      packDamlStateValue = KeyValueCommitting.packDamlStateKey(key);
+    } else {
+      packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
+    }
+    assert (packDamlStateValue.size() > 0);
     List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
     setMultipartState(leafAddresses, packDamlStateValue);
   }

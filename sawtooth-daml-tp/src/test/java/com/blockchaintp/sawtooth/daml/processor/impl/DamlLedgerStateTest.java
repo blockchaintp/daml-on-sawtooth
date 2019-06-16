@@ -11,6 +11,8 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.processor.impl;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -34,6 +36,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlRejectionEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.google.protobuf.ByteString;
@@ -60,6 +63,8 @@ public class DamlLedgerStateTest {
             ByteString value = stateMap.get(a);
             if (null != value) {
               results.put(a, value);
+            } else {
+              results.put(a, ByteString.EMPTY);
             }
           }
           if (results.size() != addresses.size()) {
@@ -107,8 +112,15 @@ public class DamlLedgerStateTest {
     try {
       ledgerState.setDamlState(firstKey, firstVal);
       DamlStateValue damlCommandDedup = ledgerState.getDamlState(firstKey);
-      assertTrue(String.format("%s != %s", firstVal,damlCommandDedup),firstVal.equals(damlCommandDedup));
+      assertNotNull(damlCommandDedup);
+      assertTrue(String.format("%s != %s", firstVal, damlCommandDedup), firstVal.equals(damlCommandDedup));
 
+      DamlCommandDedupKey dneDedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
+          .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
+      DamlStateKey dneKey = DamlStateKey.newBuilder().setCommandDedup(dneDedupKey).build();
+      DamlStateValue dneCommandDedup = ledgerState.getDamlState(dneKey);
+      assertNull(dneCommandDedup);
+      
       DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
       Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlStates(Arrays.asList(stateKey));
       assertTrue(firstVal.equals(retMap.get(stateKey)));
@@ -120,7 +132,8 @@ public class DamlLedgerStateTest {
         fail(String.format("Should not have issued an {}", exc.getClass().getName()));
       }
     } catch (InternalError | InvalidTransactionException exc) {
-      fail("No exceptions should be thrown");
+      exc.printStackTrace();
+      fail("No exceptions should be thrown: "+exc.getMessage());
     }
   }
 
@@ -133,11 +146,12 @@ public class DamlLedgerStateTest {
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
-    DamlLogEntry firstVal = DamlLogEntry.getDefaultInstance();
+    DamlLogEntry firstVal = DamlLogEntry.newBuilder()
+        .setRejectionEntry(DamlRejectionEntry.newBuilder().setMaximumRecordTimeExceeded("Sorry!").build()).build();
     try {
       ledgerState.addDamlLogEntry(firstKey, firstVal, new ArrayList<String>());
       DamlLogEntry testVal = ledgerState.getDamlLogEntry(firstKey);
-      assertTrue(firstVal.equals(testVal));
+      assertTrue(String.format("%s!=%s", firstVal, testVal), firstVal.equals(testVal));
       // DamlStateKey stateKey = DamlStateKey.newBuilder().set
       Map<DamlLogEntryId, DamlLogEntry> retMap = ledgerState.getDamlLogEntries(Arrays.asList(firstKey));
       assertTrue(firstVal.equals(retMap.get(firstKey)));
