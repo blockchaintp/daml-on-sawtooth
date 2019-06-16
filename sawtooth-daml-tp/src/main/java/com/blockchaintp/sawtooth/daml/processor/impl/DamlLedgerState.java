@@ -33,6 +33,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -95,7 +96,11 @@ public final class DamlLedgerState implements LedgerState {
   public DamlStateValue getDamlState(final DamlStateKey key) throws InternalError, InvalidTransactionException {
     List<String> addrList = Namespace.makeMultipartDamlStateAddress(key);
     ByteString bs = getMultipartState(addrList);
-    return KeyValueCommitting.unpackDamlStateValue(bs);
+    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+      return DamlStateValue.newBuilder().setCommandDedup(DamlCommandDedupValue.getDefaultInstance()).build();
+    } else {
+      return KeyValueCommitting.unpackDamlStateValue(bs);
+    }
   }
 
   @Override
@@ -184,6 +189,9 @@ public final class DamlLedgerState implements LedgerState {
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
     ByteString packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
+    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+      packDamlStateValue = key.toByteString();
+    }
     List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
     setMultipartState(leafAddresses, packDamlStateValue);
   }
