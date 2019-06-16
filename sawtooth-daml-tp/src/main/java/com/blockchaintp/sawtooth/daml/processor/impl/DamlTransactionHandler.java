@@ -26,6 +26,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.backport.TimeModel;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -35,6 +36,7 @@ import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
+import com.digitalasset.daml_lf.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
@@ -176,16 +178,14 @@ public final class DamlTransactionHandler implements TransactionHandler {
             Namespace.makeMultipartDamlStateAddress(k)));
         Option<DamlStateValue> option = Option.apply(inputStates.get(k));
         if (inputStates.get(k).toByteString().size() == 0) {
-          if (k.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-            option = Option.empty();
-          }
+          option = Option.empty();
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
               Namespace.makeMultipartDamlStateAddress(k)));
         } else {
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=%s", k, k.getKeyCase().toString(),
               Namespace.makeMultipartDamlStateAddress(k), inputStates.get(k).toByteString().size()));
-          inputStatesWithOption.put(k, option);
         }
+        inputStatesWithOption.put(k, option);
       } else {
         LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
             Namespace.makeMultipartDamlStateAddress(k)));
@@ -231,7 +231,13 @@ public final class DamlTransactionHandler implements TransactionHandler {
       LOGGER.info(
           String.format("Set state at %s(%s), address=%s, size(%s)", e.getKey(), e.getValue().getValueCase().toString(),
               Namespace.makeMultipartDamlStateAddress(e.getKey()), e.getValue().toByteString().size()));
-      ledgerState.setDamlState(e.getKey(), e.getValue());
+      if (e.getKey().getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+        ledgerState.setDamlState(e.getKey(), DamlStateValue.newBuilder().setArchive(
+            Archive.newBuilder().setHash(e.getKey().getPackageId()).build()
+            ).build());
+      } else {
+        ledgerState.setDamlState(e.getKey(), e.getValue());
+      }
     }
 
     DamlLogEntry newLogEntry = processSubmission._1;
