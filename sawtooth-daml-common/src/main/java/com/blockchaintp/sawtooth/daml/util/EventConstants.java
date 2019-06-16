@@ -41,10 +41,6 @@ public final class EventConstants {
    */
   public static final String DAML_OFFSET_EVENT_ATTRIBUTE = "offset-counter";
 
-  public static final String DAML_LOG_ENTRY_ID_EVENT_PARTS = "event-part-list";
-
-  public static final String DAML_LOG_ENTRY_ID_EVENT_PART = "event-part";
-
   private EventConstants() {
 
   }
