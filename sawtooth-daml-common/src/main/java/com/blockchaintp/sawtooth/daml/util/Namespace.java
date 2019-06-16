@@ -121,7 +121,6 @@ public final class Namespace {
     return addrList;
   }
 
-  
   /**
    * Construct a multipart context address for the given DamlStateKey.
    * @param key DamlState Key to be used for the address
