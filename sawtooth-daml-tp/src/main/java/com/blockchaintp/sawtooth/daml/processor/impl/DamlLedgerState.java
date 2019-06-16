@@ -33,7 +33,6 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -74,11 +73,18 @@ public final class DamlLedgerState implements LedgerState {
   private ByteString getMultipartState(final List<String> addrList) throws InternalError, InvalidTransactionException {
     try {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      int addressIdx = 0;
       for (String addr : addrList) {
         LOGGER.info(String.format("Get address %s", addr));
-        Map<String, ByteString> addValue = state.getState(List.of(addr));
-        LOGGER.info(String.format("Get address %s size=", addr, addValue.get(addr).size()));
-        ByteString bs = addValue.getOrDefault(addr, ByteString.EMPTY);
+        Map<String, ByteString> addrMap = state.getState(List.of(addr));
+        LOGGER.info(String.format("Get address %s size=", addr, addrMap.get(addr).size()));
+        // All addresses are set or none are
+        if (addressIdx == 0 && !addrMap.containsKey(addr)) {
+          return null;
+        } else {
+          addressIdx++;
+        }
+        ByteString bs = addrMap.get(addr);
         baos.write(bs.toByteArray());
       }
       ByteString compressed = ByteString.copyFrom(baos.toByteArray());
@@ -96,11 +102,10 @@ public final class DamlLedgerState implements LedgerState {
   public DamlStateValue getDamlState(final DamlStateKey key) throws InternalError, InvalidTransactionException {
     List<String> addrList = Namespace.makeMultipartDamlStateAddress(key);
     ByteString bs = getMultipartState(addrList);
-    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-      return DamlStateValue.newBuilder().setCommandDedup(DamlCommandDedupValue.getDefaultInstance()).build();
-    } else {
-      return KeyValueCommitting.unpackDamlStateValue(bs);
+    if (bs == null) {
+      return null;
     }
+    return KeyValueCommitting.unpackDamlStateValue(bs);
   }
 
   @Override
@@ -118,7 +123,7 @@ public final class DamlLedgerState implements LedgerState {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.warning(String.format("Skipping key %s since size=0", k));
+        LOGGER.warning(String.format("Skipping key %s since value is null", k));
       }
     }
     return retMap;
@@ -136,7 +141,9 @@ public final class DamlLedgerState implements LedgerState {
     Map<DamlLogEntryId, DamlLogEntry> retMap = new HashMap<>();
     for (DamlLogEntryId k : keys) {
       DamlLogEntry e = getDamlLogEntry(k);
-      retMap.put(k, e);
+      if (e != null) {
+        retMap.put(k, e);
+      }
     }
     return retMap;
   }
@@ -145,22 +152,31 @@ public final class DamlLedgerState implements LedgerState {
   public DamlLogEntry getDamlLogEntry(final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
     List<String> addrList = Namespace.makeMultipartDamlLogAddress(entryId);
     ByteString bs = getMultipartState(addrList);
+    if (bs == null) {
+      return null;
+    }
     DamlLogEntry e = KeyValueCommitting.unpackDamlLogEntry(bs);
     return e;
   }
 
   private List<Entry<String, ByteString>> breakApartData(final List<String> leafAddresses, final ByteString data)
       throws InvalidTransactionException, InternalError {
+    return this.breakApartData(leafAddresses, data, MAX_VALUE_SIZE);
+  }
+
+  private List<Entry<String, ByteString>> breakApartData(final List<String> leafAddresses, final ByteString data,
+      final int leafSize) throws InvalidTransactionException, InternalError {
     List<Entry<String, ByteString>> retList = new ArrayList<>();
-    if (data.size() > (Namespace.DAML_STATE_MAX_LEAVES * MAX_VALUE_SIZE)) {
+    if (data.size() > (Namespace.DAML_STATE_MAX_LEAVES * leafSize)) {
       throw new InvalidTransactionException(
-          String.format("Value is greater than max_value_size=%s", Namespace.DAML_STATE_MAX_LEAVES * MAX_VALUE_SIZE));
+          String.format("Value is greater than max_value_size=%s, max_leaves=%s, leafSize=%s",
+              Namespace.DAML_STATE_MAX_LEAVES * leafSize, Namespace.DAML_STATE_MAX_LEAVES, leafSize));
     }
     try (ByteArrayInputStream bais = new ByteArrayInputStream(data.toByteArray())) {
       for (String lAddr : leafAddresses) {
         byte[] readBuf;
         try {
-          readBuf = bais.readNBytes(MAX_VALUE_SIZE);
+          readBuf = bais.readNBytes(leafSize);
           Map<String, ByteString> setMap = new HashMap<>();
           setMap.put(lAddr, ByteString.copyFrom(readBuf));
           retList.addAll(setMap.entrySet());
@@ -189,9 +205,6 @@ public final class DamlLedgerState implements LedgerState {
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
     ByteString packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
-    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-      packDamlStateValue = key.toByteString();
-    }
     List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
     setMultipartState(leafAddresses, packDamlStateValue);
   }
@@ -294,6 +307,9 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString compressByteString(final ByteString input) throws InternalError {
+    if (input.size() == 0) {
+      return ByteString.EMPTY;
+    }
     Deflater deflater = new Deflater();
     deflater.setLevel(Deflater.BEST_SPEED);
     byte[] inputBytes = input.toByteArray();
