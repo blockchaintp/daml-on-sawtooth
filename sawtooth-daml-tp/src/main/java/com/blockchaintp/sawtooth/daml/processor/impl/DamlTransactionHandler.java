@@ -177,7 +177,6 @@ public final class DamlTransactionHandler implements TransactionHandler {
             Namespace.makeMultipartDamlStateAddress(k)));
         Option<DamlStateValue> option = Option.apply(inputStates.get(k));
         if (inputStates.get(k).toByteString().size() == 0) {
-          option = Option.empty();
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
               Namespace.makeMultipartDamlStateAddress(k)));
         } else {
