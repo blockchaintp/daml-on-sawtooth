@@ -311,6 +311,9 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws InternalError {
+    if (compressedInput.size() == 0) {
+      return ByteString.EMPTY;
+    }
     Inflater inflater = new Inflater();
     byte[] inputBytes = compressedInput.toByteArray();
     inflater.setInput(inputBytes);
