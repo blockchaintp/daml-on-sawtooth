@@ -11,6 +11,8 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.rpc.events;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -19,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 import org.reactivestreams.Publisher;
 import org.zeromq.ZFrame;
@@ -36,7 +40,6 @@ import com.daml.ledger.participant.state.v1.Update;
 import com.daml.ledger.participant.state.v1.Update.Heartbeat;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 
 import io.reactivex.processors.UnicastProcessor;
@@ -65,6 +68,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private static final String[] SUBSCRIBE_SUBJECTS = new String[] {EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
       EventConstants.DAML_LOG_EVENT_SUBJECT,
       com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
+  private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private Collection<EventSubscription> subscriptions;
   private Collection<String> lastBlockIds;
@@ -131,7 +135,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   private Collection<Tuple2<Offset, Update>> eventToUpdates(final EventList evtList)
-      throws InvalidProtocolBufferException {
+      throws IOException {
     if (this.tracer != null) {
       String jsonOut = JsonFormat.printer().print(evtList);
       this.tracer.putReadTransactions(jsonOut);
@@ -154,7 +158,8 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         long offsetCounter = Long.parseLong(attrMap.get(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE));
         ByteString entryIdVal = ByteString.copyFromUtf8(entryIdStr);
         DamlLogEntryId id = DamlLogEntryId.newBuilder().setEntryId(entryIdVal).build();
-        DamlLogEntry logEntry = KeyValueCommitting.unpackDamlLogEntry(evt.getData());
+        ByteString evtData = uncompressByteString(evt.getData());
+        DamlLogEntry logEntry = KeyValueCommitting.unpackDamlLogEntry(evtData);
         Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
         Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
         updateCounter++;
@@ -208,15 +213,15 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       try {
         Message message = Message.parseFrom(frame.getData());
         processMessage(message);
-      } catch (InvalidProtocolBufferException exc) {
+      } catch (IOException exc) {
         LOGGER.warning(exc.getMessage());
       }
     }
     return 0;
   }
 
-  protected final void processMessage(final Message message) throws InvalidProtocolBufferException {
-    LOGGER.fine("Process message...");
+  protected final void processMessage(final Message message) throws IOException {
+    LOGGER.info("Process message...");
 
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       EventList evtList = EventList.parseFrom(message.getContent());
@@ -243,7 +248,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       if (receivedMsg != null) {
         try {
           processMessage(receivedMsg);
-        } catch (InvalidProtocolBufferException exc) {
+        } catch (IOException exc) {
           LOGGER.warning(String.format("Error unmarshalling message of type: %s", receivedMsg.getMessageType()));
         }
       }
@@ -296,4 +301,31 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.tracer = trace;
   }
 
+  private ByteString uncompressByteString(final ByteString compressedInput) throws IOException {
+    Inflater inflater = new Inflater();
+    byte[] inputBytes = compressedInput.toByteArray();
+    inflater.setInput(inputBytes);
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length)) {
+      byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
+      try {
+        while (!inflater.finished()) {
+          int bCount = inflater.inflate(buffer);
+          baos.write(buffer, 0, bCount);
+        }
+        inflater.end();
+
+        ByteString bs = ByteString.copyFrom(baos.toByteArray());
+        LOGGER.info(
+            String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+        return bs;
+      } catch (DataFormatException exc) {
+        LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
+        throw new IOException(exc.getMessage());
+      }
+    } catch (IOException exc) {
+      LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      throw exc;
+    }
+  }
 }

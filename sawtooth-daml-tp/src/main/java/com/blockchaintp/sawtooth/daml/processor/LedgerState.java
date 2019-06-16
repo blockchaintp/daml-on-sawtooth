@@ -12,6 +12,7 @@
 package com.blockchaintp.sawtooth.daml.processor;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -121,23 +122,29 @@ public interface LedgerState {
       throws InternalError, InvalidTransactionException;
 
   /**
-   * @param entryId Id of this log entry
-   * @param entry   the log entry to set
+   * @param entryId          Id of this log entry
+   * @param entry            the log entry to set
+   * @param currentEntryList the current log entry index list
+   * @return the new entry list after the addition
    * @throws InvalidTransactionException when there is an error relating to the
    *                                     client input
    * @throws InternalError               when there is an unexpected back end
    *                                     error.
    */
-  void addDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry) throws InternalError, InvalidTransactionException;
+  List<String> addDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry, List<String> currentEntryList)
+      throws InternalError, InvalidTransactionException;
 
   /**
    * Record an event containing the provided log info.
    * @param entryId the id of this log entry
    * @param entry   the entry itself
-   * @param offset the offset of the entry itself
-   * @throws InternalError when there is an unexpected back end error
+   * @param offset  the offset of the entry itself
+   * @throws InternalError               when there is an unexpected back end
+   *                                     error
+   * @throws InvalidTransactionException when the data itself is invalid
    */
-  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry, long offset) throws InternalError;
+  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry, long offset)
+      throws InternalError, InvalidTransactionException;
 
   /**
    * Fetch the current global record time.
@@ -145,4 +152,22 @@ public interface LedgerState {
    * @throws InternalError when there is an unexpected back end error.
    */
   Timestamp getRecordTime() throws InternalError;
+
+  /**
+   * Update the log event index to equal the provided list.
+   * @param addresses the list of addresses which are to be set
+   * @throws InternalError               when there is an unexpected back end
+   *                                     error
+   * @throws InvalidTransactionException when the data itself is invalid
+   */
+  void updateLogEntryIndex(List<String> addresses) throws InternalError, InvalidTransactionException;
+
+  /**
+   * Return the current log event index.
+   * @return the current log event index
+   * @throws InternalError               when there is an unexpected back end
+   *                                     error
+   * @throws InvalidTransactionException when the data itself is invalid
+   */
+  List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException;
 }

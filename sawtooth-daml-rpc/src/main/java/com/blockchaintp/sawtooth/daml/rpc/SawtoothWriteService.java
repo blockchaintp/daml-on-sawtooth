@@ -125,7 +125,7 @@ public final class SawtoothWriteService implements WriteService {
       outputAddresses.addAll(addr);
       LOGGER.info(String.format("Adding output address %s for key %s", addr, dk));
     }
-    outputAddresses.add(Namespace.makeAddressForType(damlLogEntryId));
+    outputAddresses.addAll(Namespace.makeMultipartDamlLogAddress(damlLogEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     // Have to add dedupStateKey since that is missed in transactionOutputs
@@ -212,13 +212,13 @@ public final class SawtoothWriteService implements WriteService {
     for (Archive arch : archiveColl) {
       String packageId = arch.getHash();
       DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
-      String address = Namespace.makeAddressForType(packageKey);
-      packageAddresses.add(address);
+      java.util.List<String> address = Namespace.makeMultipartDamlStateAddress(packageKey);
+      packageAddresses.addAll(address);
     }
     // String packageId = archive.getHash();
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
-    String logEntryAddress = Namespace.makeAddressForType(damlLogEntryId);
+    Collection<String> logEntryAddress = Namespace.makeMultipartDamlLogAddress(damlLogEntryId);
 
     Collection<String> inputAddresses = new ArrayList<>();
     inputAddresses.add(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD);
@@ -227,7 +227,7 @@ public final class SawtoothWriteService implements WriteService {
 
     Collection<String> outputAddresses = new ArrayList<>();
     outputAddresses.addAll(packageAddresses);
-    outputAddresses.add(logEntryAddress);
+    outputAddresses.addAll(logEntryAddress);
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
 
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
