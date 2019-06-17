@@ -34,7 +34,7 @@ pipeline {
   stages {
     stage('Fetch Tags') {
       steps {
-        checkout([$class: 'GitSCM', branches: [[name: "*/${GIT_BRANCH}"]],
+        checkout([$class: 'GitSCM', branches: [[name: "${GIT_BRANCH}"]],
             doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [],
             userRemoteConfigs: [[credentialsId: 'github-credentials',noTags:false, url: "${GIT_URL}"]],
             extensions: [
