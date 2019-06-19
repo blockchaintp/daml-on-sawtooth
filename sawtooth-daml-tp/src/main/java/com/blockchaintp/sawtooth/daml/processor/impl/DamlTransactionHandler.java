@@ -197,7 +197,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   private Configuration getConfiguration() {
     // TODO this needs to be replaced with a proper configuration source
-    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(1), Duration.ofMinutes(2));
+    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
     Configuration config = new Configuration(tm);
     return config;
   }
