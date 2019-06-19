@@ -306,6 +306,7 @@ public final class DamlLedgerState implements LedgerState {
       Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
       if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
         TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
+        LOGGER.info(String.format("Record Time = %s", tkgr.getLastCalculatedTime()));
         return tkgr.getLastCalculatedTime();
       } else {
         LOGGER.info("No global time has been set,assuming beginning of epoch");

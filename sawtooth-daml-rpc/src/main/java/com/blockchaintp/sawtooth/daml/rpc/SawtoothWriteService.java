@@ -110,6 +110,7 @@ public final class SawtoothWriteService implements WriteService {
       final TransactionMeta transactionMeta,
       final GenTransaction<NodeId, ContractId, VersionedValue<ContractId>> transaction) {
 
+    LOGGER.info(String.format("Max Record Time = %s", submitterInfo.maxRecordTime()));
     DamlSubmission transactionToSubmission = KeyValueSubmission.transactionToSubmission(submitterInfo, transactionMeta,
         transaction);
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
@@ -144,7 +145,7 @@ public final class SawtoothWriteService implements WriteService {
 
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils
         .submissionToLogAddressMap(transactionToSubmission);
-    for (DamlLogEntryId e: submissionToLogAddressMap.keySet()) {
+    for (DamlLogEntryId e : submissionToLogAddressMap.keySet()) {
       java.util.List<String> logAddresses = Namespace.makeMultipartDamlLogAddress(e);
       inputAddresses.addAll(logAddresses);
     }
