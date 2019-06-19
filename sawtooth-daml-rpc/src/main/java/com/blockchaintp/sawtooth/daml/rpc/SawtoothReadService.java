@@ -11,6 +11,7 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.rpc;
 
+import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -68,9 +69,9 @@ public class SawtoothReadService implements ReadService {
   @Override
   public final Source<LedgerInitialConditions, NotUsed> getLedgerInitialConditions() {
     // TODO this should be fetched from the chain
-    Flowable<LedgerInitialConditions> f = Flowable
-        .fromArray(new LedgerInitialConditions[] {new LedgerInitialConditions(this.ledgerId,
-            new Configuration(TimeModel.reasonableDefault()), BEGINNING_OF_EPOCH)});
+    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(1), Duration.ofMinutes(2));
+    Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
+        new LedgerInitialConditions(this.ledgerId, new Configuration(tm), BEGINNING_OF_EPOCH)});
     return Source.fromPublisher(f);
   }
 
