@@ -183,15 +183,16 @@ public final class SawtoothWriteService implements WriteService {
       ByteString result = streamToValidator.getResult();
       getResponse = ClientBatchSubmitResponse.parseFrom(result);
       Status status = getResponse.getStatus();
-      if (status != ClientBatchSubmitResponse.Status.OK) {
-        if (status != ClientBatchSubmitResponse.Status.QUEUE_FULL) {
-          CompletionStage<SubmissionResult> cs = CompletableFuture.completedFuture(new SubmissionResult.Overloaded$());
-          return cs;
-        }
+      switch (status) {
+      case OK:
+        return CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
+      case QUEUE_FULL:
+        LOGGER.warn("Validator is reporting QUEUE_FULL");
+        return CompletableFuture.completedFuture(new SubmissionResult.Overloaded$());
+      default:
         throw new SawtoothWriteServiceException(
             String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
-
     } catch (InterruptedException e) {
       throw new SawtoothWriteServiceException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()), e);
@@ -202,8 +203,6 @@ public final class SawtoothWriteService implements WriteService {
       throw new SawtoothWriteServiceException(
           String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()), e);
     }
-    CompletionStage<SubmissionResult> cs = CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
-    return cs;
   }
 
   private Batch submissionToBatch(final DamlSubmission submission, final Collection<String> inputAddresses,
