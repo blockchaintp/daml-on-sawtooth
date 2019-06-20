@@ -177,19 +177,24 @@ public final class SawtoothWriteService implements WriteService {
     // Push to TraceTransaction class
     this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
+    LOGGER.info(String.format("Batch submitting %s", batch.getHeaderSignature()));
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
     ClientBatchSubmitResponse getResponse = null;
     try {
+      LOGGER.info(String.format("Batch awaiting response for %s", batch.getHeaderSignature()));
       ByteString result = streamToValidator.getResult();
       getResponse = ClientBatchSubmitResponse.parseFrom(result);
       Status status = getResponse.getStatus();
       switch (status) {
       case OK:
+        LOGGER.info(String.format("Batch submission response for %s is OK", batch.getHeaderSignature()));
         return CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
       case QUEUE_FULL:
-        LOGGER.warn("Validator is reporting QUEUE_FULL");
+        LOGGER.info(String.format("Batch submission response for %s is QUEUE_FULL", batch.getHeaderSignature()));
         return CompletableFuture.completedFuture(new SubmissionResult.Overloaded$());
       default:
+        LOGGER.info(
+            String.format("Batch submission response for %s is %s", batch.getHeaderSignature(), status.toString()));
         throw new SawtoothWriteServiceException(
             String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
@@ -214,6 +219,8 @@ public final class SawtoothWriteService implements WriteService {
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), payload.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
+    LOGGER.info(
+        String.format("Batch %s has tx %s", sawtoothBatch.getHeaderSignature(), sawtoothTxn.getHeaderSignature()));
     return sawtoothBatch;
   }
 
