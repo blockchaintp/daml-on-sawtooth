@@ -57,7 +57,7 @@ public final class DamlLedgerState implements LedgerState {
 
   private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
 
-  private static final int MAX_VALUE_SIZE = 1024 * 1024;
+  private static final int MAX_VALUE_SIZE = 64 * 1024 * 1024;
 
   /**
    * The state which this class wraps and delegates to.
@@ -105,8 +105,8 @@ public final class DamlLedgerState implements LedgerState {
 
   @Override
   public DamlStateValue getDamlState(final DamlStateKey key) throws InternalError, InvalidTransactionException {
-    List<String> addrList = Namespace.makeMultipartDamlStateAddress(key);
-    ByteString bs = getMultipartState(addrList);
+    String addr = Namespace.makeAddressForType(key);
+    ByteString bs = getMultipartState(List.of(addr));
     if (bs == null) {
       return null;
     }
@@ -158,8 +158,8 @@ public final class DamlLedgerState implements LedgerState {
 
   @Override
   public DamlLogEntry getDamlLogEntry(final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
-    List<String> addrList = Namespace.makeMultipartDamlLogAddress(entryId);
-    ByteString bs = getMultipartState(addrList);
+    String addr = Namespace.makeAddressForType(entryId);
+    ByteString bs = getMultipartState(List.of(addr));
     if (bs == null) {
       return null;
     }
@@ -175,10 +175,10 @@ public final class DamlLedgerState implements LedgerState {
   private List<Entry<String, ByteString>> breakApartData(final List<String> leafAddresses, final ByteString data,
       final int leafSize) throws InvalidTransactionException, InternalError {
     List<Entry<String, ByteString>> retList = new ArrayList<>();
-    if (data.size() > (Namespace.DAML_STATE_MAX_LEAVES * leafSize)) {
+    if (data.size() > (leafAddresses.size() * leafSize)) {
       throw new InvalidTransactionException(
           String.format("Value is greater than max_value_size=%s, max_leaves=%s, leafSize=%s",
-              Namespace.DAML_STATE_MAX_LEAVES * leafSize, Namespace.DAML_STATE_MAX_LEAVES, leafSize));
+              leafAddresses.size() * leafSize, leafAddresses.size(), leafSize));
     }
     try (ByteArrayInputStream bais = new ByteArrayInputStream(data.toByteArray())) {
       for (String lAddr : leafAddresses) {
@@ -220,17 +220,17 @@ public final class DamlLedgerState implements LedgerState {
       packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
     }
     assert (packDamlStateValue.size() > 0);
-    List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
-    setMultipartState(leafAddresses, packDamlStateValue);
+    String leafAddresses = Namespace.makeAddressForType(key);
+    setMultipartState(List.of(leafAddresses), packDamlStateValue);
   }
 
   private String[] addDamlLogEntries(final Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
       throws InternalError, InvalidTransactionException {
     List<String> idList = new ArrayList<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
-      List<String> addrList = Namespace.makeMultipartDamlLogAddress(e.getKey());
-      setMultipartState(addrList, KeyValueCommitting.packDamlLogEntry(e.getValue()));
-      idList.addAll(addrList);
+      String addr = Namespace.makeAddressForType(e.getKey());
+      setMultipartState(List.of(addr), KeyValueCommitting.packDamlLogEntry(e.getValue()));
+      idList.add(addr);
     }
     return idList.toArray(new String[] {});
   }

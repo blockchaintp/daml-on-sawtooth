@@ -143,8 +143,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
     List<String> inputList = txHeader.getInputsList();
     Map<DamlLogEntryId, String> inputLogEntryKeys = KeyValueUtils.submissionToLogAddressMap(submission);
     for (DamlLogEntryId e : inputLogEntryKeys.keySet()) {
-      List<String> multipartDamlLogAddress = Namespace.makeMultipartDamlLogAddress(e);
-      if (!inputList.containsAll(multipartDamlLogAddress)) {
+      String multipartDamlLogAddress = Namespace.makeAddressForType(e);
+      if (!inputList.contains(multipartDamlLogAddress)) {
         throw new InvalidTransactionException(String.format("Not all LogEntryId's were declared as inputs"));
       }
     }
@@ -156,13 +156,11 @@ public final class DamlTransactionHandler implements TransactionHandler {
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
     LOGGER.info(String.format("Fetching DamlState for this transaction"));
-    Map<DamlStateKey, List<String>> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
+    Map<DamlStateKey, String> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
 
     List<String> inputList = txHeader.getInputsList();
-    for (List<String> addrs : inputDamlStateKeys.values()) {
-      if (!inputList.containsAll(addrs)) {
-        throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
-      }
+    if (!inputList.containsAll(inputDamlStateKeys.values())) {
+      throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
     }
     if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
       throw new InvalidTransactionException(String.format("TIMEKEEPER_GLOBAL_RECORD not declared as input"));
@@ -175,20 +173,20 @@ public final class DamlTransactionHandler implements TransactionHandler {
     Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
     for (DamlStateKey k : inputDamlStateKeys.keySet()) {
       if (inputStates.containsKey(k)) {
-        LOGGER.info(String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(),
-            Namespace.makeMultipartDamlStateAddress(k)));
+        LOGGER.info(
+            String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(), Namespace.makeAddressForType(k)));
         Option<DamlStateValue> option = Option.apply(inputStates.get(k));
         if (inputStates.get(k).toByteString().size() == 0) {
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
-              Namespace.makeMultipartDamlStateAddress(k)));
+              Namespace.makeAddressForType(k)));
         } else {
           LOGGER.info(String.format("Fetched %s(%s), address=%s, size=%s", k, k.getKeyCase().toString(),
-              Namespace.makeMultipartDamlStateAddress(k), inputStates.get(k).toByteString().size()));
+              Namespace.makeAddressForType(k), inputStates.get(k).toByteString().size()));
         }
         inputStatesWithOption.put(k, option);
       } else {
         LOGGER.info(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
-            Namespace.makeMultipartDamlStateAddress(k)));
+            Namespace.makeAddressForType(k)));
         inputStatesWithOption.put(k, Option.empty());
       }
     }
@@ -230,7 +228,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     for (Entry<DamlStateKey, DamlStateValue> e : newState.entrySet()) {
       LOGGER.info(
           String.format("Set state at %s(%s), address=%s, size(%s)", e.getKey(), e.getValue().getValueCase().toString(),
-              Namespace.makeMultipartDamlStateAddress(e.getKey()), e.getValue().toByteString().size()));
+              Namespace.makeAddressForType(e.getKey()), e.getValue().toByteString().size()));
       if (e.getKey().getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
         ledgerState.setDamlState(e.getKey(), DamlStateValue.newBuilder()
             .setArchive(Archive.newBuilder().setHash(e.getKey().getPackageId()).build()).build());
@@ -240,8 +238,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
 
     DamlLogEntry newLogEntry = processSubmission._1;
-    LOGGER.info(String.format("Recording log at %s, address=%s", entryId,
-        Namespace.makeMultipartDamlLogAddress(entryId), newLogEntry.toByteString().size()));
+    LOGGER.info(String.format("Recording log at %s, address=%s", entryId, Namespace.makeAddressForType(entryId),
+        newLogEntry.toByteString().size()));
     List<String> newLogEntryList = ledgerState.addDamlLogEntry(entryId, newLogEntry, currentLogEntryList);
     ledgerState.updateLogEntryIndex(newLogEntryList);
   }
