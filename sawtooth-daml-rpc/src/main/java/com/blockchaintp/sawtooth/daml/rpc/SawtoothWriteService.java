@@ -54,6 +54,7 @@ import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
 import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
+import sawtooth.sdk.protobuf.ClientBatchSubmitResponse.Status;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
 import scala.Option;
@@ -166,8 +167,7 @@ public final class SawtoothWriteService implements WriteService {
     this.sawtoothTransactionsTracer.putWriteTransactions(sawtoothBatch.toString());
 
     try {
-      sendToValidator(sawtoothBatch);
-      CompletionStage<SubmissionResult> cs = CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
+      CompletionStage<SubmissionResult> cs = sendToValidator(sawtoothBatch);
       return cs;
     } catch (SawtoothWriteServiceException e) {
       LOGGER.error(e.getMessage());
@@ -176,15 +176,21 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  private void sendToValidator(final Batch batch) throws SawtoothWriteServiceException {
+  private CompletionStage<SubmissionResult> sendToValidator(final Batch batch) throws SawtoothWriteServiceException {
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
     ClientBatchSubmitResponse getResponse = null;
     try {
       ByteString result = streamToValidator.getResult();
       getResponse = ClientBatchSubmitResponse.parseFrom(result);
-      if (getResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
-        throw new SawtoothWriteServiceException();
+      Status status = getResponse.getStatus();
+      if (status != ClientBatchSubmitResponse.Status.OK) {
+        if (status != ClientBatchSubmitResponse.Status.QUEUE_FULL) {
+          CompletionStage<SubmissionResult> cs = CompletableFuture.completedFuture(new SubmissionResult.Overloaded$());
+          return cs;
+        }
+        throw new SawtoothWriteServiceException(
+            String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
 
     } catch (InterruptedException e) {
@@ -197,6 +203,8 @@ public final class SawtoothWriteService implements WriteService {
       throw new SawtoothWriteServiceException(
           String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()), e);
     }
+    CompletionStage<SubmissionResult> cs = CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
+    return cs;
   }
 
   @Override
