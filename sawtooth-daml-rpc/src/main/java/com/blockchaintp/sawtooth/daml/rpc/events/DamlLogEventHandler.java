@@ -40,6 +40,7 @@ import com.daml.ledger.participant.state.v1.Update;
 import com.daml.ledger.participant.state.v1.Update.Heartbeat;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 
 import io.reactivex.processors.UnicastProcessor;
@@ -48,6 +49,7 @@ import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
+import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
 import sawtooth.sdk.protobuf.ClientEventsUnsubscribeRequest;
 import sawtooth.sdk.protobuf.Event;
 import sawtooth.sdk.protobuf.Event.Attribute;
@@ -55,6 +57,8 @@ import sawtooth.sdk.protobuf.EventList;
 import sawtooth.sdk.protobuf.EventSubscription;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Message.MessageType;
+import sawtooth.sdk.protobuf.ClientBlockGetByNumRequest;
+import sawtooth.sdk.protobuf.ClientBlockGetResponse;
 import scala.Tuple2;
 
 /**
@@ -78,6 +82,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private Stream stream;
   private LogEntryTransformer transformer;
   private SawtoothTransactionsTracer tracer = null;
+  private Offset lastOffset;
 
   /**
    * Build a handler for the given zmqUrl.
@@ -93,26 +98,15 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * @param argStream the delegate to use
    */
   public DamlLogEventHandler(final Stream argStream) {
-    this(argStream, new ArrayList<String>());
+    this(argStream, new ParticipantStateLogEntryTransformer());
   }
 
   /**
    * Build a handler based on the given delegate.and last known block ids.
    * @param argStream the delegate to use
-   * @param blockIds  the last known block ids for this event handler
-   */
-  public DamlLogEventHandler(final Stream argStream, final Collection<String> blockIds) {
-    this(argStream, blockIds, new ParticipantStateLogEntryTransformer());
-  }
-
-  /**
-   * Build a handler based on the given delegate.and last known block ids.
-   * @param argStream the delegate to use
-   * @param blockIds  the last known block ids for this event handler
    * @param transform the transformer to use
    */
-  public DamlLogEventHandler(final Stream argStream, final Collection<String> blockIds,
-      final LogEntryTransformer transform) {
+  public DamlLogEventHandler(final Stream argStream, final LogEntryTransformer transform) {
     this.transformer = transform;
     this.subscriptions = new ArrayList<EventSubscription>();
     for (String subject : SUBSCRIBE_SUBJECTS) {
@@ -122,7 +116,67 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.stream = argStream;
     // TODO add a cancel call back
     this.processor = UnicastProcessor.create();
-    this.lastBlockIds = blockIds;
+    this.lastOffset = Offset.apply(new long[] {0});
+  }
+
+  /**
+   * Start an event handler after the given offset.
+   * @param url              the url of the ZMQ
+   * @param beginAfterOffset the offset to begin after
+   */
+  public DamlLogEventHandler(final String url, final Offset beginAfterOffset) {
+    // TODO Auto-generated constructor stub
+    this.transformer = new ParticipantStateLogEntryTransformer();
+    this.subscriptions = new ArrayList<EventSubscription>();
+    for (String subject : SUBSCRIBE_SUBJECTS) {
+      EventSubscription evtSubscription = EventSubscription.newBuilder().setEventType(subject).build();
+      this.subscriptions.add(evtSubscription);
+    }
+    this.stream = new ZmqStream(url);
+    this.processor = UnicastProcessor.create();
+    this.lastBlockIds = new ArrayList<>();
+    this.lastBlockIds.add(getBlockIdByOffset(beginAfterOffset));
+  }
+
+  private String getBlockIdByOffset(final Offset offset) {
+    String[] offsetSplit = offset.toString().split("-");
+    // Block 1 is the genesis block, While unlikely the first possible interesting
+    // data is at block 2
+    Long blockNum = Math.max(2, Long.valueOf(offsetSplit[0]));
+
+    ClientBlockGetByNumRequest bgbn = ClientBlockGetByNumRequest.newBuilder().setBlockNum(blockNum).build();
+    Future resp = this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
+
+    String retBlockId = null;
+    LOGGER.info(String.format("Waiting for ClientBlockGetResponse for block_num: %s", blockNum));
+    try {
+      ByteString result = null;
+      while (result == null) {
+        try {
+          result = resp.getResult(DEFAULT_TIMEOUT);
+          ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
+          switch (response.getStatus()) {
+          case OK:
+            LOGGER.info("ClientBlockGetResponse received...");
+            retBlockId = response.getBlock().getHeaderSignature();
+            break;
+          case INTERNAL_ERROR:
+          case NO_RESOURCE:
+          case UNRECOGNIZED:
+          case INVALID_ID:
+          case STATUS_UNSET:
+          default:
+            LOGGER.severe(
+                String.format("Invlid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+          }
+        } catch (TimeoutException exc) {
+          LOGGER.warning("Still waiting for ClientBlockGetResponse...");
+        }
+      }
+    } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
+      LOGGER.warning(exc.getMessage());
+    }
+    return retBlockId;
   }
 
   private Map<String, String> eventAttributeMap(final Event evt) {
@@ -134,8 +188,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     return attrMap;
   }
 
-  private Collection<Tuple2<Offset, Update>> eventToUpdates(final EventList evtList)
-      throws IOException {
+  private Collection<Tuple2<Offset, Update>> eventToUpdates(final EventList evtList) throws IOException {
     if (this.tracer != null) {
       String jsonOut = JsonFormat.printer().print(evtList);
       this.tracer.putReadTransactions(jsonOut);
@@ -151,6 +204,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       }
     }
     long updateCounter = 1;
+    Offset lastOffsetThisBlock = null;
     for (Event evt : evtList.getEventsList()) {
       Map<String, String> attrMap = eventAttributeMap(evt);
       if (evt.getEventType().equals(EventConstants.DAML_LOG_EVENT_SUBJECT)) {
@@ -163,9 +217,16 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
         Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
         updateCounter++;
-        Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
-        tuplesToReturn.add(updateTuple);
-        LOGGER.info(String.format("Sending update at offset=%s", offset));
+        if (offset.compareTo(this.lastOffset) > 0) {
+          Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
+          tuplesToReturn.add(updateTuple);
+          lastOffsetThisBlock = offset;
+          LOGGER.info(String.format("Sending update at offset=%s", offset));
+        } else {
+          LOGGER
+              .info(String.format("Skip sending offset=%s which is less than lastOffset=%s", offset, this.lastOffset));
+
+        }
       }
     }
     // Only send heartbeats if we haven't sent anything
@@ -179,16 +240,24 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           long microseconds = Long.valueOf(microsStr);
           Heartbeat heartbeat = new Heartbeat(new Timestamp(microseconds));
           Offset hbOffset = new Offset(new long[] {blockNum, 0});
-          Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
-          // Only send the most recent heartbeat
-          if (!tuplesToReturn.isEmpty()) {
-            tuplesToReturn.clear();
+          if (hbOffset.compareTo(this.lastOffset) > 0) {
+            Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
+            // Only send the most recent heartbeat
+            if (!tuplesToReturn.isEmpty()) {
+              tuplesToReturn.clear();
+            }
+            tuplesToReturn.add(updateTuple);
+            lastOffsetThisBlock = hbOffset;
+            LOGGER.info(String.format("Sending heartbeat at offset=%s", hbOffset));
+          } else {
+            LOGGER.info(
+                String.format("Skip sending offset=%s which is less than lastOffset=%s", hbOffset, this.lastOffset));
           }
-          tuplesToReturn.add(updateTuple);
-          LOGGER.info(String.format("Sending heartbeat at offset=%s", hbOffset));
-
         }
       }
+    }
+    if (null != lastOffsetThisBlock) {
+      this.lastOffset = lastOffsetThisBlock;
     }
     return tuplesToReturn;
   }
@@ -268,13 +337,24 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       while (result == null) {
         try {
           result = resp.getResult(DEFAULT_TIMEOUT);
+          ClientEventsSubscribeResponse subscribeResponse = ClientEventsSubscribeResponse.parseFrom(result);
+          switch (subscribeResponse.getStatus()) {
+          case UNKNOWN_BLOCK:
+            throw new RuntimeException(String.format("Unknown blockids in subscription: %s", this.lastBlockIds));
+          case INVALID_FILTER:
+            LOGGER.warning("InvalidFilters response received");
+          case STATUS_UNSET:
+          case OK:
+            LOGGER.info("Subscription response received...");
+            return;
+          default:
+          }
         } catch (TimeoutException exc) {
           LOGGER.warning("Still waiting for subscription response...");
         }
       }
-      LOGGER.info("Subscription response received...");
 
-    } catch (InterruptedException | ValidatorConnectionError exc) {
+    } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
     }
   }

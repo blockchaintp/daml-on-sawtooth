@@ -14,6 +14,7 @@ package com.blockchaintp.sawtooth.daml.rpc;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.rpc.events.DamlLogEventHandler;
 import com.daml.ledger.participant.state.backport.TimeModel;
@@ -34,6 +35,8 @@ import scala.Tuple2;
  * Sawtooth implementation of the Daml ReadService.
  */
 public class SawtoothReadService implements ReadService {
+
+  private static final Logger LOGGER = Logger.getLogger(SawtoothReadService.class.getName());
 
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
   private final String url;
@@ -77,17 +80,19 @@ public class SawtoothReadService implements ReadService {
 
   @Override
   public final Source<Tuple2<Offset, Update>, NotUsed> stateUpdates(final Option<Offset> beginAfter) {
+    DamlLogEventHandler dleHandler;
     if (beginAfter.isDefined()) {
-      // then we create a catch-up processor for this guy
-      return null;
+      LOGGER.info(String.format("Starting event handling at offset=%s", beginAfter.get()));
+      dleHandler = new DamlLogEventHandler(url, beginAfter.get());
     } else {
-      DamlLogEventHandler dleHandler = new DamlLogEventHandler(url);
-      if (this.trace != null) {
-        dleHandler.setTracer(this.trace);
-      }
-      executorService.submit(dleHandler);
-      return Source.fromPublisher(dleHandler.getPublisher());
+      LOGGER.info(String.format("Starting event handling at wherever is current"));
+      dleHandler = new DamlLogEventHandler(url);
     }
+    if (this.trace != null) {
+      dleHandler.setTracer(this.trace);
+    }
+    executorService.submit(dleHandler);
+    return Source.fromPublisher(dleHandler.getPublisher());
   }
 
 }
