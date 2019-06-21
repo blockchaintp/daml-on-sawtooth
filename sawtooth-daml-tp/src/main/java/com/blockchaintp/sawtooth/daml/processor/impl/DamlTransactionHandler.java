@@ -196,9 +196,11 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Configuration getConfiguration(final LedgerState ledgerState)
       throws InternalError, InvalidTransactionException {
     TimeModel tm = ledgerState.getTimeModel();
-    if (null == tm) {
-      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+    if ( tm == null ) {
+      LOGGER.info("No time model set on chain using defaults");
+        tm=new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
     }
+    LOGGER.info(String.format("TimeModel set to %s",tm));
     Configuration config = new Configuration(tm);
     return config;
   }
