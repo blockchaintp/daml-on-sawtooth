@@ -16,6 +16,7 @@ import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLO
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,6 +31,8 @@ import java.util.zip.Inflater;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
+import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
+import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
@@ -38,6 +41,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.daml.ledger.participant.state.backport.TimeModel;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -52,6 +56,14 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  * @author scealiontach
  */
 public final class DamlLedgerState implements LedgerState {
+
+  private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
+
+  private static final String MAX_TTL_KEY = TIMEMODEL_CONFIG + ".maxTtl";
+
+  private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
+
+  private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
 
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
@@ -381,4 +393,74 @@ public final class DamlLedgerState implements LedgerState {
     }
   }
 
+  @Override
+  public TimeModel getTimeModel() throws InternalError, InvalidTransactionException {
+    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
+    ConfigurationMap configMap;
+    try {
+      configMap = ConfigurationMap
+          .parseFrom(configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY));
+      Duration maxTtl = null;
+      Duration maxClockSkew = null;
+      Duration minTxLatency = null;
+
+      for (ConfigurationEntry ce : configMap.getEntriesList()) {
+        if (ce.getKey().equals(MIN_TRANSACTION_LATENCY_KEY)) {
+          minTxLatency = Duration.parse(ce.getValue().toStringUtf8());
+        }
+        if (ce.getKey().equals(MAX_CLOCK_SKEW_KEY)) {
+          maxClockSkew = Duration.parse(ce.getValue().toStringUtf8());
+        }
+        if (ce.getKey().equals(MAX_TTL_KEY)) {
+          maxTtl = Duration.parse(ce.getValue().toStringUtf8());
+        }
+      }
+      if (null == maxTtl || null == maxClockSkew || null == minTxLatency) {
+        return null;
+      } else {
+        return new TimeModel(minTxLatency, maxClockSkew, maxTtl);
+      }
+    } catch (InvalidProtocolBufferException exc) {
+      InternalError internalError = new InternalError(exc.getMessage());
+      internalError.initCause(exc);
+      throw internalError;
+    }
+  }
+
+  @Override
+  public void setTimeModel(final TimeModel tm) throws InternalError, InvalidTransactionException {
+    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
+    List<ConfigurationEntry> newCEList = new ArrayList<>();
+    try {
+      ConfigurationMap configMap = ConfigurationMap
+          .parseFrom(configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY));
+      for (ConfigurationEntry ce : configMap.getEntriesList()) {
+        if (!ce.getKey().startsWith(TIMEMODEL_CONFIG)) {
+          newCEList.add(ce);
+        }
+      }
+      ByteString minTxLatency = ByteString.copyFromUtf8(tm.minTransactionLatency().toString());
+      ConfigurationEntry minTxLatencyCE = ConfigurationEntry.newBuilder().setKey(MIN_TRANSACTION_LATENCY_KEY)
+          .setValue(minTxLatency).build();
+      newCEList.add(minTxLatencyCE);
+
+      ByteString maxClockSkew = ByteString.copyFromUtf8(tm.maxClockSkew().toString());
+      ConfigurationEntry maxClockSkewCE = ConfigurationEntry.newBuilder().setKey(MAX_CLOCK_SKEW_KEY)
+          .setValue(maxClockSkew).build();
+      newCEList.add(maxClockSkewCE);
+
+      ByteString maxTtl = ByteString.copyFromUtf8(tm.maxTtl().toString());
+      ConfigurationEntry maxTtlCE = ConfigurationEntry.newBuilder().setKey(MAX_TTL_KEY).setValue(maxTtl).build();
+      newCEList.add(maxTtlCE);
+
+      ConfigurationMap newMap = ConfigurationMap.newBuilder().addAllEntries(newCEList).build();
+
+      configEntry.put(Namespace.DAML_CONFIG_TIME_MODEL, newMap.toByteString());
+      state.setState(configEntry.entrySet());
+    } catch (InvalidProtocolBufferException exc) {
+      InternalError internalError = new InternalError(exc.getMessage());
+      internalError.initCause(exc);
+      throw internalError;
+    }
+  }
 }

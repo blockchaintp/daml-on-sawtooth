@@ -20,6 +20,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.daml.ledger.participant.state.backport.TimeModel;
 import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -170,4 +171,22 @@ public interface LedgerState {
    * @throws InvalidTransactionException when the data itself is invalid
    */
   List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException;
+
+  /**
+   * Retrieve the current TimeModel or null if it has not been set.
+   * @return current TimeModel or null if it has not been set
+   * @throws InternalError               when there is an unexpected back end
+   *                                     error
+   * @throws InvalidTransactionException when the data itself is invalid
+   */
+  TimeModel getTimeModel() throws InternalError, InvalidTransactionException;
+
+  /**
+   * Set the TimeModel to be used after this transaction is complete.
+   * @param tm the new time model
+   * @throws InternalError               when there is an unexpected back end
+   *                                     error
+   * @throws InvalidTransactionException when the data itself is invalid
+   */
+  void setTimeModel(TimeModel tm) throws InternalError, InvalidTransactionException;
 }

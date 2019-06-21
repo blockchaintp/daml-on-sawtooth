@@ -193,9 +193,12 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return inputStatesWithOption;
   }
 
-  private Configuration getConfiguration() {
-    // TODO this needs to be replaced with a proper configuration source
-    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+  private Configuration getConfiguration(final LedgerState ledgerState)
+      throws InternalError, InvalidTransactionException {
+    TimeModel tm = ledgerState.getTimeModel();
+    if (null == tm) {
+      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+    }
     Configuration config = new Configuration(tm);
     return config;
   }
@@ -222,7 +225,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throws InternalError, InvalidTransactionException {
 
     Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
-        getConfiguration(), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
+        getConfiguration(ledgerState), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
 
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
     for (Entry<DamlStateKey, DamlStateValue> e : newState.entrySet()) {

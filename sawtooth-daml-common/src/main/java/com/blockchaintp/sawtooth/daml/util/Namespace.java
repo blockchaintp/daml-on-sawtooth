@@ -60,6 +60,16 @@ public final class Namespace {
   public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "daml-log-entry-list");
 
   /**
+   * Address space for Configuration Entries.
+   */
+  public static final String DAML_CONFIG_ENTRY_NS = getNameSpace() + "02";
+
+  /**
+   * Address for main daml-on-sawtooth configuration.
+   */
+  public static final String DAML_CONFIG_TIME_MODEL = makeAddress(DAML_CONFIG_ENTRY_NS, "main-config");
+
+  /**
    * Maximum number of leaf addresses for a DamlStateKey.
    */
   public static final int DAML_STATE_MAX_LEAVES = 10;
