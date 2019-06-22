@@ -49,6 +49,8 @@ import scala.Tuple2;
  */
 public class SawtoothReadService implements ReadService {
 
+  private static final int DEFAULT_WAIT_LOOPS = 10;
+
   private static final Logger LOGGER = Logger.getLogger(SawtoothReadService.class.getName());
 
   private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
@@ -126,8 +128,8 @@ public class SawtoothReadService implements ReadService {
   }
 
   private TimeModel getTimeModel() {
-    try (Stream stream = new ZmqStream(this.url)) {
-
+    try {
+      Stream stream = new ZmqStream(this.url);
       ClientStateGetRequest req = ClientStateGetRequest.newBuilder().setAddress(Namespace.DAML_CONFIG_TIME_MODEL)
           .build();
       Future resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
@@ -136,6 +138,7 @@ public class SawtoothReadService implements ReadService {
           String.format("Waiting for ClientStateGetResponse for TimeModel at %s", Namespace.DAML_CONFIG_TIME_MODEL));
       try {
         ByteString result = null;
+        int loopCount = 0;
         while (result == null) {
           try {
             result = resp.getResult(DEFAULT_TIMEOUT);
@@ -178,13 +181,23 @@ public class SawtoothReadService implements ReadService {
             case INVALID_ROOT:
             default:
               LOGGER.severe(
-                  String.format("Invalid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+                  String.format("Invalid response received from ClientStateGetRequest: %s", response.getStatus()));
               return null;
             }
           } catch (TimeoutException exc) {
             LOGGER.warning("Still waiting for ClientStateGetResponse...");
+            loopCount++;
+            if (loopCount >= DEFAULT_WAIT_LOOPS) {
+              try {
+                stream.close();
+              } catch (Exception exc1) {
+                LOGGER.info(String.format("Exception closing stream: %s", exc1.getMessage()));
+              }
+              stream = new ZmqStream(this.url);
+            }
           }
         }
+        stream.close();
       } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
         LOGGER.warning(exc.getMessage());
       }
