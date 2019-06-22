@@ -61,7 +61,7 @@ public class SawtoothReadService implements ReadService {
 
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
-  private static final long DEFAULT_TIMEOUT = 0;
+  private static final long DEFAULT_TIMEOUT = 10;
 
   private final String url;
   private final ExecutorService executorService;
@@ -179,6 +179,7 @@ public class SawtoothReadService implements ReadService {
             default:
               LOGGER.severe(
                   String.format("Invalid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+              return null;
             }
           } catch (TimeoutException exc) {
             LOGGER.warning("Still waiting for ClientStateGetResponse...");
