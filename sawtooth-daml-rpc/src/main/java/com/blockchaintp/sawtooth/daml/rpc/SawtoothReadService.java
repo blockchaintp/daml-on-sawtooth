@@ -194,6 +194,7 @@ public class SawtoothReadService implements ReadService {
                 LOGGER.info(String.format("Exception closing stream: %s", exc1.getMessage()));
               }
               stream = new ZmqStream(this.url);
+              resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
             }
           }
         }
