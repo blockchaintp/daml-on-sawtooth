@@ -96,13 +96,13 @@ public class SawtoothReadService implements ReadService {
   @Override
   public final Source<LedgerInitialConditions, NotUsed> getLedgerInitialConditions() {
     // TODO this should be fetched from the chain
-    
+
     TimeModel tm = getTimeModel();
-    if ( tm == null ) {
+    if (tm == null) {
       LOGGER.info("No time model set on chain using defaults");
-        tm=new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
     }
-    LOGGER.info(String.format("TimeModel set to %s",tm));
+    LOGGER.info(String.format("TimeModel set to %s", tm));
     Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
         new LedgerInitialConditions(this.ledgerId, new Configuration(tm), BEGINNING_OF_EPOCH)});
     return Source.fromPublisher(f);
@@ -166,20 +166,22 @@ public class SawtoothReadService implements ReadService {
               } else {
                 return new TimeModel(minTxLatency, maxClockSkew, maxTtl);
               }
+            case NO_RESOURCE:
+              LOGGER.info("No TimeModel currently set");
+              return null;
             case INVALID_ADDRESS:
             case NOT_READY:
             case NO_ROOT:
             case INTERNAL_ERROR:
-            case NO_RESOURCE:
             case UNRECOGNIZED:
             case STATUS_UNSET:
             case INVALID_ROOT:
             default:
               LOGGER.severe(
-                  String.format("Invlid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+                  String.format("Invalid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
             }
           } catch (TimeoutException exc) {
-            LOGGER.warning("Still waiting for ClientBlockGetResponse...");
+            LOGGER.warning("Still waiting for ClientStateGetResponse...");
           }
         }
       } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {

@@ -135,7 +135,10 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.stream = new ZmqStream(url);
     this.processor = UnicastProcessor.create();
     this.lastBlockIds = new ArrayList<>();
-    this.lastBlockIds.add(getBlockIdByOffset(beginAfterOffset));
+    String lastBlockId = getBlockIdByOffset(beginAfterOffset);
+    if (null != lastBlockId) {
+      this.lastBlockIds.add(lastBlockId);
+    }
   }
 
   private String getBlockIdByOffset(final Offset offset) {
@@ -160,14 +163,16 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
             LOGGER.info("ClientBlockGetResponse received...");
             retBlockId = response.getBlock().getHeaderSignature();
             break;
-          case INTERNAL_ERROR:
           case NO_RESOURCE:
+            LOGGER.info(String.format("NO_RESOURCE received from ClientBlockGetResponse: %s", response.toString()));
+            return null;
+          case INTERNAL_ERROR:
           case UNRECOGNIZED:
           case INVALID_ID:
           case STATUS_UNSET:
           default:
             LOGGER.severe(
-                String.format("Invlid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+                String.format("Invalid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
           }
         } catch (TimeoutException exc) {
           LOGGER.warning("Still waiting for ClientBlockGetResponse...");
