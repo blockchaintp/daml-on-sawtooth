@@ -21,9 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteServiceException;
@@ -69,7 +67,7 @@ import scala.collection.JavaConverters;
  */
 public final class SawtoothWriteService implements WriteService {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothWriteService.class);
+  private static final Logger LOGGER = Logger.getLogger(SawtoothWriteService.class.getName());
 
   private Stream stream;
 
@@ -169,7 +167,7 @@ public final class SawtoothWriteService implements WriteService {
     for (DamlStateKey dk : damlStateKeys) {
       String addr = Namespace.makeAddressForType(dk);
       outputAddresses.add(addr);
-      LOGGER.info(String.format("Adding output address %s for key %s", addr, dk));
+      LOGGER.fine(String.format("Adding output address %s for key %s", addr, dk));
     }
     outputAddresses.add(Namespace.makeAddressForType(logEntryId));
     outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
@@ -180,11 +178,11 @@ public final class SawtoothWriteService implements WriteService {
     // Push to TraceTransaction class
     this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    LOGGER.info(String.format("Batch submitting %s", batch.getHeaderSignature()));
+    LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
     ClientBatchSubmitResponse getResponse = null;
     try {
-      LOGGER.info(String.format("Batch awaiting response for %s", batch.getHeaderSignature()));
+      LOGGER.fine(String.format("Batch awaiting response for %s", batch.getHeaderSignature()));
       ByteString result = streamToValidator.getResult();
       getResponse = ClientBatchSubmitResponse.parseFrom(result);
       Status status = getResponse.getStatus();
@@ -222,7 +220,7 @@ public final class SawtoothWriteService implements WriteService {
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), payload.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
-    LOGGER.info(
+    LOGGER.fine(
         String.format("Batch %s has tx %s", sawtoothBatch.getHeaderSignature(), sawtoothTxn.getHeaderSignature()));
     return sawtoothBatch;
   }
@@ -244,11 +242,11 @@ public final class SawtoothWriteService implements WriteService {
     // Have to add dedupStateKey since that is missed in transactionOutputs
     String dedupStateAddress = makeDamlCommandDedupKeyAddress(submitterInfo);
     if (!outputAddresses.contains(dedupStateAddress)) {
-      LOGGER.warn(String.format("Output addresses do not contain the dedup key, adding addr=%s", dedupStateAddress));
+      LOGGER.warning(String.format("Output addresses do not contain the dedup key, adding addr=%s", dedupStateAddress));
       outputAddresses.add(dedupStateAddress);
     }
     if (!inputAddresses.contains(dedupStateAddress)) {
-      LOGGER.warn(String.format("Input addresses do not contain the dedup key, adding addr=%s", dedupStateAddress));
+      LOGGER.warning(String.format("Input addresses do not contain the dedup key, adding addr=%s", dedupStateAddress));
       inputAddresses.add(dedupStateAddress);
     }
 
@@ -256,7 +254,7 @@ public final class SawtoothWriteService implements WriteService {
     // some are missed on the KeyValueSubmission.transactionOutputs
     for (String addr : inputAddresses) {
       if (!outputAddresses.contains(addr)) {
-        LOGGER.warn(String.format("Output addresses do not contain an input key, adding addr=%s", addr));
+        LOGGER.warning(String.format("Output addresses do not contain an input key, adding addr=%s", addr));
         outputAddresses.add(addr);
       }
     }
@@ -266,7 +264,7 @@ public final class SawtoothWriteService implements WriteService {
     try {
       return sendToValidator(sawtoothBatch);
     } catch (SawtoothWriteServiceException e) {
-      LOGGER.error(e.getMessage());
+      LOGGER.severe(e.getMessage());
       throw new RuntimeException(e);
     }
   }
@@ -287,7 +285,7 @@ public final class SawtoothWriteService implements WriteService {
     // some are missed on the KeyValueSubmission.transactionOutputs
     for (String addr : inputAddresses) {
       if (!outputAddresses.contains(addr)) {
-        LOGGER.warn(String.format("Output addresses do not contain an input key, adding addr=%s", addr));
+        LOGGER.warning(String.format("Output addresses do not contain an input key, adding addr=%s", addr));
         outputAddresses.add(addr);
       }
     }
@@ -297,7 +295,7 @@ public final class SawtoothWriteService implements WriteService {
     try {
       return sendToValidator(sawtoothBatch);
     } catch (SawtoothWriteServiceException e) {
-      LOGGER.error(e.getMessage());
+      LOGGER.severe(e.getMessage());
       throw new RuntimeException(e);
     }
   }
