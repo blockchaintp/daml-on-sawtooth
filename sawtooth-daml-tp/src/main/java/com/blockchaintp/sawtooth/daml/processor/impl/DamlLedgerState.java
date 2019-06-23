@@ -68,6 +68,7 @@ public final class DamlLedgerState implements LedgerState {
 
   private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
 
+
   /**
    * The state which this class wraps and delegates to.
    */
@@ -198,7 +199,20 @@ public final class DamlLedgerState implements LedgerState {
       setMap.put(addr, compressByteString(KeyValueCommitting.packDamlLogEntry(e.getValue())));
       idList.add(addr);
     }
+    state.setState(setMap.entrySet());
     return idList.toArray(new String[] {});
+  }
+
+  @Override
+  public List<String> addDamlLogEntry(final DamlLogEntryId entryId, final DamlLogEntry entry,
+      final List<String> currentEntryList) throws InternalError, InvalidTransactionException {
+    Map<DamlLogEntryId, DamlLogEntry> setMap = new HashMap<>();
+    setMap.put(entryId, entry);
+    String[] addresses = addDamlLogEntries(setMap.entrySet());
+    List<String> retList = new ArrayList<>(currentEntryList);
+    retList.addAll(Arrays.asList(addresses));
+    sendLogEvent(entryId, entry, retList.size());
+    return retList;
   }
 
   @Override
@@ -230,18 +244,6 @@ public final class DamlLedgerState implements LedgerState {
     } else {
       return new ArrayList<String>();
     }
-  }
-
-  @Override
-  public List<String> addDamlLogEntry(final DamlLogEntryId entryId, final DamlLogEntry entry,
-      final List<String> currentEntryList) throws InternalError, InvalidTransactionException {
-    Map<DamlLogEntryId, DamlLogEntry> setMap = new HashMap<>();
-    setMap.put(entryId, entry);
-    String[] addresses = addDamlLogEntries(setMap.entrySet());
-    List<String> retList = new ArrayList<>(currentEntryList);
-    retList.addAll(Arrays.asList(addresses));
-    sendLogEvent(entryId, entry, retList.size());
-    return retList;
   }
 
   @Override
