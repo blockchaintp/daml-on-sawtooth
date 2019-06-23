@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -48,17 +49,19 @@ import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
+import sawtooth.sdk.protobuf.ClientBlockGetByNumRequest;
+import sawtooth.sdk.protobuf.ClientBlockGetResponse;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
 import sawtooth.sdk.protobuf.ClientEventsUnsubscribeRequest;
+import sawtooth.sdk.protobuf.ClientStateGetRequest;
+import sawtooth.sdk.protobuf.ClientStateGetResponse;
 import sawtooth.sdk.protobuf.Event;
 import sawtooth.sdk.protobuf.Event.Attribute;
 import sawtooth.sdk.protobuf.EventList;
 import sawtooth.sdk.protobuf.EventSubscription;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Message.MessageType;
-import sawtooth.sdk.protobuf.ClientBlockGetByNumRequest;
-import sawtooth.sdk.protobuf.ClientBlockGetResponse;
 import scala.Tuple2;
 
 /**
@@ -75,10 +78,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private Collection<EventSubscription> subscriptions;
-  private Collection<String> lastBlockIds;
 
-  private final UnicastProcessor<Tuple2<Offset, Update>> processor;
-
+  private final List<UnicastProcessor<Tuple2<Offset, Update>>> processors;
+  private boolean subscribed = false;
   private Stream stream;
   private LogEntryTransformer transformer;
   private SawtoothTransactionsTracer tracer = null;
@@ -115,30 +117,8 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     }
     this.stream = argStream;
     // TODO add a cancel call back
-    this.processor = UnicastProcessor.create();
+    this.processors = Collections.synchronizedList(new ArrayList<>());
     this.lastOffset = Offset.apply(new long[] {0});
-  }
-
-  /**
-   * Start an event handler after the given offset.
-   * @param url              the url of the ZMQ
-   * @param beginAfterOffset the offset to begin after
-   */
-  public DamlLogEventHandler(final String url, final Offset beginAfterOffset) {
-    // TODO Auto-generated constructor stub
-    this.transformer = new ParticipantStateLogEntryTransformer();
-    this.subscriptions = new ArrayList<EventSubscription>();
-    for (String subject : SUBSCRIBE_SUBJECTS) {
-      EventSubscription evtSubscription = EventSubscription.newBuilder().setEventType(subject).build();
-      this.subscriptions.add(evtSubscription);
-    }
-    this.stream = new ZmqStream(url);
-    this.processor = UnicastProcessor.create();
-    this.lastBlockIds = new ArrayList<>();
-    String lastBlockId = getBlockIdByOffset(beginAfterOffset);
-    if (null != lastBlockId) {
-      this.lastBlockIds.add(lastBlockId);
-    }
   }
 
   private String getBlockIdByOffset(final Offset offset) {
@@ -272,7 +252,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * @return the publisher
    */
   public final Publisher<Tuple2<Offset, Update>> getPublisher() {
-    return processor;
+    UnicastProcessor<Tuple2<Offset, Update>> p = UnicastProcessor.create();
+    this.processors.add(p);
+    return p;
   }
 
   @Override
@@ -295,13 +277,13 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   protected final void processMessage(final Message message) throws IOException {
-    LOGGER.info("Process message...");
-
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       EventList evtList = EventList.parseFrom(message.getContent());
       Collection<Tuple2<Offset, Update>> updates = eventToUpdates(evtList);
       for (Tuple2<Offset, Update> u : updates) {
-        this.processor.onNext(u);
+        for (UnicastProcessor<Tuple2<Offset, Update>> proc : this.processors) {
+          proc.onNext(u);
+        }
       }
     } else {
       LOGGER.warning(String.format("Unexpected message type: %s", message.getMessageType()));
@@ -310,7 +292,6 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   @Override
   public final void run() {
-    sendSubscribe();
     while (true) {
       Message receivedMsg = null;
       try {
@@ -333,8 +314,28 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * Send a subscribe message to the validator.
    */
   public final void sendSubscribe() {
+    this.sendSubscribe(null);
+  }
+
+  /**
+   * Send a subscribe message to the validator.
+   * @param beginAfter the offset to begin subscribing after
+   */
+  public final void sendSubscribe(final Offset beginAfter) {
+    if (this.subscribed) {
+      LOGGER.warning("Attempted to subscribe twice");
+      return;
+    }
+
+    List<String> lastBlockIds = new ArrayList<>();
+    if (beginAfter != null) {
+      lastBlockIds.add(getBlockIdByOffset(beginAfter));
+      this.lastOffset = beginAfter;
+    }
+
     ClientEventsSubscribeRequest cesReq = ClientEventsSubscribeRequest.newBuilder().addAllSubscriptions(subscriptions)
         .addAllLastKnownBlockIds(lastBlockIds).build();
+
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
     LOGGER.info("Waiting for subscription response...");
     try {
@@ -345,11 +346,12 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           ClientEventsSubscribeResponse subscribeResponse = ClientEventsSubscribeResponse.parseFrom(result);
           switch (subscribeResponse.getStatus()) {
           case UNKNOWN_BLOCK:
-            throw new RuntimeException(String.format("Unknown blockids in subscription: %s", this.lastBlockIds));
+            throw new RuntimeException(String.format("Unknown blockids in subscription: %s", lastBlockIds));
           case INVALID_FILTER:
             LOGGER.warning("InvalidFilters response received");
           case STATUS_UNSET:
           case OK:
+            this.subscribed = true;
             LOGGER.info("Subscription response received...");
             return;
           default:
@@ -413,4 +415,51 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       throw exc;
     }
   }
+
+  /**
+   * Get the state at the given address.
+   * @param address the address of the state entry
+   * @return the data at the address
+   */
+  public ByteString getState(final String address) {
+    ClientStateGetRequest req = ClientStateGetRequest.newBuilder().setAddress(address).build();
+    Future resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
+
+    LOGGER.info(String.format("Waiting for ClientStateGetResponse for address %s", address));
+    try {
+      ByteString result = null;
+      while (result == null) {
+        try {
+          result = resp.getResult(DEFAULT_TIMEOUT);
+          ClientStateGetResponse response = ClientStateGetResponse.parseFrom(result);
+          switch (response.getStatus()) {
+          case OK:
+            ByteString bs = response.getValue();
+            LOGGER.info(String.format("ClientStateGetResponse received OK for %s=%s", address, bs));
+            return bs;
+          case NO_RESOURCE:
+            LOGGER.info(String.format("Address %s not currently set", address));
+            return null;
+          case INVALID_ADDRESS:
+          case NOT_READY:
+          case NO_ROOT:
+          case INTERNAL_ERROR:
+          case UNRECOGNIZED:
+          case STATUS_UNSET:
+          case INVALID_ROOT:
+          default:
+            LOGGER.severe(String.format("Invalid response received from ClientStateGetRequest address=%s response=%s",
+                address, response.getStatus()));
+            return null;
+          }
+        } catch (TimeoutException exc) {
+          LOGGER.warning(String.format("Still waiting for ClientStateGetResponse address=%s", address));
+        }
+      }
+    } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
+      LOGGER.warning(exc.getMessage());
+    }
+    return null;
+  }
+
 }

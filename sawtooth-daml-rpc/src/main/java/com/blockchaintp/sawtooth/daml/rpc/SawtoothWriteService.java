@@ -11,6 +11,8 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.rpc;
 
+import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -129,7 +131,8 @@ public final class SawtoothWriteService implements WriteService {
     List<String> inputAddresses = new ArrayList<>();
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils.submissionToDamlStateAddress(submission);
     inputAddresses.addAll(submissionToDamlStateAddress.values());
-    inputAddresses.add(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD);
+    inputAddresses.add(TIMEKEEPER_GLOBAL_RECORD);
+    inputAddresses.add(Namespace.DAML_CONFIG_TIME_MODEL);
 
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils.submissionToLogAddressMap(submission);
     for (DamlLogEntryId e : submissionToLogAddressMap.keySet()) {
