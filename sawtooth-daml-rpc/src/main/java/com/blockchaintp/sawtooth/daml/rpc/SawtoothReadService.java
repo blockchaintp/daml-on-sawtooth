@@ -55,6 +55,7 @@ public class SawtoothReadService implements ReadService {
   private final ExecutorService executorService;
   private final String ledgerId;
   private final SawtoothTransactionsTracer trace;
+  private boolean startAtTheBeginning = false;
 
   private DamlLogEventHandler handler;
 
@@ -77,14 +78,19 @@ public class SawtoothReadService implements ReadService {
    * @param thisLedgerId the ledger id for this RPC
    * @param zmqUrl       the url of the zmq endpoint
    * @param tracer       a transaction tracer
+   * @param indexReset   set to true if this reader should start at the first
+   *                     offset regardless of subscription. This is useful in the
+   *                     case of the in memory reference index server.
    */
-  public SawtoothReadService(final String thisLedgerId, final String zmqUrl, final SawtoothTransactionsTracer tracer) {
+  public SawtoothReadService(final String thisLedgerId, final String zmqUrl, final SawtoothTransactionsTracer tracer,
+      final boolean indexReset) {
     this.ledgerId = thisLedgerId;
     this.url = zmqUrl;
     this.trace = tracer;
     this.executorService = Executors.newWorkStealingPool();
     this.handler = new DamlLogEventHandler(this.url);
     this.executorService.submit(this.handler);
+    this.startAtTheBeginning = indexReset;
   }
 
   private TimeModel parseTimeModel(final ByteString data) throws InvalidProtocolBufferException {
@@ -138,8 +144,14 @@ public class SawtoothReadService implements ReadService {
       LOGGER.info(String.format("Starting event handling at offset=%s", beginAfter.get()));
       this.handler.sendSubscribe(beginAfter.get());
     } else {
-      LOGGER.info(String.format("Starting event handling at wherever is current"));
-      this.handler.sendSubscribe();
+      if (this.startAtTheBeginning) {
+        LOGGER.info("Starting at the beginning of the chain (offset=1-0) as requested");
+        Offset offset=new Offset(new long[] {1,0});
+        this.handler.sendSubscribe(offset);
+      } else {
+        LOGGER.info(String.format("Starting event handling at wherever is current"));
+        this.handler.sendSubscribe();
+      }
     }
     if (this.trace != null) {
       this.handler.setTracer(this.trace);
