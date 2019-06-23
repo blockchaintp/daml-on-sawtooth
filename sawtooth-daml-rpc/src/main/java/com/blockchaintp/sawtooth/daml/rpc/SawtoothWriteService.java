@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
@@ -76,6 +78,8 @@ public final class SawtoothWriteService implements WriteService {
   private SawtoothTransactionsTracer sawtoothTransactionsTracer;
 
   private final String participantId;
+
+  private ExecutorService watchThreadPool = Executors.newWorkStealingPool();
 
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
@@ -174,28 +178,20 @@ public final class SawtoothWriteService implements WriteService {
     return outputAddresses;
   }
 
-  private CompletionStage<SubmissionResult> sendToValidator(final Batch batch) throws SawtoothWriteServiceException {
-    // Push to TraceTransaction class
-    this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
-    ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
-    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
-    ClientBatchSubmitResponse getResponse = null;
+  private SubmissionResult submissionToResponse(final Future submissionFuture) throws SawtoothWriteServiceException {
     try {
-      LOGGER.fine(String.format("Batch awaiting response for %s", batch.getHeaderSignature()));
-      ByteString result = streamToValidator.getResult();
-      getResponse = ClientBatchSubmitResponse.parseFrom(result);
+      ByteString result = submissionFuture.getResult();
+      ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
       Status status = getResponse.getStatus();
       switch (status) {
       case OK:
-        LOGGER.info(String.format("Batch submission response for %s is OK", batch.getHeaderSignature()));
-        return CompletableFuture.completedStage(new SubmissionResult.Acknowledged$());
+        LOGGER.info(String.format("ClientBatchSubmit response is OK"));
+        return new SubmissionResult.Acknowledged$();
       case QUEUE_FULL:
-        LOGGER.info(String.format("Batch submission response for %s is QUEUE_FULL", batch.getHeaderSignature()));
-        return CompletableFuture.completedFuture(new SubmissionResult.Overloaded$());
+        LOGGER.info(String.format("ClientBatchSubmit response is QUEUE_FULL"));
+        return new SubmissionResult.Overloaded$();
       default:
-        LOGGER.info(
-            String.format("Batch submission response for %s is %s", batch.getHeaderSignature(), status.toString()));
+        LOGGER.info(String.format("ClientBatchSubmit response is %s", status.toString()));
         throw new SawtoothWriteServiceException(
             String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
@@ -209,6 +205,24 @@ public final class SawtoothWriteService implements WriteService {
       throw new SawtoothWriteServiceException(
           String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()), e);
     }
+  }
+
+  synchronized private CompletionStage<SubmissionResult> sendToValidator(final Collection<Batch> batches) {
+    // Push to TraceTransaction class
+    for (Batch b : batches) {
+      this.sawtoothTransactionsTracer.putWriteTransactions(b.toString());
+      LOGGER.info(String.format("Batch submission %s", b.getHeaderSignature()));
+    }
+    ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addAllBatches(batches).build();
+    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        return submissionToResponse(streamToValidator);
+      } catch (SawtoothWriteServiceException exc) {
+        LOGGER.severe(exc.getMessage());
+        return new SubmissionResult.Acknowledged$();
+      }
+    }, watchThreadPool);
   }
 
   private Batch submissionToBatch(final DamlSubmission submission, final Collection<String> inputAddresses,
@@ -261,12 +275,7 @@ public final class SawtoothWriteService implements WriteService {
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
 
-    try {
-      return sendToValidator(sawtoothBatch);
-    } catch (SawtoothWriteServiceException e) {
-      LOGGER.severe(e.getMessage());
-      throw new RuntimeException(e);
-    }
+    return sendToValidator(List.of(sawtoothBatch));
   }
 
   @Override
@@ -292,12 +301,7 @@ public final class SawtoothWriteService implements WriteService {
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
 
-    try {
-      return sendToValidator(sawtoothBatch);
-    } catch (SawtoothWriteServiceException e) {
-      LOGGER.severe(e.getMessage());
-      throw new RuntimeException(e);
-    }
+    return sendToValidator(List.of(sawtoothBatch));
   }
 
 }
