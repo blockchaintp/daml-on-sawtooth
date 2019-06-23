@@ -131,7 +131,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     Future resp = this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
 
     String retBlockId = null;
-    LOGGER.info(String.format("Waiting for ClientBlockGetResponse for block_num: %s", blockNum));
+    LOGGER.fine(String.format("Waiting for ClientBlockGetResponse for block_num: %s", blockNum));
     try {
       ByteString result = null;
       while (result == null) {
@@ -140,7 +140,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
           switch (response.getStatus()) {
           case OK:
-            LOGGER.info("ClientBlockGetResponse received...");
+            LOGGER.fine("ClientBlockGetResponse received...");
             retBlockId = response.getBlock().getHeaderSignature();
             break;
           case NO_RESOURCE:
@@ -206,7 +206,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
           tuplesToReturn.add(updateTuple);
           lastOffsetThisBlock = offset;
-          LOGGER.info(String.format("Sending update at offset=%s", offset));
+          LOGGER.fine(String.format("Sending update at offset=%s", offset));
         } else {
           LOGGER
               .info(String.format("Skip sending offset=%s which is less than lastOffset=%s", offset, this.lastOffset));
@@ -337,7 +337,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         .addAllLastKnownBlockIds(lastBlockIds).build();
 
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
-    LOGGER.info("Waiting for subscription response...");
+    LOGGER.fine("Waiting for subscription response...");
     try {
       ByteString result = null;
       while (result == null) {
@@ -374,7 +374,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST, ceuReq.toByteString());
     try {
       resp.getResult();
-      LOGGER.info("Unsubscribed...");
+      LOGGER.fine("Unsubscribed...");
     } catch (InterruptedException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
     }
@@ -403,7 +403,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         inflater.end();
 
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
-        LOGGER.info(
+        LOGGER.fine(
             String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
@@ -425,7 +425,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     ClientStateGetRequest req = ClientStateGetRequest.newBuilder().setAddress(address).build();
     Future resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
 
-    LOGGER.info(String.format("Waiting for ClientStateGetResponse for address %s", address));
+    LOGGER.fine(String.format("Waiting for ClientStateGetResponse for address %s", address));
     try {
       ByteString result = null;
       while (result == null) {
@@ -435,7 +435,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           switch (response.getStatus()) {
           case OK:
             ByteString bs = response.getValue();
-            LOGGER.info(String.format("ClientStateGetResponse received OK for %s=%s", address, bs));
+            LOGGER.fine(String.format("ClientStateGetResponse received OK for %s=%s", address, bs));
             return bs;
           case NO_RESOURCE:
             LOGGER.info(String.format("Address %s not currently set", address));
