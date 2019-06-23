@@ -241,17 +241,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
         getConfiguration(ledgerState), entryId, getRecordTime(ledgerState), submission, inputLogEntries, stateMap);
     long recordStart = System.currentTimeMillis();
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
-    for (Entry<DamlStateKey, DamlStateValue> e : newState.entrySet()) {
-      LOGGER.fine(
-          String.format("Set state at %s(%s), address=%s, size(%s)", e.getKey(), e.getValue().getValueCase().toString(),
-              Namespace.makeAddressForType(e.getKey()), e.getValue().toByteString().size()));
-      if (e.getKey().getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-        ledgerState.setDamlState(e.getKey(), DamlStateValue.newBuilder()
-            .setArchive(Archive.newBuilder().setHash(e.getKey().getPackageId()).build()).build());
-      } else {
-        ledgerState.setDamlState(e.getKey(), e.getValue());
-      }
-    }
+    ledgerState.setDamlStates(newState.entrySet());
 
     DamlLogEntry newLogEntry = processSubmission._1;
     LOGGER.fine(String.format("Recording log at %s, address=%s", entryId, Namespace.makeAddressForType(entryId),
