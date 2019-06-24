@@ -68,7 +68,6 @@ public final class DamlLedgerState implements LedgerState {
 
   private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
 
-
   /**
    * The state which this class wraps and delegates to.
    */
@@ -283,6 +282,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString compressByteString(final ByteString input) throws InternalError {
+    long compressStart = System.currentTimeMillis();
     if (input.size() == 0) {
       return ByteString.EMPTY;
     }
@@ -302,7 +302,10 @@ public final class DamlLedgerState implements LedgerState {
       deflater.end();
 
       ByteString bs = ByteString.copyFrom(baos.toByteArray());
-      LOGGER.info(String.format("Compressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+      long compressStop = System.currentTimeMillis();
+      long compressTime = compressStop - compressStart;
+      LOGGER.info(String.format("Compressed ByteString time=%s, original_size=%s, new_size=%s", compressTime,
+          inputBytes.length, baos.size()));
       return bs;
     } catch (IOException exc) {
       LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
@@ -311,6 +314,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws InternalError {
+    long uncompressStart = System.currentTimeMillis();
     if (compressedInput.size() == 0) {
       return ByteString.EMPTY;
     }
@@ -328,8 +332,10 @@ public final class DamlLedgerState implements LedgerState {
         inflater.end();
 
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
-        LOGGER.info(
-            String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+        long uncompressStop = System.currentTimeMillis();
+        long uncompressTime = uncompressStop - uncompressStart;
+        LOGGER.info(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+            inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
         LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));

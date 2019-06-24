@@ -207,7 +207,7 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  synchronized private CompletionStage<SubmissionResult> sendToValidator(final Collection<Batch> batches) {
+  private synchronized CompletionStage<SubmissionResult> sendToValidator(final Collection<Batch> batches) {
     // Push to TraceTransaction class
     for (Batch b : batches) {
       this.sawtoothTransactionsTracer.putWriteTransactions(b.toString());

@@ -389,6 +389,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws IOException {
+    long uncompressStart = System.currentTimeMillis();
     Inflater inflater = new Inflater();
     byte[] inputBytes = compressedInput.toByteArray();
     inflater.setInput(inputBytes);
@@ -403,8 +404,10 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         inflater.end();
 
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
-        LOGGER.fine(
-            String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+        long uncompressStop = System.currentTimeMillis();
+        long uncompressTime = uncompressStop - uncompressStart;
+        LOGGER.fine(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+            inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
         LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
