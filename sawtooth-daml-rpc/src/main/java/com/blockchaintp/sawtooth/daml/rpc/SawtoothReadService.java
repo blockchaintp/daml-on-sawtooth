@@ -53,7 +53,6 @@ public class SawtoothReadService implements ReadService {
 
   private final String url;
   private final ExecutorService executorService;
-  private final String ledgerId;
   private final SawtoothTransactionsTracer trace;
   private boolean startAtTheBeginning = false;
 
@@ -61,11 +60,9 @@ public class SawtoothReadService implements ReadService {
 
   /**
    * Build a ReadService based on a zmq address URL.
-   * @param thisLedgerId the ledger id for this RPC
-   * @param zmqUrl       the url of the zmq endpoint
+   * @param zmqUrl the url of the zmq endpoint
    */
-  public SawtoothReadService(final String thisLedgerId, final String zmqUrl) {
-    this.ledgerId = thisLedgerId;
+  public SawtoothReadService(final String zmqUrl) {
     this.url = zmqUrl;
     this.executorService = Executors.newWorkStealingPool();
     this.trace = null;
@@ -75,16 +72,13 @@ public class SawtoothReadService implements ReadService {
 
   /**
    * Build a ReadService based on a zmq address URL.
-   * @param thisLedgerId the ledger id for this RPC
-   * @param zmqUrl       the url of the zmq endpoint
-   * @param tracer       a transaction tracer
-   * @param indexReset   set to true if this reader should start at the first
-   *                     offset regardless of subscription. This is useful in the
-   *                     case of the in memory reference index server.
+   * @param zmqUrl     the url of the zmq endpoint
+   * @param tracer     a transaction tracer
+   * @param indexReset set to true if this reader should start at the first offset
+   *                   regardless of subscription. This is useful in the case of
+   *                   the in memory reference index server.
    */
-  public SawtoothReadService(final String thisLedgerId, final String zmqUrl, final SawtoothTransactionsTracer tracer,
-      final boolean indexReset) {
-    this.ledgerId = thisLedgerId;
+  public SawtoothReadService(final String zmqUrl, final SawtoothTransactionsTracer tracer, final boolean indexReset) {
     this.url = zmqUrl;
     this.trace = tracer;
     this.executorService = Executors.newWorkStealingPool();
@@ -123,7 +117,6 @@ public class SawtoothReadService implements ReadService {
       LOGGER.info("No time model set on chain using defaults");
       tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
     } else {
-      // TODO parse time model bs and return;
       try {
         tm = parseTimeModel(data);
       } catch (InvalidProtocolBufferException exc) {
@@ -132,9 +125,14 @@ public class SawtoothReadService implements ReadService {
       }
     }
     LOGGER.info(String.format("TimeModel set to %s", tm));
-    // TODO ledgerId should be drawn from the ledger
+
+    String ledgerId = "default-ledgerid";
+    data = this.handler.getState(Namespace.DAML_CONFIG_LEDGER_ID);
+    if (data != null) {
+      ledgerId = data.toStringUtf8();
+    }
     Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
-        new LedgerInitialConditions(this.ledgerId, new Configuration(tm), BEGINNING_OF_EPOCH)});
+        new LedgerInitialConditions(ledgerId, new Configuration(tm), BEGINNING_OF_EPOCH)});
     return Source.fromPublisher(f);
   }
 
