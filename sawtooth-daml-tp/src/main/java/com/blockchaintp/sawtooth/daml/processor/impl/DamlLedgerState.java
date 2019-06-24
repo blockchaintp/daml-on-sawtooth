@@ -56,8 +56,6 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  */
 public final class DamlLedgerState implements LedgerState {
 
-  private static final int MAX_CACHE_SIZE = 1000;
-
   private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
 
   private static final String MAX_TTL_KEY = TIMEMODEL_CONFIG + ".maxTtl";
@@ -75,27 +73,20 @@ public final class DamlLedgerState implements LedgerState {
    */
   private Context state;
 
-  private LRUCache<String, ByteString> cache;
-
   /**
    * @param aState the State class which this object wraps.
    */
   public DamlLedgerState(final Context aState) {
     this.state = aState;
-    this.cache = new LRUCache<>(MAX_CACHE_SIZE);
   }
 
   private ByteString getStateOrNull(final String address) throws InternalError, InvalidTransactionException {
-    if (this.cache.containsKey(address)) {
-      return this.cache.get(address);
-    }
     Map<String, ByteString> stateMap = state.getState(List.of(address));
     if (stateMap.containsKey(address)) {
       ByteString bs = stateMap.get(address);
       if (bs.isEmpty() || bs == null) {
         return null;
       } else {
-        this.cache.put(address, bs);
         return bs;
       }
     } else {
@@ -187,9 +178,6 @@ public final class DamlLedgerState implements LedgerState {
       String address = Namespace.makeAddressForType(key);
       setMap.put(address, compressByteString(packDamlStateValue));
     }
-    for (String address : setMap.keySet()) {
-      this.cache.remove(address);
-    }
     state.setState(setMap.entrySet());
   }
 
@@ -209,9 +197,6 @@ public final class DamlLedgerState implements LedgerState {
       String addr = Namespace.makeAddressForType(e.getKey());
       setMap.put(addr, compressByteString(KeyValueCommitting.packDamlLogEntry(e.getValue())));
       idList.add(addr);
-    }
-    for (String address : setMap.keySet()) {
-      this.cache.remove(address);
     }
     state.setState(setMap.entrySet());
     return idList.toArray(new String[] {});
@@ -235,9 +220,6 @@ public final class DamlLedgerState implements LedgerState {
     Map<String, ByteString> indexSetMap = new HashMap<>();
     indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, compressByteString(newIndex.toByteString()));
     LOGGER.info("Fetching setting new log entry list");
-    for (String address : indexSetMap.keySet()) {
-      this.cache.remove(address);
-    }
     state.setState(indexSetMap.entrySet());
   }
 
@@ -369,12 +351,8 @@ public final class DamlLedgerState implements LedgerState {
   public TimeModel getTimeModel() throws InternalError, InvalidTransactionException {
     ConfigurationMap configMap;
     ByteString bs;
-    if (this.cache.containsKey(Namespace.DAML_CONFIG_TIME_MODEL)) {
-      bs = this.cache.get(Namespace.DAML_CONFIG_TIME_MODEL);
-    } else {
-      Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
-      bs = configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY);
-    }
+    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
+    bs = configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY);
     try {
       configMap = ConfigurationMap.parseFrom(bs);
       Duration maxTtl = null;
@@ -406,7 +384,6 @@ public final class DamlLedgerState implements LedgerState {
 
   @Override
   public void setTimeModel(final TimeModel tm) throws InternalError, InvalidTransactionException {
-    this.cache.remove(Namespace.DAML_CONFIG_TIME_MODEL);
     Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
     List<ConfigurationEntry> newCEList = new ArrayList<>();
     try {
@@ -434,9 +411,6 @@ public final class DamlLedgerState implements LedgerState {
       ConfigurationMap newMap = ConfigurationMap.newBuilder().addAllEntries(newCEList).build();
 
       configEntry.put(Namespace.DAML_CONFIG_TIME_MODEL, newMap.toByteString());
-      for (String address : configEntry.keySet()) {
-        this.cache.remove(address);
-      }
       state.setState(configEntry.entrySet());
     } catch (InvalidProtocolBufferException exc) {
       InternalError internalError = new InternalError(exc.getMessage());
