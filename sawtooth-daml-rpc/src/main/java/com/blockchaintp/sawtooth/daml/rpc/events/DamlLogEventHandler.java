@@ -85,6 +85,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private LogEntryTransformer transformer;
   private SawtoothTransactionsTracer tracer = null;
   private Offset lastOffset;
+  private final boolean compressionDisabled = true;
 
   /**
    * Build a handler for the given zmqUrl.
@@ -389,6 +390,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws IOException {
+    if (this.compressionDisabled) {
+      return compressedInput;
+    }
     long uncompressStart = System.currentTimeMillis();
     Inflater inflater = new Inflater();
     byte[] inputBytes = compressedInput.toByteArray();
