@@ -219,20 +219,20 @@ public final class DamlLedgerState implements LedgerState {
     DamlLogEntryIndex newIndex = DamlLogEntryIndex.newBuilder().clearAddresses().addAllAddresses(addresses).build();
     Map<String, ByteString> indexSetMap = new HashMap<>();
     indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, compressByteString(newIndex.toByteString()));
-    LOGGER.info("Fetching setting new log entry list");
+    LOGGER.fine("Setting new log entry list");
     state.setState(indexSetMap.entrySet());
   }
 
   @Override
   public List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException {
-    LOGGER.info(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
+    LOGGER.fine(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
     Map<String, ByteString> stateMap = state.getState(List.of(Namespace.DAML_LOG_ENTRY_LIST));
     if (stateMap.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
       ByteString compressed = stateMap.get(Namespace.DAML_LOG_ENTRY_LIST);
-      LOGGER.info(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
+      LOGGER.fine(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
           compressed.size()));
       ByteString data = uncompressByteString(compressed);
-      LOGGER.info(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
+      LOGGER.fine(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
           data.size(), compressed.size()));
       try {
         DamlLogEntryIndex dlei = DamlLogEntryIndex.parseFrom(data);
@@ -268,7 +268,7 @@ public final class DamlLedgerState implements LedgerState {
         LOGGER.fine(String.format("Record Time = %s", tkgr.getLastCalculatedTime()));
         return tkgr.getLastCalculatedTime();
       } else {
-        LOGGER.info("No global time has been set,assuming beginning of epoch");
+        LOGGER.warning("No global time has been set,assuming beginning of epoch");
         return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
       }
     } catch (InvalidTransactionException exc) {
@@ -304,7 +304,7 @@ public final class DamlLedgerState implements LedgerState {
       ByteString bs = ByteString.copyFrom(baos.toByteArray());
       long compressStop = System.currentTimeMillis();
       long compressTime = compressStop - compressStart;
-      LOGGER.info(String.format("Compressed ByteString time=%s, original_size=%s, new_size=%s", compressTime,
+      LOGGER.fine(String.format("Compressed ByteString time=%s, original_size=%s, new_size=%s", compressTime,
           inputBytes.length, baos.size()));
       return bs;
     } catch (IOException exc) {
@@ -334,7 +334,7 @@ public final class DamlLedgerState implements LedgerState {
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
         long uncompressStop = System.currentTimeMillis();
         long uncompressTime = uncompressStop - uncompressStart;
-        LOGGER.info(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+        LOGGER.fine(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
             inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
