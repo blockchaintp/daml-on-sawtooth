@@ -73,8 +73,6 @@ public final class DamlLedgerState implements LedgerState {
    */
   private Context state;
 
-  private final boolean compressionDisabled = true;
-
   /**
    * @param aState the State class which this object wraps.
    */
@@ -284,9 +282,6 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString compressByteString(final ByteString input) throws InternalError {
-    if (this.compressionDisabled) {
-      return ByteString.copyFrom(input.toByteArray());
-    }
     long compressStart = System.currentTimeMillis();
     if (input.size() == 0) {
       return ByteString.EMPTY;
@@ -319,9 +314,6 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws InternalError {
-    if (this.compressionDisabled) {
-      return ByteString.copyFrom(compressedInput.toByteArray());
-    }
     long uncompressStart = System.currentTimeMillis();
     if (compressedInput.size() == 0) {
       return ByteString.EMPTY;
