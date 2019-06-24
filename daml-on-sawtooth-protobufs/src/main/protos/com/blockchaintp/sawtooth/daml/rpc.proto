@@ -29,3 +29,11 @@ message DamlLogEntryIndex {
     repeated string addresses=1;
 }
 
+message ConfigurationMap {
+    repeated ConfigurationEntry entries=1;
+}
+
+message ConfigurationEntry {
+    string key=1;
+    bytes value=2;
+}

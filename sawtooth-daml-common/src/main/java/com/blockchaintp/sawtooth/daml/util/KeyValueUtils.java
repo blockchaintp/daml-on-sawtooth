@@ -34,13 +34,13 @@ public final class KeyValueUtils {
    *                   null, all keys.
    * @return a mapping of DamlStateKey to address
    */
-  public static Map<DamlStateKey, List<String>> submissionToDamlStateAddress(final DamlSubmission submission,
+  public static Map<DamlStateKey, String> submissionToDamlStateAddress(final DamlSubmission submission,
       final DamlStateKey.KeyCase keyCase) {
     List<DamlStateKey> inputDamlStateList = submission.getInputDamlStateList();
-    BiMap<DamlStateKey, List<String>> inputKeys = HashBiMap.create();
+    BiMap<DamlStateKey, String> inputKeys = HashBiMap.create();
     for (DamlStateKey k : inputDamlStateList) {
       if (keyCase == null || k.getKeyCase().equals(keyCase)) {
-        inputKeys.put(k, Namespace.makeMultipartDamlStateAddress(k));
+        inputKeys.put(k, Namespace.makeAddressForType(k));
       }
     }
     return inputKeys;
@@ -52,7 +52,7 @@ public final class KeyValueUtils {
    * @param submission the DamlSubmission to be analyzed
    * @return a mapping of DamlStateKey to address
    */
-  public static Map<DamlStateKey, List<String>> submissionToDamlStateAddress(final DamlSubmission submission) {
+  public static Map<DamlStateKey, String> submissionToDamlStateAddress(final DamlSubmission submission) {
     return submissionToDamlStateAddress(submission, null);
   }
 

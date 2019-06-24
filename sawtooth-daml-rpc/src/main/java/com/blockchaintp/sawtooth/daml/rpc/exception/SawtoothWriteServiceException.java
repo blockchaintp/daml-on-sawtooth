@@ -42,7 +42,7 @@ public class SawtoothWriteServiceException extends Exception {
    * Construct an undefined exception class.
    */
   public SawtoothWriteServiceException() {
-    super("Sawtooth writer service: Undefined Exception");
+    super("Undefined Exception");
   }
 
   /**
@@ -51,7 +51,7 @@ public class SawtoothWriteServiceException extends Exception {
    * @param message to be displayed.
    */
   public SawtoothWriteServiceException(final String message) {
-    super(String.format("Sawtooth writer service", message));
+    super(message);
   }
 
 }

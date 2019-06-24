@@ -60,6 +60,16 @@ public final class Namespace {
   public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "daml-log-entry-list");
 
   /**
+   * Address space for Configuration Entries.
+   */
+  public static final String DAML_CONFIG_ENTRY_NS = getNameSpace() + "02";
+
+  /**
+   * Address for main daml-on-sawtooth configuration.
+   */
+  public static final String DAML_CONFIG_TIME_MODEL = makeAddress(DAML_CONFIG_ENTRY_NS, "main-config");
+
+  /**
    * Maximum number of leaf addresses for a DamlStateKey.
    */
   public static final int DAML_STATE_MAX_LEAVES = 10;
@@ -113,7 +123,7 @@ public final class Namespace {
    * @param key DamlState Key to be used for the address
    * @return the list of string address
    */
-  public static List<String> makeMultipartDamlLogAddress(final DamlLogEntryId key) {
+  protected static List<String> makeMultipartDamlLogAddress(final DamlLogEntryId key) {
     List<String> addrList = new ArrayList<>();
     for (int i = 0; i < DAML_STATE_MAX_LEAVES; i++) {
       addrList.add(makeAddress(DAML_LOG_ENTRY_NS, key.toByteString().toStringUtf8(), Integer.toString(i)));
@@ -126,7 +136,7 @@ public final class Namespace {
    * @param key DamlState Key to be used for the address
    * @return the list of string address
    */
-  public static List<String> makeMultipartDamlStateAddress(final DamlStateKey key) {
+  protected static List<String> makeMultipartDamlStateAddress(final DamlStateKey key) {
     List<String> addrList = new ArrayList<>();
     for (int i = 0; i < DAML_STATE_MAX_LEAVES; i++) {
       addrList.add(makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8(), Integer.toString(i)));
@@ -139,7 +149,7 @@ public final class Namespace {
    * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
-  protected static String makeAddressForType(final DamlStateKey key) {
+  public static String makeAddressForType(final DamlStateKey key) {
     return makeDamlStateAddress(key);
   }
 
@@ -149,7 +159,7 @@ public final class Namespace {
    * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
-  protected static String makeAddressForType(final DamlLogEntryId key) {
+  public static String makeAddressForType(final DamlLogEntryId key) {
     return makeDamlLogEntryAddress(key);
   }
 

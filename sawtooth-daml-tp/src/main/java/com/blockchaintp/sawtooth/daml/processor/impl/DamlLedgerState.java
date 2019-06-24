@@ -13,9 +13,9 @@ package com.blockchaintp.sawtooth.daml.processor.impl;
 
 import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,10 +29,13 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
+import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
+import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
+import com.daml.ledger.participant.state.backport.TimeModel;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -53,11 +56,17 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  */
 public final class DamlLedgerState implements LedgerState {
 
+  private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
+
+  private static final String MAX_TTL_KEY = TIMEMODEL_CONFIG + ".maxTtl";
+
+  private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
+
+  private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
+
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
-
-  private static final int MAX_VALUE_SIZE = 1024 * 1024;
 
   /**
    * The state which this class wraps and delegates to.
@@ -71,49 +80,33 @@ public final class DamlLedgerState implements LedgerState {
     this.state = aState;
   }
 
-  private ByteString getMultipartState(final List<String> addrList) throws InternalError, InvalidTransactionException {
-    try {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      int addressIdx = 0;
-      for (String addr : addrList) {
-        LOGGER.info(String.format("Get address %s", addr));
-        Map<String, ByteString> addrMap = state.getState(List.of(addr));
-        LOGGER.info(String.format("Get address %s size=", addr, addrMap.get(addr).size()));
-        // All addresses are set or none are
-        if (addressIdx == 0) {
-          if (!addrMap.containsKey(addr) || addrMap.get(addr).equals(ByteString.EMPTY)) {
-            return null;
-          } else {
-            addressIdx++;
-          }
-        } else {
-          addressIdx++;
-        }
-        ByteString bs = addrMap.get(addr);
-        baos.write(bs.toByteArray());
-      }
-      ByteString compressed = ByteString.copyFrom(baos.toByteArray());
-      if (compressed.size() == 0) {
-        return ByteString.EMPTY;
+  private ByteString getStateOrNull(final String address) throws InternalError, InvalidTransactionException {
+    Map<String, ByteString> stateMap = state.getState(List.of(address));
+    if (stateMap.containsKey(address)) {
+      ByteString bs = stateMap.get(address);
+      if (bs.isEmpty() || bs == null) {
+        return null;
       } else {
-        return uncompressByteString(compressed);
+        return bs;
       }
-    } catch (IOException exc) {
-      throw new InternalError(exc.getMessage());
+    } else {
+      return null;
     }
   }
 
   @Override
   public DamlStateValue getDamlState(final DamlStateKey key) throws InternalError, InvalidTransactionException {
-    List<String> addrList = Namespace.makeMultipartDamlStateAddress(key);
-    ByteString bs = getMultipartState(addrList);
+    String addr = Namespace.makeAddressForType(key);
+    ByteString bs = getStateOrNull(addr);
     if (bs == null) {
       return null;
+    } else {
+      if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+        return DamlStateValue.newBuilder().setCommandDedup(DamlCommandDedupValue.newBuilder().build()).build();
+      }
+      return KeyValueCommitting.unpackDamlStateValue(uncompressByteString(bs));
+
     }
-    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-      return DamlStateValue.newBuilder().setCommandDedup(DamlCommandDedupValue.newBuilder().build()).build();
-    }
-    return KeyValueCommitting.unpackDamlStateValue(bs);
   }
 
   @Override
@@ -158,112 +151,55 @@ public final class DamlLedgerState implements LedgerState {
 
   @Override
   public DamlLogEntry getDamlLogEntry(final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
-    List<String> addrList = Namespace.makeMultipartDamlLogAddress(entryId);
-    ByteString bs = getMultipartState(addrList);
+    String addr = Namespace.makeAddressForType(entryId);
+    ByteString bs = getStateOrNull(addr);
     if (bs == null) {
       return null;
     }
-    DamlLogEntry e = KeyValueCommitting.unpackDamlLogEntry(bs);
+    DamlLogEntry e = KeyValueCommitting.unpackDamlLogEntry(uncompressByteString(bs));
     return e;
   }
 
-  private List<Entry<String, ByteString>> breakApartData(final List<String> leafAddresses, final ByteString data)
-      throws InvalidTransactionException, InternalError {
-    return this.breakApartData(leafAddresses, data, MAX_VALUE_SIZE);
-  }
-
-  private List<Entry<String, ByteString>> breakApartData(final List<String> leafAddresses, final ByteString data,
-      final int leafSize) throws InvalidTransactionException, InternalError {
-    List<Entry<String, ByteString>> retList = new ArrayList<>();
-    if (data.size() > (Namespace.DAML_STATE_MAX_LEAVES * leafSize)) {
-      throw new InvalidTransactionException(
-          String.format("Value is greater than max_value_size=%s, max_leaves=%s, leafSize=%s",
-              Namespace.DAML_STATE_MAX_LEAVES * leafSize, Namespace.DAML_STATE_MAX_LEAVES, leafSize));
-    }
-    try (ByteArrayInputStream bais = new ByteArrayInputStream(data.toByteArray())) {
-      for (String lAddr : leafAddresses) {
-        byte[] readBuf;
-        try {
-          readBuf = bais.readNBytes(leafSize);
-          Map<String, ByteString> setMap = new HashMap<>();
-          setMap.put(lAddr, ByteString.copyFrom(readBuf));
-          retList.addAll(setMap.entrySet());
-        } catch (IOException exc) {
-          throw new InternalError(exc.getMessage());
-        }
+  @Override
+  public void setDamlStates(final Collection<Entry<DamlStateKey, DamlStateValue>> entries)
+      throws InternalError, InvalidTransactionException {
+    Map<String, ByteString> setMap = new HashMap<>();
+    for (Entry<DamlStateKey, DamlStateValue> e : entries) {
+      DamlStateKey key = e.getKey();
+      DamlStateValue val = e.getValue();
+      ByteString packDamlStateValue;
+      if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
+        LOGGER.info("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
+        packDamlStateValue = KeyValueCommitting.packDamlStateKey(key);
+      } else {
+        packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
       }
-      return retList;
-    } catch (IOException exc) {
-      LOGGER.severe("ByteArrayInputStream.close() has thrown an IOException, this should never happen!");
-      throw new InternalError(exc.getMessage());
+      assert (packDamlStateValue.size() > 0);
+      String address = Namespace.makeAddressForType(key);
+      setMap.put(address, compressByteString(packDamlStateValue));
     }
-  }
-
-  private void setMultipartState(final List<String> leafAddresses, final ByteString data)
-      throws InvalidTransactionException, InternalError {
-    ByteString compressedData = compressByteString(data);
-    List<Entry<String, ByteString>> setList = breakApartData(leafAddresses, compressedData);
-    for (Entry<String, ByteString> e : setList) {
-      LOGGER.info(String.format("Set address=%s, size=%s", e.getKey(), e.getValue().size()));
-      state.setState(List.of(e));
-    }
+    state.setState(setMap.entrySet());
   }
 
   @Override
   public void setDamlState(final DamlStateKey key, final DamlStateValue val)
       throws InternalError, InvalidTransactionException {
-    ByteString packDamlStateValue;
-    if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-      LOGGER.info("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
-      packDamlStateValue = KeyValueCommitting.packDamlStateKey(key);
-    } else {
-      packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
-    }
-    assert (packDamlStateValue.size() > 0);
-    List<String> leafAddresses = Namespace.makeMultipartDamlStateAddress(key);
-    setMultipartState(leafAddresses, packDamlStateValue);
+    Map<DamlStateKey, DamlStateValue> setMap = new HashMap<>();
+    setMap.put(key, val);
+    setDamlStates(setMap.entrySet());
   }
 
   private String[] addDamlLogEntries(final Collection<Entry<DamlLogEntryId, DamlLogEntry>> entries)
       throws InternalError, InvalidTransactionException {
     List<String> idList = new ArrayList<>();
+    Map<String, ByteString> setMap = new HashMap<>();
     for (Entry<DamlLogEntryId, DamlLogEntry> e : entries) {
-      List<String> addrList = Namespace.makeMultipartDamlLogAddress(e.getKey());
-      setMultipartState(addrList, KeyValueCommitting.packDamlLogEntry(e.getValue()));
-      idList.addAll(addrList);
+      String addr = Namespace.makeAddressForType(e.getKey());
+      setMap.put(addr, compressByteString(KeyValueCommitting.packDamlLogEntry(e.getValue())));
+      idList.add(addr);
     }
+    state.setState(setMap.entrySet());
     return idList.toArray(new String[] {});
-  }
-
-  @Override
-  public void updateLogEntryIndex(final List<String> addresses) throws InternalError, InvalidTransactionException {
-    DamlLogEntryIndex newIndex = DamlLogEntryIndex.newBuilder().clearAddresses().addAllAddresses(addresses).build();
-    Map<String, ByteString> indexSetMap = new HashMap<>();
-    indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, compressByteString(newIndex.toByteString()));
-    LOGGER.info("Fetching setting new log entry list");
-    state.setState(indexSetMap.entrySet());
-  }
-
-  @Override
-  public List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException {
-    LOGGER.info(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
-    Map<String, ByteString> stateMap = state.getState(List.of(Namespace.DAML_LOG_ENTRY_LIST));
-    if (stateMap.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
-      ByteString compressed = stateMap.get(Namespace.DAML_LOG_ENTRY_LIST);
-      LOGGER.info(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
-          compressed.size()));
-      ByteString data = uncompressByteString(compressed);
-      LOGGER.info(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
-          data.size(), compressed.size()));
-      try {
-        DamlLogEntryIndex dlei = DamlLogEntryIndex.parseFrom(data);
-        return dlei.getAddressesList();
-      } catch (InvalidProtocolBufferException exc) {
-        throw new InternalError(exc.getMessage());
-      }
-    } else {
-      return new ArrayList<String>();
-    }
   }
 
   @Override
@@ -279,10 +215,33 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public void setDamlStates(final Collection<Entry<DamlStateKey, DamlStateValue>> entries)
-      throws InternalError, InvalidTransactionException {
-    for (Entry<DamlStateKey, DamlStateValue> e : entries) {
-      setDamlState(e.getKey(), e.getValue());
+  public void updateLogEntryIndex(final List<String> addresses) throws InternalError, InvalidTransactionException {
+    DamlLogEntryIndex newIndex = DamlLogEntryIndex.newBuilder().clearAddresses().addAllAddresses(addresses).build();
+    Map<String, ByteString> indexSetMap = new HashMap<>();
+    indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, compressByteString(newIndex.toByteString()));
+    LOGGER.fine("Setting new log entry list");
+    state.setState(indexSetMap.entrySet());
+  }
+
+  @Override
+  public List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException {
+    LOGGER.fine(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
+    Map<String, ByteString> stateMap = state.getState(List.of(Namespace.DAML_LOG_ENTRY_LIST));
+    if (stateMap.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
+      ByteString compressed = stateMap.get(Namespace.DAML_LOG_ENTRY_LIST);
+      LOGGER.fine(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
+          compressed.size()));
+      ByteString data = uncompressByteString(compressed);
+      LOGGER.fine(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
+          data.size(), compressed.size()));
+      try {
+        DamlLogEntryIndex dlei = DamlLogEntryIndex.parseFrom(data);
+        return dlei.getAddressesList();
+      } catch (InvalidProtocolBufferException exc) {
+        throw new InternalError(exc.getMessage());
+      }
+    } else {
+      return new ArrayList<String>();
     }
   }
 
@@ -302,14 +261,14 @@ public final class DamlLedgerState implements LedgerState {
   @Override
   public Timestamp getRecordTime() throws InternalError {
     try {
-      LOGGER.info(String.format("Fetching global time %s", TIMEKEEPER_GLOBAL_RECORD));
+      LOGGER.fine(String.format("Fetching global time %s", TIMEKEEPER_GLOBAL_RECORD));
       Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
       if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
         TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
-        LOGGER.info(String.format("Record Time = %s", tkgr.getLastCalculatedTime()));
+        LOGGER.fine(String.format("Record Time = %s", tkgr.getLastCalculatedTime()));
         return tkgr.getLastCalculatedTime();
       } else {
-        LOGGER.info("No global time has been set,assuming beginning of epoch");
+        LOGGER.warning("No global time has been set,assuming beginning of epoch");
         return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
       }
     } catch (InvalidTransactionException exc) {
@@ -323,6 +282,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString compressByteString(final ByteString input) throws InternalError {
+    long compressStart = System.currentTimeMillis();
     if (input.size() == 0) {
       return ByteString.EMPTY;
     }
@@ -342,7 +302,10 @@ public final class DamlLedgerState implements LedgerState {
       deflater.end();
 
       ByteString bs = ByteString.copyFrom(baos.toByteArray());
-      LOGGER.info(String.format("Compressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+      long compressStop = System.currentTimeMillis();
+      long compressTime = compressStop - compressStart;
+      LOGGER.fine(String.format("Compressed ByteString time=%s, original_size=%s, new_size=%s", compressTime,
+          inputBytes.length, baos.size()));
       return bs;
     } catch (IOException exc) {
       LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
@@ -351,6 +314,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws InternalError {
+    long uncompressStart = System.currentTimeMillis();
     if (compressedInput.size() == 0) {
       return ByteString.EMPTY;
     }
@@ -368,8 +332,10 @@ public final class DamlLedgerState implements LedgerState {
         inflater.end();
 
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
-        LOGGER.info(
-            String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+        long uncompressStop = System.currentTimeMillis();
+        long uncompressTime = uncompressStop - uncompressStart;
+        LOGGER.fine(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+            inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
         LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
@@ -381,4 +347,75 @@ public final class DamlLedgerState implements LedgerState {
     }
   }
 
+  @Override
+  public TimeModel getTimeModel() throws InternalError, InvalidTransactionException {
+    ConfigurationMap configMap;
+    ByteString bs;
+    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
+    bs = configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY);
+    try {
+      configMap = ConfigurationMap.parseFrom(bs);
+      Duration maxTtl = null;
+      Duration maxClockSkew = null;
+      Duration minTxLatency = null;
+
+      for (ConfigurationEntry ce : configMap.getEntriesList()) {
+        if (ce.getKey().equals(MIN_TRANSACTION_LATENCY_KEY)) {
+          minTxLatency = Duration.parse(ce.getValue().toStringUtf8());
+        }
+        if (ce.getKey().equals(MAX_CLOCK_SKEW_KEY)) {
+          maxClockSkew = Duration.parse(ce.getValue().toStringUtf8());
+        }
+        if (ce.getKey().equals(MAX_TTL_KEY)) {
+          maxTtl = Duration.parse(ce.getValue().toStringUtf8());
+        }
+      }
+      if (null == maxTtl || null == maxClockSkew || null == minTxLatency) {
+        return null;
+      } else {
+        return new TimeModel(minTxLatency, maxClockSkew, maxTtl);
+      }
+    } catch (InvalidProtocolBufferException exc) {
+      InternalError internalError = new InternalError(exc.getMessage());
+      internalError.initCause(exc);
+      throw internalError;
+    }
+  }
+
+  @Override
+  public void setTimeModel(final TimeModel tm) throws InternalError, InvalidTransactionException {
+    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
+    List<ConfigurationEntry> newCEList = new ArrayList<>();
+    try {
+      ConfigurationMap configMap = ConfigurationMap
+          .parseFrom(configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY));
+      for (ConfigurationEntry ce : configMap.getEntriesList()) {
+        if (!ce.getKey().startsWith(TIMEMODEL_CONFIG)) {
+          newCEList.add(ce);
+        }
+      }
+      ByteString minTxLatency = ByteString.copyFromUtf8(tm.minTransactionLatency().toString());
+      ConfigurationEntry minTxLatencyCE = ConfigurationEntry.newBuilder().setKey(MIN_TRANSACTION_LATENCY_KEY)
+          .setValue(minTxLatency).build();
+      newCEList.add(minTxLatencyCE);
+
+      ByteString maxClockSkew = ByteString.copyFromUtf8(tm.maxClockSkew().toString());
+      ConfigurationEntry maxClockSkewCE = ConfigurationEntry.newBuilder().setKey(MAX_CLOCK_SKEW_KEY)
+          .setValue(maxClockSkew).build();
+      newCEList.add(maxClockSkewCE);
+
+      ByteString maxTtl = ByteString.copyFromUtf8(tm.maxTtl().toString());
+      ConfigurationEntry maxTtlCE = ConfigurationEntry.newBuilder().setKey(MAX_TTL_KEY).setValue(maxTtl).build();
+      newCEList.add(maxTtlCE);
+
+      ConfigurationMap newMap = ConfigurationMap.newBuilder().addAllEntries(newCEList).build();
+
+      configEntry.put(Namespace.DAML_CONFIG_TIME_MODEL, newMap.toByteString());
+      state.setState(configEntry.entrySet());
+    } catch (InvalidProtocolBufferException exc) {
+      InternalError internalError = new InternalError(exc.getMessage());
+      internalError.initCause(exc);
+      throw internalError;
+    }
+  }
 }

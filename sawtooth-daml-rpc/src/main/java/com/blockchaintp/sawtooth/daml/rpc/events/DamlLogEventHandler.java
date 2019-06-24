@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -40,6 +41,7 @@ import com.daml.ledger.participant.state.v1.Update;
 import com.daml.ledger.participant.state.v1.Update.Heartbeat;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 
 import io.reactivex.processors.UnicastProcessor;
@@ -47,8 +49,13 @@ import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
+import sawtooth.sdk.protobuf.ClientBlockGetByNumRequest;
+import sawtooth.sdk.protobuf.ClientBlockGetResponse;
 import sawtooth.sdk.protobuf.ClientEventsSubscribeRequest;
+import sawtooth.sdk.protobuf.ClientEventsSubscribeResponse;
 import sawtooth.sdk.protobuf.ClientEventsUnsubscribeRequest;
+import sawtooth.sdk.protobuf.ClientStateGetRequest;
+import sawtooth.sdk.protobuf.ClientStateGetResponse;
 import sawtooth.sdk.protobuf.Event;
 import sawtooth.sdk.protobuf.Event.Attribute;
 import sawtooth.sdk.protobuf.EventList;
@@ -71,13 +78,13 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private Collection<EventSubscription> subscriptions;
-  private Collection<String> lastBlockIds;
 
-  private final UnicastProcessor<Tuple2<Offset, Update>> processor;
-
+  private final List<UnicastProcessor<Tuple2<Offset, Update>>> processors;
+  private boolean subscribed = false;
   private Stream stream;
   private LogEntryTransformer transformer;
   private SawtoothTransactionsTracer tracer = null;
+  private Offset lastOffset;
 
   /**
    * Build a handler for the given zmqUrl.
@@ -93,26 +100,15 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * @param argStream the delegate to use
    */
   public DamlLogEventHandler(final Stream argStream) {
-    this(argStream, new ArrayList<String>());
+    this(argStream, new ParticipantStateLogEntryTransformer());
   }
 
   /**
    * Build a handler based on the given delegate.and last known block ids.
    * @param argStream the delegate to use
-   * @param blockIds  the last known block ids for this event handler
-   */
-  public DamlLogEventHandler(final Stream argStream, final Collection<String> blockIds) {
-    this(argStream, blockIds, new ParticipantStateLogEntryTransformer());
-  }
-
-  /**
-   * Build a handler based on the given delegate.and last known block ids.
-   * @param argStream the delegate to use
-   * @param blockIds  the last known block ids for this event handler
    * @param transform the transformer to use
    */
-  public DamlLogEventHandler(final Stream argStream, final Collection<String> blockIds,
-      final LogEntryTransformer transform) {
+  public DamlLogEventHandler(final Stream argStream, final LogEntryTransformer transform) {
     this.transformer = transform;
     this.subscriptions = new ArrayList<EventSubscription>();
     for (String subject : SUBSCRIBE_SUBJECTS) {
@@ -121,8 +117,51 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     }
     this.stream = argStream;
     // TODO add a cancel call back
-    this.processor = UnicastProcessor.create();
-    this.lastBlockIds = blockIds;
+    this.processors = Collections.synchronizedList(new ArrayList<>());
+    this.lastOffset = Offset.apply(new long[] {0});
+  }
+
+  private String getBlockIdByOffset(final Offset offset) {
+    String[] offsetSplit = offset.toString().split("-");
+    // Block 1 is the genesis block, While unlikely the first possible interesting
+    // data is at block 2
+    Long blockNum = Math.max(2, Long.valueOf(offsetSplit[0]));
+
+    ClientBlockGetByNumRequest bgbn = ClientBlockGetByNumRequest.newBuilder().setBlockNum(blockNum).build();
+    Future resp = this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
+
+    String retBlockId = null;
+    LOGGER.fine(String.format("Waiting for ClientBlockGetResponse for block_num: %s", blockNum));
+    try {
+      ByteString result = null;
+      while (result == null) {
+        try {
+          result = resp.getResult(DEFAULT_TIMEOUT);
+          ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
+          switch (response.getStatus()) {
+          case OK:
+            LOGGER.fine("ClientBlockGetResponse received...");
+            retBlockId = response.getBlock().getHeaderSignature();
+            break;
+          case NO_RESOURCE:
+            LOGGER.info(String.format("NO_RESOURCE received from ClientBlockGetResponse: %s", response.toString()));
+            return null;
+          case INTERNAL_ERROR:
+          case UNRECOGNIZED:
+          case INVALID_ID:
+          case STATUS_UNSET:
+          default:
+            LOGGER.severe(
+                String.format("Invalid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+          }
+        } catch (TimeoutException exc) {
+          LOGGER.warning("Still waiting for ClientBlockGetResponse...");
+        }
+      }
+    } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
+      LOGGER.warning(exc.getMessage());
+    }
+    return retBlockId;
   }
 
   private Map<String, String> eventAttributeMap(final Event evt) {
@@ -134,8 +173,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     return attrMap;
   }
 
-  private Collection<Tuple2<Offset, Update>> eventToUpdates(final EventList evtList)
-      throws IOException {
+  private Collection<Tuple2<Offset, Update>> eventToUpdates(final EventList evtList) throws IOException {
     if (this.tracer != null) {
       String jsonOut = JsonFormat.printer().print(evtList);
       this.tracer.putReadTransactions(jsonOut);
@@ -151,6 +189,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       }
     }
     long updateCounter = 1;
+    Offset lastOffsetThisBlock = null;
     for (Event evt : evtList.getEventsList()) {
       Map<String, String> attrMap = eventAttributeMap(evt);
       if (evt.getEventType().equals(EventConstants.DAML_LOG_EVENT_SUBJECT)) {
@@ -163,9 +202,16 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         Update logEntryToUpdate = this.transformer.logEntryUpdate(id, logEntry);
         Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
         updateCounter++;
-        Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
-        tuplesToReturn.add(updateTuple);
-        LOGGER.info(String.format("Sending update at offset=%s", offset));
+        if (offset.compareTo(this.lastOffset) > 0) {
+          Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
+          tuplesToReturn.add(updateTuple);
+          lastOffsetThisBlock = offset;
+          LOGGER.fine(String.format("Sending update at offset=%s", offset));
+        } else {
+          LOGGER
+              .info(String.format("Skip sending offset=%s which is less than lastOffset=%s", offset, this.lastOffset));
+
+        }
       }
     }
     // Only send heartbeats if we haven't sent anything
@@ -179,16 +225,24 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           long microseconds = Long.valueOf(microsStr);
           Heartbeat heartbeat = new Heartbeat(new Timestamp(microseconds));
           Offset hbOffset = new Offset(new long[] {blockNum, 0});
-          Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
-          // Only send the most recent heartbeat
-          if (!tuplesToReturn.isEmpty()) {
-            tuplesToReturn.clear();
+          if (hbOffset.compareTo(this.lastOffset) > 0) {
+            Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
+            // Only send the most recent heartbeat
+            if (!tuplesToReturn.isEmpty()) {
+              tuplesToReturn.clear();
+            }
+            tuplesToReturn.add(updateTuple);
+            lastOffsetThisBlock = hbOffset;
+            LOGGER.info(String.format("Sending heartbeat at offset=%s", hbOffset));
+          } else {
+            LOGGER.info(
+                String.format("Skip sending offset=%s which is less than lastOffset=%s", hbOffset, this.lastOffset));
           }
-          tuplesToReturn.add(updateTuple);
-          LOGGER.info(String.format("Sending heartbeat at offset=%s", hbOffset));
-
         }
       }
+    }
+    if (null != lastOffsetThisBlock) {
+      this.lastOffset = lastOffsetThisBlock;
     }
     return tuplesToReturn;
   }
@@ -198,7 +252,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * @return the publisher
    */
   public final Publisher<Tuple2<Offset, Update>> getPublisher() {
-    return processor;
+    UnicastProcessor<Tuple2<Offset, Update>> p = UnicastProcessor.create();
+    this.processors.add(p);
+    return p;
   }
 
   @Override
@@ -221,13 +277,13 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   protected final void processMessage(final Message message) throws IOException {
-    LOGGER.info("Process message...");
-
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       EventList evtList = EventList.parseFrom(message.getContent());
       Collection<Tuple2<Offset, Update>> updates = eventToUpdates(evtList);
       for (Tuple2<Offset, Update> u : updates) {
-        this.processor.onNext(u);
+        for (UnicastProcessor<Tuple2<Offset, Update>> proc : this.processors) {
+          proc.onNext(u);
+        }
       }
     } else {
       LOGGER.warning(String.format("Unexpected message type: %s", message.getMessageType()));
@@ -236,7 +292,6 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   @Override
   public final void run() {
-    sendSubscribe();
     while (true) {
       Message receivedMsg = null;
       try {
@@ -259,22 +314,54 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * Send a subscribe message to the validator.
    */
   public final void sendSubscribe() {
+    this.sendSubscribe(null);
+  }
+
+  /**
+   * Send a subscribe message to the validator.
+   * @param beginAfter the offset to begin subscribing after
+   */
+  public final void sendSubscribe(final Offset beginAfter) {
+    if (this.subscribed) {
+      LOGGER.warning("Attempted to subscribe twice");
+      return;
+    }
+
+    List<String> lastBlockIds = new ArrayList<>();
+    if (beginAfter != null) {
+      lastBlockIds.add(getBlockIdByOffset(beginAfter));
+      this.lastOffset = beginAfter;
+    }
+
     ClientEventsSubscribeRequest cesReq = ClientEventsSubscribeRequest.newBuilder().addAllSubscriptions(subscriptions)
         .addAllLastKnownBlockIds(lastBlockIds).build();
+
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
-    LOGGER.info("Waiting for subscription response...");
+    LOGGER.fine("Waiting for subscription response...");
     try {
       ByteString result = null;
       while (result == null) {
         try {
           result = resp.getResult(DEFAULT_TIMEOUT);
+          ClientEventsSubscribeResponse subscribeResponse = ClientEventsSubscribeResponse.parseFrom(result);
+          switch (subscribeResponse.getStatus()) {
+          case UNKNOWN_BLOCK:
+            throw new RuntimeException(String.format("Unknown blockids in subscription: %s", lastBlockIds));
+          case INVALID_FILTER:
+            LOGGER.warning("InvalidFilters response received");
+          case STATUS_UNSET:
+          case OK:
+            this.subscribed = true;
+            LOGGER.info("Subscription response received...");
+            return;
+          default:
+          }
         } catch (TimeoutException exc) {
           LOGGER.warning("Still waiting for subscription response...");
         }
       }
-      LOGGER.info("Subscription response received...");
 
-    } catch (InterruptedException | ValidatorConnectionError exc) {
+    } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
     }
   }
@@ -287,7 +374,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST, ceuReq.toByteString());
     try {
       resp.getResult();
-      LOGGER.info("Unsubscribed...");
+      LOGGER.fine("Unsubscribed...");
     } catch (InterruptedException | ValidatorConnectionError exc) {
       LOGGER.warning(exc.getMessage());
     }
@@ -302,6 +389,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   private ByteString uncompressByteString(final ByteString compressedInput) throws IOException {
+    long uncompressStart = System.currentTimeMillis();
     Inflater inflater = new Inflater();
     byte[] inputBytes = compressedInput.toByteArray();
     inflater.setInput(inputBytes);
@@ -316,8 +404,10 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         inflater.end();
 
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
-        LOGGER.info(
-            String.format("Uncompressed ByteString original_size=%s, new_size=%s", inputBytes.length, baos.size()));
+        long uncompressStop = System.currentTimeMillis();
+        long uncompressTime = uncompressStop - uncompressStart;
+        LOGGER.fine(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+            inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
         LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
@@ -328,4 +418,51 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       throw exc;
     }
   }
+
+  /**
+   * Get the state at the given address.
+   * @param address the address of the state entry
+   * @return the data at the address
+   */
+  public ByteString getState(final String address) {
+    ClientStateGetRequest req = ClientStateGetRequest.newBuilder().setAddress(address).build();
+    Future resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
+
+    LOGGER.fine(String.format("Waiting for ClientStateGetResponse for address %s", address));
+    try {
+      ByteString result = null;
+      while (result == null) {
+        try {
+          result = resp.getResult(DEFAULT_TIMEOUT);
+          ClientStateGetResponse response = ClientStateGetResponse.parseFrom(result);
+          switch (response.getStatus()) {
+          case OK:
+            ByteString bs = response.getValue();
+            LOGGER.fine(String.format("ClientStateGetResponse received OK for %s=%s", address, bs));
+            return bs;
+          case NO_RESOURCE:
+            LOGGER.info(String.format("Address %s not currently set", address));
+            return null;
+          case INVALID_ADDRESS:
+          case NOT_READY:
+          case NO_ROOT:
+          case INTERNAL_ERROR:
+          case UNRECOGNIZED:
+          case STATUS_UNSET:
+          case INVALID_ROOT:
+          default:
+            LOGGER.severe(String.format("Invalid response received from ClientStateGetRequest address=%s response=%s",
+                address, response.getStatus()));
+            return null;
+          }
+        } catch (TimeoutException exc) {
+          LOGGER.warning(String.format("Still waiting for ClientStateGetResponse address=%s", address));
+        }
+      }
+    } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
+      LOGGER.warning(exc.getMessage());
+    }
+    return null;
+  }
+
 }

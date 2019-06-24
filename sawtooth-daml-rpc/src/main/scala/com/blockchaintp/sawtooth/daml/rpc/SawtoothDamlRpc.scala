@@ -53,7 +53,7 @@ object SawtoothDamlRpc extends App {
   val keyManager = DirectoryKeyManager.create(config.keystore)
   // This should be a more arbitrary identifier, which is set via CLI, 
   val participantId = keyManager.getPublicKeyInHex()
-  val readService = new SawtoothReadService("this-ledger-id",validatorAddress,swTxnTracer)
+  val readService = new SawtoothReadService("this-ledger-id",validatorAddress,swTxnTracer, true)
   val writeService = new SawtoothWriteService(validatorAddress,keyManager, swTxnTracer, participantId)
  
   //val ledger = new Ledger(timeModel, tsb)
