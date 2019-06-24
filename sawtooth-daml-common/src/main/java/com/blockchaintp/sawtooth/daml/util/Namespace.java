@@ -65,9 +65,14 @@ public final class Namespace {
   public static final String DAML_CONFIG_ENTRY_NS = getNameSpace() + "02";
 
   /**
-   * Address for main daml-on-sawtooth configuration.
+   * Address for DAML TimeModel configuration.
    */
-  public static final String DAML_CONFIG_TIME_MODEL = makeAddress(DAML_CONFIG_ENTRY_NS, "main-config");
+  public static final String DAML_CONFIG_TIME_MODEL = makeAddress(DAML_CONFIG_ENTRY_NS, "time-model");
+
+  /**
+   * Address for DAML Ledger id.
+   */
+  public static final String DAML_CONFIG_LEDGER_ID = makeAddress(DAML_CONFIG_ENTRY_NS, "ledger-id");
 
   /**
    * Maximum number of leaf addresses for a DamlStateKey.
