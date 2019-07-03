@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import akka.protobuf.ByteString;
 import sawtooth.sdk.signing.Context;
 import sawtooth.sdk.signing.CryptoFactory;
 import sawtooth.sdk.signing.PrivateKey;
@@ -94,7 +95,8 @@ public final class DirectoryKeyManager implements KeyManager {
         if (keyDir.mkdirs()) {
           File privFile = new File(keyDir, entry.getKey() + ".pub");
           FileOutputStream fos = new FileOutputStream(privFile);
-          fos.write(entry.getValue().getBytes());
+          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
+          fos.write(bs.toByteArray());
           fos.flush();
           fos.close();
         } else {
@@ -104,7 +106,8 @@ public final class DirectoryKeyManager implements KeyManager {
         File privFile = new File(keyDir, entry.getKey() + ".pub");
         if (!privFile.exists()) {
           FileOutputStream fos = new FileOutputStream(privFile);
-          fos.write(entry.getValue().getBytes());
+          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
+          fos.write(bs.toByteArray());
           fos.flush();
           fos.close();
         }
@@ -119,7 +122,8 @@ public final class DirectoryKeyManager implements KeyManager {
         if (keyDir.mkdirs()) {
           File privFile = new File(keyDir, entry.getKey() + ".priv");
           FileOutputStream fos = new FileOutputStream(privFile);
-          fos.write(entry.getValue().getBytes());
+          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
+          fos.write(bs.toByteArray());
           fos.flush();
           fos.close();
         } else {
@@ -129,7 +133,8 @@ public final class DirectoryKeyManager implements KeyManager {
         File privFile = new File(keyDir, entry.getKey() + ".priv");
         if (!privFile.exists()) {
           FileOutputStream fos = new FileOutputStream(privFile);
-          fos.write(entry.getValue().getBytes());
+          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
+          fos.write(bs.toByteArray());
           fos.flush();
           fos.close();
         }
@@ -162,7 +167,8 @@ public final class DirectoryKeyManager implements KeyManager {
     }
     for (File p : privateKeys) {
       byte[] data = readKeyFile(p);
-      PrivateKey pk = new Secp256k1PrivateKey(data);
+      String hexPk = ByteString.copyFrom(data).toStringUtf8();
+      PrivateKey pk = Secp256k1PrivateKey.fromHex(hexPk);
       this.privateKeyMap.put(id, pk);
     }
     File[] publicKeys = f.listFiles(new EndsWithFilter(".pub"));
@@ -171,7 +177,8 @@ public final class DirectoryKeyManager implements KeyManager {
     }
     for (File p : privateKeys) {
       byte[] data = readKeyFile(p);
-      PublicKey pk = new Secp256k1PublicKey(data);
+      String hexPk = ByteString.copyFrom(data).toStringUtf8();
+      PublicKey pk = Secp256k1PublicKey.fromHex(hexPk);
       this.publicKeyMap.put(id, pk);
     }
   }

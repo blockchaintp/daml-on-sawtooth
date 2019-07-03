@@ -17,11 +17,13 @@ import java.util.Collection;
 
 import com.google.protobuf.ByteString;
 
-import sawtooth.sdk.processor.Utils;
+import static sawtooth.sdk.processor.Utils.hash512;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
 import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
+
+import static org.bitcoinj.core.Utils.HEX;
 
 /**
  * Utility methods and constants useful for interacting with Sawtooth as a
@@ -91,7 +93,7 @@ public final class SawtoothClientUtils {
     SecureRandom secureRandom = new SecureRandom();
     final int seedByteCount = 20;
     byte[] seed = secureRandom.generateSeed(seedByteCount);
-    return seed.toString();
+    return HEX.encode(seed);
   }
 
   /**
@@ -124,6 +126,6 @@ public final class SawtoothClientUtils {
    * @return the hash512 of the byte array
    */
   public static String getHash(final byte[] arg) {
-    return Utils.hash512(arg);
+    return hash512(arg);
   }
 }
