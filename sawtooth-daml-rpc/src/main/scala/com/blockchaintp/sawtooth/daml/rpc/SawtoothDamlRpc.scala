@@ -20,7 +20,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.daml.ledger.api.server.damlonx.Server
 import com.daml.ledger.participant.state.index.v1.impl.reference.ReferenceIndexService
-import com.daml.ledger.participant.state.v1.{LedgerInitialConditions, Offset, ReadService, Update}
+import com.digitalasset.daml.lf.data.Ref
+import com.daml.ledger.participant.state.v1.{LedgerInitialConditions, Offset, ReadService, Update, ParticipantId}
 import com.digitalasset.daml.lf.archive.DarReader
 import com.digitalasset.daml.lf.data.ImmArray
 import com.digitalasset.daml.lf.transaction.GenTransaction
@@ -28,7 +29,7 @@ import com.digitalasset.daml_lf.DamlLf.Archive
 import com.digitalasset.platform.common.util.DirectExecutionContext
 import com.blockchaintp.utils.DirectoryKeyManager
 import org.slf4j.LoggerFactory
- 
+
 import scala.util.Try
 
 object SawtoothDamlRpc extends App {
@@ -49,36 +50,28 @@ object SawtoothDamlRpc extends App {
   logger.error(s"Connecting to "+config.connect)
   val validatorAddress = config.connect
   val swTxnTracer = new SawtoothTransactionsTracer(5051)
-  
+
   val keyManager = DirectoryKeyManager.create(config.keystore)
-  // This should be a more arbitrary identifier, which is set via CLI, 
+  // This should be a more arbitrary identifier, which is set via CLI,
   val participantId = keyManager.getPublicKeyInHex()
   val readService = new SawtoothReadService(validatorAddress,swTxnTracer, true)
   val writeService = new SawtoothWriteService(validatorAddress,keyManager, swTxnTracer, participantId)
- 
-  //val ledger = new Ledger(timeModel, tsb)
-  def archivesFromDar(file: File): List[Archive] = {
-    DarReader[Archive](x => Try(Archive.parseFrom(x)))
-      .readArchive(new ZipFile(file))
-      .fold(t => throw new RuntimeException(s"Failed to parse DAR from $file", t), dar => dar.all)
+
+  config.archiveFiles.foreach { file =>
+    val archivesTry = for {
+      dar <- DarReader { case (_, x) => Try(Archive.parseFrom(x)) }
+        .readArchiveFromFile(file)
+    } yield writeService.uploadPackages(dar.all, Some("uploaded on startup by participant"))
   }
 
-  // Parse DAR archives given as command-line arguments and upload them
-  // to the ledger using a side-channel.
-  config.archiveFiles.foreach { f =>
-    val archives = archivesFromDar(f)
-    archives.foreach { archive =>
-      logger.info(s"Uploading archive ${archive.getHash}...")
-    }
-    writeService.uploadPublicPackages(archives, "uploaded on startup by participant")
-  }
-
+  val thisParticipantId: ParticipantId = Ref.LedgerString.assertFromString(writeService.getParticipantId())
   readService.getLedgerInitialConditions
     .runWith(Sink.head)
     .foreach { initialConditions =>
       val indexService = ReferenceIndexService(
         participantReadService = readService,
-        initialConditions = initialConditions
+        initialConditions = initialConditions,
+        thisParticipantId
       )
 
       val server = Server(

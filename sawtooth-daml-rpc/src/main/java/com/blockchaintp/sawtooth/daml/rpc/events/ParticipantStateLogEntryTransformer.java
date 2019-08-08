@@ -11,10 +11,15 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.rpc.events;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.KeyValueConsumption;
 import com.daml.ledger.participant.state.v1.Update;
+
+import scala.collection.Iterator;
 
 /**
  * Implementation of LogEntryTransformer based on participant-state v1.
@@ -23,7 +28,13 @@ import com.daml.ledger.participant.state.v1.Update;
 public class ParticipantStateLogEntryTransformer implements LogEntryTransformer {
 
   @Override
-  public final Update logEntryUpdate(final DamlLogEntryId entryId, final DamlLogEntry logEntry) {
-    return KeyValueConsumption.logEntryToUpdate(entryId, logEntry);
+  public final List<Update> logEntryUpdate(final DamlLogEntryId entryId, final DamlLogEntry logEntry) {
+    scala.collection.immutable.List<Update> updateList = KeyValueConsumption.logEntryToUpdate(entryId, logEntry);
+    List<Update> retList = new ArrayList<>();
+    Iterator<Update> iterator = updateList.iterator();
+    while (iterator.hasNext()) {
+      retList.add(iterator.next());
+    }
+    return retList;
   }
 }

@@ -41,6 +41,7 @@ import com.daml.ledger.participant.state.v1.PartyAllocationResult;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
+import com.daml.ledger.participant.state.v1.UploadPackagesResult;
 import com.daml.ledger.participant.state.v1.WriteService;
 import com.digitalasset.daml.lf.transaction.GenTransaction;
 import com.digitalasset.daml.lf.value.Value.ContractId;
@@ -55,10 +56,14 @@ import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Batch;
+import sawtooth.sdk.protobuf.ClientBatchStatus;
+import sawtooth.sdk.protobuf.ClientBatchStatusRequest;
+import sawtooth.sdk.protobuf.ClientBatchStatusResponse;
 import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
 import sawtooth.sdk.protobuf.ClientBatchSubmitResponse;
 import sawtooth.sdk.protobuf.ClientBatchSubmitResponse.Status;
 import sawtooth.sdk.protobuf.Message;
+import sawtooth.sdk.protobuf.Message.MessageType;
 import sawtooth.sdk.protobuf.Transaction;
 import scala.Option;
 import scala.collection.JavaConverters;
@@ -70,6 +75,8 @@ import scala.collection.JavaConverters;
 public final class SawtoothWriteService implements WriteService {
 
   private static final Logger LOGGER = Logger.getLogger(SawtoothWriteService.class.getName());
+
+  private static final int DEFAULT_WAIT_TIME = 300;
 
   private Stream stream;
 
@@ -83,6 +90,7 @@ public final class SawtoothWriteService implements WriteService {
 
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
+   *
    * @param implementation of a ZMQ stream.
    * @param kmgr           the keyManager for this service.
    * @param txnTracer      a RESTFul interface to push record of sawtooth
@@ -99,6 +107,7 @@ public final class SawtoothWriteService implements WriteService {
 
   /**
    * Constructor a SawtoothWriteService instance from an address.
+   *
    * @param validatorAddress in String format e.g. "http://localhost:3030".
    * @param kmgr             the keyManager for this service.
    * @param txnTracer        a RESTFul interface to push record of sawtooth
@@ -117,7 +126,7 @@ public final class SawtoothWriteService implements WriteService {
     return CompletableFuture.completedStage(new PartyAllocationResult.NotSupported$());
   }
 
-  private String getParticipantId() {
+  public String getParticipantId() {
     return this.participantId;
   }
 
@@ -178,7 +187,8 @@ public final class SawtoothWriteService implements WriteService {
     return outputAddresses;
   }
 
-  private SubmissionResult submissionToResponse(final Future submissionFuture) throws SawtoothWriteServiceException {
+  private Map.Entry<String, ClientBatchSubmitResponse.Status> submissionToResponse(final String batchid,
+      final Future submissionFuture) throws SawtoothWriteServiceException {
     try {
       ByteString result = submissionFuture.getResult();
       ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
@@ -186,15 +196,16 @@ public final class SawtoothWriteService implements WriteService {
       switch (status) {
       case OK:
         LOGGER.info(String.format("ClientBatchSubmit response is OK"));
-        return new SubmissionResult.Acknowledged$();
+        break;
       case QUEUE_FULL:
         LOGGER.info(String.format("ClientBatchSubmit response is QUEUE_FULL"));
-        return new SubmissionResult.Overloaded$();
+        break;
       default:
         LOGGER.info(String.format("ClientBatchSubmit response is %s", status.toString()));
         throw new SawtoothWriteServiceException(
             String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
+      return Map.entry(batchid, status);
     } catch (InterruptedException e) {
       throw new SawtoothWriteServiceException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()), e);
@@ -207,22 +218,81 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  private synchronized CompletionStage<SubmissionResult> sendToValidator(final Collection<Batch> batches) {
+  private synchronized CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> sendToValidator(
+      final Batch batch) {
     // Push to TraceTransaction class
-    for (Batch b : batches) {
-      this.sawtoothTransactionsTracer.putWriteTransactions(b.toString());
-      LOGGER.info(String.format("Batch submission %s", b.getHeaderSignature()));
-    }
-    ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addAllBatches(batches).build();
+    this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
+    LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
+    ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+
     return CompletableFuture.supplyAsync(() -> {
       try {
-        return submissionToResponse(streamToValidator);
+        return submissionToResponse(batch.getHeaderSignature(), streamToValidator);
       } catch (SawtoothWriteServiceException exc) {
         LOGGER.severe(exc.getMessage());
-        return new SubmissionResult.Acknowledged$();
+        return Map.entry(batch.getHeaderSignature(), ClientBatchSubmitResponse.Status.INTERNAL_ERROR);
       }
     }, watchThreadPool);
+  }
+
+  private SubmissionResult batchSubmitToSubmissionResult(
+      Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
+    switch (submission.getValue()) {
+    case OK:
+      return new SubmissionResult.Acknowledged$();
+    case QUEUE_FULL:
+      return new SubmissionResult.Overloaded$();
+    default:
+      return new SubmissionResult.Overloaded$();
+    }
+  }
+
+  private UploadPackagesResult batchTerminalToUploadPackageResult(
+      Map.Entry<String, ClientBatchStatus.Status> submission) {
+    switch (submission.getValue()) {
+    case COMMITTED:
+      return new UploadPackagesResult.Ok$();
+    case INVALID:
+      return new UploadPackagesResult.InvalidPackage(
+          String.format("Package submission %s is invalid", submission.getKey()));
+    default:
+      return new UploadPackagesResult.InvalidPackage(
+          String.format("Package submission %s has been lost", submission.getKey()));
+    }
+  }
+
+  private Map.Entry<String, ClientBatchStatus.Status> checkBatchWaitForTerminal(
+      Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
+    String batchid = submission.getKey();
+    while (true) {
+      try {
+        ClientBatchStatusRequest cbstatReq = ClientBatchStatusRequest.newBuilder().addBatchIds(batchid).setWait(true)
+            .setTimeout(DEFAULT_WAIT_TIME).build();
+        Future cbstatFut = this.stream.send(MessageType.CLIENT_BATCH_STATUS_REQUEST, cbstatReq.toByteString());
+        ByteString result = cbstatFut.getResult();
+        ClientBatchStatusResponse cbsResp = ClientBatchStatusResponse.parseFrom(result);
+        List<ClientBatchStatus> batchStatusesList = cbsResp.getBatchStatusesList();
+        ClientBatchStatus.Status consolidatedStatus = ClientBatchStatus.Status.STATUS_UNSET;
+        for (ClientBatchStatus thisStatus : batchStatusesList) {
+          if (thisStatus.getStatus().compareTo(consolidatedStatus) > 0) {
+            consolidatedStatus = thisStatus.getStatus();
+          }
+        }
+        switch (consolidatedStatus) {
+        case COMMITTED:
+          return Map.entry(batchid, ClientBatchStatus.Status.COMMITTED);
+        case INVALID:
+          return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
+        case UNKNOWN:
+          return Map.entry(batchid, ClientBatchStatus.Status.UNKNOWN);
+        case PENDING:
+        default:
+        }
+      } catch (InvalidProtocolBufferException | InterruptedException | ValidatorConnectionError e) {
+        return Map.entry(batchid, ClientBatchStatus.Status.UNKNOWN);
+      }
+    }
   }
 
   private Batch submissionToBatch(final DamlSubmission submission, final Collection<String> inputAddresses,
@@ -275,17 +345,22 @@ public final class SawtoothWriteService implements WriteService {
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
 
-    return sendToValidator(List.of(sawtoothBatch));
+    return sendToValidator(sawtoothBatch).thenApply(x -> batchSubmitToSubmissionResult(x));
   }
 
   @Override
-  public CompletionStage<SubmissionResult> uploadPublicPackages(final scala.collection.immutable.List<Archive> archives,
-      final String sourceDescription) {
-    DamlSubmission submission = KeyValueSubmission.archivesToSubmission(archives, sourceDescription,
+  public CompletionStage<UploadPackagesResult> uploadPackages(final scala.collection.immutable.List<Archive> archives,
+      final Option<String> optionalDescription) {
+    String sourceDescription = "Uploaded package";
+    if (optionalDescription.nonEmpty()) {
+      sourceDescription = optionalDescription.get();
+    }
+    String submissionId = UUID.randomUUID().toString();
+    DamlSubmission submission = KeyValueSubmission.archivesToSubmission(submissionId, archives, sourceDescription,
         this.getParticipantId());
 
-    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
-        .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
+    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
+        .build();
     Collection<String> outputAddresses = makeOutputAddresses(archives, damlLogEntryId);
 
     Collection<String> inputAddresses = makeInputAddresses(submission);
@@ -301,7 +376,7 @@ public final class SawtoothWriteService implements WriteService {
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
 
-    return sendToValidator(List.of(sawtoothBatch));
+    return sendToValidator(sawtoothBatch).thenApply(x -> checkBatchWaitForTerminal(x))
+        .thenApply(x -> batchTerminalToUploadPackageResult(x));
   }
-
 }

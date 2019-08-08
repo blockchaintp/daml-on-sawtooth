@@ -32,6 +32,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
@@ -120,7 +121,7 @@ public class DamlLedgerStateTest {
       DamlStateKey dneKey = DamlStateKey.newBuilder().setCommandDedup(dneDedupKey).build();
       DamlStateValue dneCommandDedup = ledgerState.getDamlState(dneKey);
       assertNull(dneCommandDedup);
-      
+
       DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
       Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlStates(Arrays.asList(stateKey));
       assertTrue(firstVal.equals(retMap.get(stateKey)));
@@ -133,7 +134,7 @@ public class DamlLedgerStateTest {
       }
     } catch (InternalError | InvalidTransactionException exc) {
       exc.printStackTrace();
-      fail("No exceptions should be thrown: "+exc.getMessage());
+      fail("No exceptions should be thrown: " + exc.getMessage());
     }
   }
 
@@ -147,7 +148,10 @@ public class DamlLedgerStateTest {
     DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntry firstVal = DamlLogEntry.newBuilder()
-        .setRejectionEntry(DamlRejectionEntry.newBuilder().setMaximumRecordTimeExceeded("Sorry!").build()).build();
+        .setRejectionEntry(DamlRejectionEntry.newBuilder()
+            .setMaximumRecordTimeExceeded(DamlKvutils.DamlRejectionEntry.MaximumRecordTimeExceeded.getDefaultInstance())
+            .build())
+        .build();
     try {
       ledgerState.addDamlLogEntry(firstKey, firstVal, new ArrayList<String>());
       DamlLogEntry testVal = ledgerState.getDamlLogEntry(firstKey);
