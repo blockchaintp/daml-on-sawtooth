@@ -32,6 +32,7 @@ import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
+import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
@@ -52,6 +53,7 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
 /**
  * An implementation of LedgerState for DAML.
+ *
  * @author scealiontach
  */
 public final class DamlLedgerState implements LedgerState {
@@ -418,4 +420,44 @@ public final class DamlLedgerState implements LedgerState {
       throw internalError;
     }
   }
+
+  @Override
+  public SawtoothDamlParty getParty(String partyId) throws InternalError, InvalidTransactionException {
+    String address = Namespace.makeDamlPartyAddress(partyId);
+    Map<String, ByteString> smap = state.getState(List.of(address));
+    if (smap.containsKey(address)) {
+      ByteString bs = smap.get(address);
+      if (null == bs || bs.isEmpty()) {
+        return null;
+      } else {
+        try {
+          return SawtoothDamlParty.parseFrom(bs);
+        } catch (InvalidProtocolBufferException e) {
+          throw new InternalError(e.getMessage());
+        }
+      }
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public SawtoothDamlParty setParty(SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException {
+    ByteString bs = partyEntry.toByteString();
+    String address = Namespace.makeAddressForType(partyEntry);
+    state.setState(List.of(Map.entry(address, bs)));
+    return partyEntry;
+  }
+
+  @Override
+  public void addParty(SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException {
+    SawtoothDamlParty previousParty = getParty(partyEntry.getHint());
+    if (null == previousParty) {
+      setParty(partyEntry);
+    } else {
+      throw new InvalidTransactionException(
+          String.format("DAML Party identified by %s already exists", partyEntry.getHint()));
+    }
+  }
+
 }
