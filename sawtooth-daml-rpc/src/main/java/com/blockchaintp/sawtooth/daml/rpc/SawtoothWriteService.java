@@ -25,6 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
+import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
+import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteServiceException;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
@@ -48,6 +50,7 @@ import com.digitalasset.daml.lf.value.Value.ContractId;
 import com.digitalasset.daml.lf.value.Value.NodeId;
 import com.digitalasset.daml.lf.value.Value.VersionedValue;
 import com.digitalasset.daml_lf.DamlLf.Archive;
+import com.digitalasset.ledger.api.domain.PartyDetails;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -122,8 +125,35 @@ public final class SawtoothWriteService implements WriteService {
   @Override
   public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
       final Option<String> displayName) {
-    // TODO Implement this, for now report unsupported
-    return CompletableFuture.completedStage(new PartyAllocationResult.NotSupported$());
+    final String partyId;
+    if (hint.nonEmpty()) {
+      partyId = hint.get();
+    } else {
+      partyId = UUID.randomUUID().toString();
+    }
+    final String partyDisplayName;
+    if (displayName.nonEmpty()) {
+      partyDisplayName = displayName.get();
+    } else {
+      partyDisplayName = partyId;
+    }
+    SawtoothDamlParty newParty = SawtoothDamlParty.newBuilder().setHint(partyId).setDisplayName(partyDisplayName)
+        .build();
+    Batch batch = allocatePartyToBatch(newParty);
+
+    final PartyDetails details = new PartyDetails(partyId, Option.apply(partyDisplayName), false);
+    return sendToValidator(batch).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+        .<PartyAllocationResult>thenApply(result -> {
+          switch (result.getValue()) {
+          case COMMITTED:
+            return new PartyAllocationResult.Ok(details);
+          case INVALID:
+            return new PartyAllocationResult.AlreadyExists$();
+          case UNKNOWN:
+          default:
+            return new PartyAllocationResult.InvalidName(String.format("%s is not a valid party id", partyId));
+          }
+        });
   }
 
   public String getParticipantId() {
@@ -295,14 +325,27 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
+  private Batch allocatePartyToBatch(final SawtoothDamlParty partyToAllocate) {
+    Collection<String> inputAddresses = List.of(Namespace.makeAddressForType(partyToAllocate));
+    Collection<String> outputAddresses = List.of(Namespace.makeAddressForType(partyToAllocate));
+    SawtoothDamlOperation operation = SawtoothDamlOperation.newBuilder().setAllocateParty(partyToAllocate).build();
+    return operationToBatch(operation, inputAddresses, outputAddresses);
+  }
+
   private Batch submissionToBatch(final DamlSubmission submission, final Collection<String> inputAddresses,
       final Collection<String> outputAddresses, final DamlLogEntryId damlLogEntryId) {
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(KeyValueSubmission.packDamlSubmission(submission))
         .setLogEntryId(KeyValueCommitting.packDamlLogEntryId(damlLogEntryId)).build();
+    SawtoothDamlOperation operation = SawtoothDamlOperation.newBuilder().setTransaction(payload).build();
+    return operationToBatch(operation, inputAddresses, outputAddresses);
+  }
+
+  private Batch operationToBatch(final SawtoothDamlOperation operation, final Collection<String> inputAddresses,
+      final Collection<String> outputAddresses) {
 
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
-        Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), payload.toByteString());
+        Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), operation.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
     LOGGER.fine(
         String.format("Batch %s has tx %s", sawtoothBatch.getHeaderSignature(), sawtoothTxn.getHeaderSignature()));
@@ -376,7 +419,7 @@ public final class SawtoothWriteService implements WriteService {
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
 
-    return sendToValidator(sawtoothBatch).thenApply(x -> checkBatchWaitForTerminal(x))
+    return sendToValidator(sawtoothBatch).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .thenApply(x -> batchTerminalToUploadPackageResult(x));
   }
 }
