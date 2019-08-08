@@ -21,6 +21,8 @@ import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
+import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
+import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
@@ -49,6 +51,7 @@ import scala.Tuple2;
 
 /**
  * A TransactionHandler implementation which handles DAML.
+ *
  * @author scealiontach
  */
 public final class DamlTransactionHandler implements TransactionHandler {
@@ -63,6 +66,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   /**
    * Constructs a TransactionHandler for DAML Transactions.
+   *
    * @param damlCommitter the DamlCommitter which will be used to process
    *                      submissions
    */
@@ -76,26 +80,37 @@ public final class DamlTransactionHandler implements TransactionHandler {
   @Override
   public void apply(final TpProcessRequest tpProcessRequest, final Context state)
       throws InvalidTransactionException, InternalError {
-    long applyStart = System.currentTimeMillis();
     LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
     basicRequestChecks(tpProcessRequest);
 
     LedgerState ledgerState = new DamlLedgerState(state);
-    SawtoothDamlTransaction tx;
     TransactionHeader txHeader = tpProcessRequest.getHeader();
-    DamlSubmission submission;
-    DamlLogEntryId entryId;
     try {
-      tx = SawtoothDamlTransaction.parseFrom(tpProcessRequest.getPayload());
-      entryId = KeyValueCommitting.unpackDamlLogEntryId(tx.getLogEntryId());
-      submission = KeyValueSubmission.unpackDamlSubmission(tx.getSubmission());
+      SawtoothDamlOperation operation = SawtoothDamlOperation.parseFrom(tpProcessRequest.getPayload());
+      if (operation.hasTransaction()) {
+        SawtoothDamlTransaction tx = operation.getTransaction();
+        DamlLogEntryId entryId = KeyValueCommitting.unpackDamlLogEntryId(tx.getLogEntryId());
+        DamlSubmission submission = KeyValueSubmission.unpackDamlSubmission(tx.getSubmission());
+        processTransaction(ledgerState, txHeader, submission, entryId);
+      } else if (operation.hasAllocateParty()) {
+        SawtoothDamlParty partyToAllocate = operation.getAllocateParty();
+        processAllocateParty(ledgerState, txHeader, partyToAllocate);
+      }
     } catch (InvalidProtocolBufferException e) {
       InvalidTransactionException ite = new InvalidTransactionException(
           String.format("Payload is unparseable, and not a valid DamlSubmission", e.getMessage().getBytes()));
       ite.initCause(e);
       throw ite;
     }
+  }
 
+  private void processAllocateParty(LedgerState ledgerState, TransactionHeader txHeader,
+      SawtoothDamlParty partyToAllocate) throws InternalError, InvalidTransactionException {
+    ledgerState.addParty(partyToAllocate);
+  }
+
+  private void processTransaction(LedgerState ledgerState, TransactionHeader txHeader, DamlSubmission submission,
+      DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
     long fetchStateStart = System.currentTimeMillis();
     Map<DamlStateKey, Option<DamlStateValue>> stateMap = buildStateMap(ledgerState, txHeader, submission);
 
@@ -105,17 +120,16 @@ public final class DamlTransactionHandler implements TransactionHandler {
     long recordStateStart = System.currentTimeMillis();
     recordState(ledgerState, submission, inputLogEntries, stateMap, entryId, currentLogEntryList);
 
-    long applyFinished = System.currentTimeMillis();
-    long recordStateTime = applyFinished - recordStateStart;
+    long processFinished = System.currentTimeMillis();
+    long recordStateTime = processFinished - recordStateStart;
     long fetchStateTime = recordStateStart - fetchStateStart;
-    long validationTime = fetchStateStart - applyStart;
-    long totalTime = applyFinished - applyStart;
-    LOGGER.info(String.format("Finished processing transaction %s times=[total=%s, validation=%s,fetch=%s,record=%s]",
-        tpProcessRequest.getSignature(), totalTime, validationTime, fetchStateTime, recordStateTime));
+    LOGGER.info(String.format("Finished processing transaction %s times=[fetch=%s,record=%s]",
+        txHeader.getPayloadSha512(), fetchStateTime, recordStateTime));
   }
 
   /**
    * Fundamental checks of the transaction.
+   *
    * @param tpProcessRequest the process request
    * @throws InvalidTransactionException if the transaction fails because of a
    *                                     business rule validation error
@@ -215,7 +229,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   @Override
   public Collection<String> getNameSpaces() {
-    return Arrays.asList(new String[] {this.namespace});
+    return Arrays.asList(new String[] { this.namespace });
   }
 
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {

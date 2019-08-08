@@ -14,6 +14,7 @@ package com.blockchaintp.sawtooth.daml.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -21,6 +22,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 /**
  * Utility class dealing with the common namespace functions and values with
  * Sawtooth and DAML.
+ *
  * @author scealiontach
  */
 public final class Namespace {
@@ -65,6 +67,11 @@ public final class Namespace {
   public static final String DAML_CONFIG_ENTRY_NS = getNameSpace() + "02";
 
   /**
+   * Address space for Party Entries.
+   */
+  public static final String DAML_PARTY_NS = getNameSpace() + "03";
+
+  /**
    * Address for DAML TimeModel configuration.
    */
   public static final String DAML_CONFIG_TIME_MODEL = makeAddress(DAML_CONFIG_ENTRY_NS, "time-model");
@@ -81,6 +88,7 @@ public final class Namespace {
 
   /**
    * The first 6 characters of the family name hash.
+   *
    * @return The first 6 characters of the family name hash
    */
   public static String getNameSpace() {
@@ -89,6 +97,7 @@ public final class Namespace {
 
   /**
    * Make an address given a namespace, and list of parts in order.
+   *
    * @param ns    the namespace byte string
    * @param parts one or more string part components
    * @return the hash of the collected address
@@ -107,6 +116,7 @@ public final class Namespace {
   /**
    * Construct a context address for the ledger sync event with logical id
    * eventId.
+   *
    * @param entryId the log entry Id
    * @return the byte string address
    */
@@ -116,6 +126,7 @@ public final class Namespace {
 
   /**
    * Construct a context address for the given DamlStateKey.
+   *
    * @param key DamlStateKey to be used for the address
    * @return the string address
    */
@@ -125,6 +136,7 @@ public final class Namespace {
 
   /**
    * Construct a multipart context address for the given DamlLogEntryId.
+   *
    * @param key DamlState Key to be used for the address
    * @return the list of string address
    */
@@ -138,6 +150,7 @@ public final class Namespace {
 
   /**
    * Construct a multipart context address for the given DamlStateKey.
+   *
    * @param key DamlState Key to be used for the address
    * @return the list of string address
    */
@@ -151,6 +164,7 @@ public final class Namespace {
 
   /**
    * A utility method to make addresses for most Daml state entry types.
+   *
    * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
@@ -161,11 +175,43 @@ public final class Namespace {
   /**
    * A utility method to make addresses for most DamlLogEntryId key types,
    * complementing the other methods with similar signature.
+   *
    * @param key the key object which will be used to create the address
    * @return a sawtooth context address
    */
   public static String makeAddressForType(final DamlLogEntryId key) {
     return makeDamlLogEntryAddress(key);
+  }
+
+  /**
+   * A utility method to make addresses for party entries, complementing the other
+   * methods with similar signature.
+   *
+   * @param party the party entry in question.
+   * @return a sawtooth context address
+   */
+  public static String makeAddressForType(final SawtoothDamlParty party) {
+    return makeDamlPartyAddress(party);
+  }
+
+  /**
+   * Construct a context address for the SawtoothDamlParty.
+   *
+   * @param party the SawtoothDamlParty
+   * @return the byte string address
+   */
+  public static String makeDamlPartyAddress(SawtoothDamlParty party) {
+    return makeAddress(DAML_PARTY_NS, party.getHint());
+  }
+
+  /**
+   * Construct a context address for the SawtoothDamlParty.
+   *
+   * @param partyId the party identifier
+   * @return the byte string address
+   */
+  public static String makeDamlPartyAddress(String partyId) {
+    return makeAddress(DAML_PARTY_NS, partyId);
   }
 
   private Namespace() {
