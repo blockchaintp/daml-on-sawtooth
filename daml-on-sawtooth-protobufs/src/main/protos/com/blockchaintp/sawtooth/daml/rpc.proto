@@ -19,6 +19,23 @@ option java_multiple_files = true;
 package com.blockchaintp.sawtooth.daml.protobuf;
 import "google/protobuf/timestamp.proto";
 
+message SawtoothDamlOperation {
+  oneof payload {
+    SawtoothDamlTransaction transaction = 1;
+    SawtoothDamlParty allocateParty = 2;
+  };
+}
+
+/**
+ * Daml Parties will be stored under the address hash(hint).
+ * Duplicate parties will be rejected.
+ * Diplay names may be updated.
+ */
+message SawtoothDamlParty {
+  string hint = 1;
+  string displayName = 2;
+}
+
 message SawtoothDamlTransaction {
   bytes logEntryId = 1;
   bytes submission = 2;
