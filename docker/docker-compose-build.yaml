@@ -25,4 +25,11 @@ services:
     volumes:
       - ../:/project/daml-on-sawtooth
       - ${HOME}/.m2/settings.xml:/root/.m2/settings.xml
-      
+  ledger-api-testtool:
+    build:
+      context: .
+      dockerfile: ledger-api-testtool.docker
+    image: ledger-api-testtool:${ISOLATION_ID}
+    container_name: ledger-api-testtool
+    volumes:
+      - ../:/project/daml-on-sawtooth
