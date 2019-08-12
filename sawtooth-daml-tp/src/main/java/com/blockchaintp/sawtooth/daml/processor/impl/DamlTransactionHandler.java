@@ -104,13 +104,13 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
   }
 
-  private void processAllocateParty(LedgerState ledgerState, TransactionHeader txHeader,
-      SawtoothDamlParty partyToAllocate) throws InternalError, InvalidTransactionException {
+  private void processAllocateParty(final LedgerState ledgerState, final TransactionHeader txHeader,
+      final SawtoothDamlParty partyToAllocate) throws InternalError, InvalidTransactionException {
     ledgerState.addParty(partyToAllocate);
   }
 
-  private void processTransaction(LedgerState ledgerState, TransactionHeader txHeader, DamlSubmission submission,
-      DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
+  private void processTransaction(final LedgerState ledgerState, final TransactionHeader txHeader,
+      final DamlSubmission submission, final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
     long fetchStateStart = System.currentTimeMillis();
     Map<DamlStateKey, Option<DamlStateValue>> stateMap = buildStateMap(ledgerState, txHeader, submission);
 
@@ -229,7 +229,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   @Override
   public Collection<String> getNameSpaces() {
-    return Arrays.asList(new String[] { this.namespace });
+    return Arrays.asList(new String[] {this.namespace});
   }
 
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {

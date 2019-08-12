@@ -72,9 +72,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private static final int DEFAULT_TIMEOUT = 10;
   private static final Logger LOGGER = Logger.getLogger(DamlLogEventHandler.class.getName());
-  private static final String[] SUBSCRIBE_SUBJECTS = new String[] { EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
+  private static final String[] SUBSCRIBE_SUBJECTS = new String[] {EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
       EventConstants.DAML_LOG_EVENT_SUBJECT,
-      com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT };
+      com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private Collection<EventSubscription> subscriptions;
@@ -121,10 +121,10 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.stream = argStream;
     // TODO add a cancel call back
     this.processors = Collections.synchronizedList(new ArrayList<>());
-    this.lastOffset = Offset.apply(new long[] { 0 });
+    this.lastOffset = Offset.apply(new long[] {0});
   }
 
-  private String getBlockIdByOffset(Offset offset) {
+  private String getBlockIdByOffset(final Offset offset) {
     String[] offsetSplit = offset.toString().split("-");
     // Block 1 is the genesis block, While unlikely the first possible interesting
     // data is at block 2
@@ -203,7 +203,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         ByteString evtData = uncompressByteString(evt.getData());
         DamlLogEntry logEntry = KeyValueCommitting.unpackDamlLogEntry(evtData);
         for (Update logEntryToUpdate : this.transformer.logEntryUpdate(id, logEntry)) {
-          Offset offset = new Offset(new long[] { blockNum, offsetCounter, updateCounter });
+          Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
           updateCounter++;
           if (offset.compareTo(this.lastOffset) > 0) {
             Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
@@ -227,7 +227,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
               .get(com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE);
           long microseconds = Long.valueOf(microsStr);
           Heartbeat heartbeat = new Heartbeat(new Timestamp(microseconds));
-          Offset hbOffset = new Offset(new long[] { blockNum, 0 });
+          Offset hbOffset = new Offset(new long[] {blockNum, 0});
           if (hbOffset.compareTo(this.lastOffset) > 0) {
             Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
             // Only send the most recent heartbeat

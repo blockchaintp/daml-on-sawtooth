@@ -156,6 +156,10 @@ public final class SawtoothWriteService implements WriteService {
         });
   }
 
+  /**
+   * Return this participants identifier as a string.
+   * @return the id of the participant
+   */
   public String getParticipantId() {
     return this.participantId;
   }
@@ -267,7 +271,7 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   private SubmissionResult batchSubmitToSubmissionResult(
-      Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
+      final Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
     switch (submission.getValue()) {
     case OK:
       return new SubmissionResult.Acknowledged$();
@@ -279,7 +283,7 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   private UploadPackagesResult batchTerminalToUploadPackageResult(
-      Map.Entry<String, ClientBatchStatus.Status> submission) {
+      final Map.Entry<String, ClientBatchStatus.Status> submission) {
     switch (submission.getValue()) {
     case COMMITTED:
       return new UploadPackagesResult.Ok$();
@@ -293,7 +297,7 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   private Map.Entry<String, ClientBatchStatus.Status> checkBatchWaitForTerminal(
-      Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
+      final Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
     String batchid = submission.getKey();
     while (true) {
       try {
