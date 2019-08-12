@@ -422,7 +422,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public SawtoothDamlParty getParty(String partyId) throws InternalError, InvalidTransactionException {
+  public SawtoothDamlParty getParty(final String partyId) throws InternalError, InvalidTransactionException {
     String address = Namespace.makeDamlPartyAddress(partyId);
     Map<String, ByteString> smap = state.getState(List.of(address));
     if (smap.containsKey(address)) {
@@ -442,7 +442,8 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public SawtoothDamlParty setParty(SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException {
+  public SawtoothDamlParty setParty(final SawtoothDamlParty partyEntry)
+      throws InternalError, InvalidTransactionException {
     ByteString bs = partyEntry.toByteString();
     String address = Namespace.makeAddressForType(partyEntry);
     state.setState(List.of(Map.entry(address, bs)));
@@ -450,7 +451,7 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public void addParty(SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException {
+  public void addParty(final SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException {
     SawtoothDamlParty previousParty = getParty(partyEntry.getHint());
     if (null == previousParty) {
       setParty(partyEntry);

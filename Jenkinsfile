@@ -72,7 +72,7 @@ pipeline {
     stage('Package') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B package'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B package verify'
           sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
           sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
         }
@@ -106,7 +106,7 @@ pipeline {
         junit '**/target/surefire-reports/**/*.xml'
         sh 'docker-compose -f docker/docker-compose-build.yaml down'
         sh 'docker-compose -f docker/daml-test.yaml down'
-        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn clean'
+        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B clean'
         sh '''
           for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
             docker rmi -f $img:$ISOLATION_ID

@@ -200,7 +200,7 @@ public final class Namespace {
    * @param party the SawtoothDamlParty
    * @return the byte string address
    */
-  public static String makeDamlPartyAddress(SawtoothDamlParty party) {
+  public static String makeDamlPartyAddress(final SawtoothDamlParty party) {
     return makeAddress(DAML_PARTY_NS, party.getHint());
   }
 
@@ -210,7 +210,7 @@ public final class Namespace {
    * @param partyId the party identifier
    * @return the byte string address
    */
-  public static String makeDamlPartyAddress(String partyId) {
+  public static String makeDamlPartyAddress(final String partyId) {
     return makeAddress(DAML_PARTY_NS, partyId);
   }
 
