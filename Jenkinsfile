@@ -62,7 +62,7 @@ pipeline {
     stage('Test') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B test'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B verify test'
           sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
           sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
         }
