@@ -14,4 +14,4 @@
 # limitations under the License.
 
 
-java -jar timekeeper-*.jar $@
+java ${JAVA_ARGS} -jar timekeeper-*.jar $@

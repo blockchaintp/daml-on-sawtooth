@@ -14,4 +14,4 @@
 # limitations under the License.
 
 
-java -jar sawtooth-daml-rpc-*.jar $@
+java ${JAVA_ARGS} -jar sawtooth-daml-rpc-*.jar $@

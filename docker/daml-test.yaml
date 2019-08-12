@@ -1,0 +1,123 @@
+# Copyright 2019 Blockchain Technology Partners
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ------------------------------------------------------------------------------
+
+version: "2.1"
+
+services:
+
+  settings-tp:
+    image: hyperledger/sawtooth-settings-tp:1.1
+    container_name: sawtooth-settings-tp-default
+    depends_on:
+      - validator
+    entrypoint: settings-tp -v --connect tcp://validator:4004
+
+  validator:
+    image: hyperledger/sawtooth-validator:1.1
+    container_name: sawtooth-validator-default
+    expose:
+      - 4004
+      - 8800
+      - 5050
+    ports:
+      - "4004:4004"
+      - "8800:8800"
+      - "5050:5050"
+    entrypoint: "bash -c \"\
+        sawadm keygen && \
+        sawtooth keygen && \
+        sawset genesis && \
+        sawadm genesis config-genesis.batch && \
+        sawtooth-validator -v \
+          --endpoint tcp://validator:8800 \
+          --bind component:tcp://eth0:4004 \
+          --bind consensus:tcp://eth0:5050 \
+          --bind network:tcp://eth0:8800 \
+        \""
+
+
+  devmode-engine:
+    image: hyperledger/sawtooth-devmode-engine-rust:1.1
+    container_name: sawtooth-devmode-engine-rust-default
+    depends_on:
+      - validator
+    entrypoint: devmode-engine-rust -C tcp://validator:5050
+
+  rest-api:
+    image: hyperledger/sawtooth-rest-api:1.1
+    container_name: sawtooth-rest-api-default
+    expose:
+      - 8008
+    ports:
+      - "8008:8008"
+    depends_on:
+      - validator
+    entrypoint: sawtooth-rest-api  --connect tcp://validator:4004 --bind rest-api:8008
+
+  daml-tp:
+    image: sawtooth-daml-tp:${ISOLATION_ID}
+    container_name: sawtooth-daml-tp
+    command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
+    environment:
+      - JAVA_ARGS=-verbose:gc
+    depends_on:
+      - validator
+
+  daml-rpc:
+    image: sawtooth-daml-rpc:${ISOLATION_ID}
+    container_name: sawtooth-daml-rpc
+    expose:
+      - 9000
+      - 5051
+    ports:
+      - "9000:9000"
+      - "5051:5051"
+    entrypoint: "bash -c \"\
+      sleep 10 && \
+      /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
+        --connect tcp://validator:4004 \
+        `ls /opt/sawtooth-daml-rpc/dar/*.dar` \
+        \""
+    environment:
+      - JAVA_ARGS=-verbose:gc
+    volumes:
+      - ../test-dars:/opt/sawtooth-daml-rpc/dar/
+    depends_on:
+      - validator
+
+  timekeeper:
+    image: timekeeper:${ISOLATION_ID}
+    container_name: timekeeper
+    command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
+    environment:
+      - JAVA_ARGS=-verbose:gc
+    depends_on:
+      - validator
+
+  # Run the integration tests at most twice to compensate for "piming the pump"
+  ledger-api-testtool:
+    image: ledger-api-testtool:${ISOLATION_ID}
+    container_name: ledger-api-testtool
+    entrypoint: "bash -c \"\
+      sleep 30 && \
+      java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
+        --timeout-scale-factor 5 \
+        --command-submission-ttl-scale-factor 5 || \
+      java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
+        --timeout-scale-factor 5 \
+        --command-submission-ttl-scale-factor 5
+        \""
+    depends_on:
+      - daml-rpc

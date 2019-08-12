@@ -18,7 +18,7 @@
 
 pipeline {
   agent any
-  
+
   triggers {cron('H H * * *')}
 
   options {
@@ -48,21 +48,23 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh 'docker build -t daml-on-sawtooth-build:${ISOLATION_ID} . -f docker/daml-on-sawtooth-build.docker'
+        sh 'docker-compose -f docker/docker-compose-build.yaml build'
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B clean compile'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B clean compile'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh 'mkdir -p test-dars && docker run --rm -v `pwd`/test-dars:/out ledger-api-testtool:${ISOLATION_ID} bash -c "java -jar ledger-api-test-tool_2.12.jar -x && cp *.dar /out"'
         }
+        sh 'docker-compose -f docker/daml-test.yaml build'
       }
     }
 
     stage('Test') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B test'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B test'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
         }
       }
     }
@@ -70,11 +72,17 @@ pipeline {
     stage('Package') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn -B package'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B package'
+          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
+          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
         }
         sh 'docker-compose -f docker-compose-installed.yaml build'
+      }
+    }
+
+    stage('Integration Test') {
+      steps {
+        sh 'docker-compose -f docker/daml-test.yaml up --exit-code-from ledger-api-testtool'
       }
     }
 
@@ -97,7 +105,8 @@ pipeline {
       always {
         junit '**/target/surefire-reports/**/*.xml'
         sh 'docker-compose -f docker/docker-compose-build.yaml down'
-        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build:${ISOLATION_ID} mvn clean'
+        sh 'docker-compose -f docker/daml-test.yaml down'
+        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn clean'
         sh '''
           for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
             docker rmi -f $img:$ISOLATION_ID

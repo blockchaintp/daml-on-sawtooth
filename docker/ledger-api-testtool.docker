@@ -1,0 +1,49 @@
+# Copyright 2019 Blockchain Techology Partners
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+FROM ubuntu:bionic
+
+ARG DAML_SDK_VERSION=0.13.16
+ARG DAML_REPO_VERSION=100.13.16
+
+RUN apt-get update -y && \
+  apt-get upgrade -y && \
+  apt-get install -y \
+  curl \
+  gnupg \
+  software-properties-common \
+  tar \
+  wget
+
+# Add Azul Repository for Zulu JDK
+# https://www.azul.com/products/zulu-community/free-jdk-comparison-matrix/
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0xB1998361219BD9C9 && \
+  apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main' && \
+  apt-get update -y && \
+  apt-get install -y \
+  zulu-12
+
+RUN curl -sSL https://get.daml.com/ | sh -s $DAML_SDK_VERSION && \
+  mkdir -p /opt && \
+  mv /root/.daml /opt/daml-sdk
+
+ENV PATH=/opt/daml-sdk/bin:$PATH
+
+RUN mkdir -p /opt/ledger-api-test-tool && \
+  cd  /opt/ledger-api-test-tool && \
+  wget -nv https://digitalassetsdk.bintray.com/DigitalAssetSDK/com/daml/ledger/testtool/ledger-api-test-tool_2.12/${DAML_REPO_VERSION}/ledger-api-test-tool_2.12-${DAML_REPO_VERSION}.jar && \
+  mv ledger-api-test-tool_2.12-${DAML_REPO_VERSION}.jar ledger-api-test-tool_2.12.jar
+
+WORKDIR /opt/ledger-api-test-tool
+
+CMD ["java", "-jar","ledger-api-test-tool_2.12.jar"]
