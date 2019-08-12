@@ -55,6 +55,7 @@ pipeline {
           sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
           sh 'mkdir -p test-dars && docker run --rm -v `pwd`/test-dars:/out ledger-api-testtool:${ISOLATION_ID} bash -c "java -jar ledger-api-test-tool_2.12.jar -x && cp *.dar /out"'
         }
+        sh 'docker-compose -f docker/daml-test.yaml build'
       }
     }
 
