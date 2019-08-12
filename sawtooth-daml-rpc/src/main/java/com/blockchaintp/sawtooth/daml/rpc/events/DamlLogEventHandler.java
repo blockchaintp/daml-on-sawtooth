@@ -88,7 +88,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Build a handler for the given zmqUrl.
-   * 
+   *
    * @param zmqUrl the zmq address to connect to
    */
   public DamlLogEventHandler(final String zmqUrl) {
@@ -98,7 +98,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Build a handler based on the given Stream.
-   * 
+   *
    * @param argStream the delegate to use
    */
   public DamlLogEventHandler(final Stream argStream) {
@@ -107,7 +107,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Build a handler based on the given delegate.and last known block ids.
-   * 
+   *
    * @param argStream the delegate to use
    * @param transform the transformer to use
    */
@@ -252,7 +252,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Fetch the publisher for the event subscription this handler controls.
-   * 
+   *
    * @return the publisher
    */
   public final Publisher<Tuple2<Offset, Update>> getPublisher() {
@@ -323,7 +323,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Send a subscribe message to the validator.
-   * 
+   *
    * @param beginAfter the offset to begin subscribing after
    */
   public final void sendSubscribe(final Offset beginAfter) {
@@ -334,7 +334,10 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
     List<String> lastBlockIds = new ArrayList<>();
     if (beginAfter != null) {
-      lastBlockIds.add(getBlockIdByOffset(beginAfter));
+      String blockId = getBlockIdByOffset(beginAfter);
+      if (blockId != null) {
+        lastBlockIds.add(blockId);
+      }
       this.lastOffset = beginAfter;
     }
 
@@ -387,7 +390,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Set a tracer for this event handler.
-   * 
+   *
    * @param trace the tracer
    */
   public final void setTracer(final SawtoothTransactionsTracer trace) {
@@ -427,7 +430,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   /**
    * Get the state at the given address.
-   * 
+   *
    * @param address the address of the state entry
    * @return the data at the address
    */
