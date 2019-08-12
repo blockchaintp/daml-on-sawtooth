@@ -106,7 +106,7 @@ pipeline {
         junit '**/target/surefire-reports/**/*.xml'
         sh 'docker-compose -f docker/docker-compose-build.yaml down'
         sh 'docker-compose -f docker/daml-test.yaml down'
-        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn clean'
+        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B clean'
         sh '''
           for img in `docker images --filter reference="*:$ISOLATION_ID" --format "{{.Repository}}"`; do
             docker rmi -f $img:$ISOLATION_ID
