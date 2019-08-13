@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import akka.protobuf.ByteString;
 import sawtooth.sdk.signing.Context;
@@ -37,11 +38,14 @@ import sawtooth.sdk.signing.Secp256k1PublicKey;
  */
 public final class DirectoryKeyManager implements KeyManager {
 
+  private static final Logger LOGGER = Logger.getLogger(DirectoryKeyManager.class.getName());
+
   private static final String DEFAULT = "default";
 
   /**
    * Creates an instance of secp256k1 based manager with a random private key and
    * corresponding public key.
+   *
    * @param path the path where this manager will store its keys
    * @return KeyManager.
    * @throws IOException there was a problem initializing the key manager
@@ -205,6 +209,7 @@ public final class DirectoryKeyManager implements KeyManager {
   }
 
   private Context getContextForKey(final PrivateKey key) {
+    LOGGER.warning(String.format("Getting context for algorithm=%s", key.getAlgorithmName()));
     return CryptoFactory.createContext(key.getAlgorithmName());
   }
 
@@ -219,6 +224,7 @@ public final class DirectoryKeyManager implements KeyManager {
     if (privKey == null) {
       throw new RuntimeException(String.format("No private key with id %s is available", id));
     }
+    LOGGER.warning(String.format("Signing array of size=%s for id=%s", item.length, id));
     return getContextForKey(privKey).sign(item, privKey);
   }
 
