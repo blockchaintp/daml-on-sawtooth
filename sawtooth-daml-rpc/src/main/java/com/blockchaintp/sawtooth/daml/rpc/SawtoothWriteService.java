@@ -225,7 +225,6 @@ public final class SawtoothWriteService implements WriteService {
   private Map.Entry<String, ClientBatchSubmitResponse.Status> submissionToResponse(final String batchid,
       final Future submissionFuture) throws SawtoothWriteServiceException {
     try {
-      LOGGER.warning("Waiting for result");
       ByteString result = submissionFuture.getResult();
       ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
       Status status = getResponse.getStatus();
@@ -256,19 +255,15 @@ public final class SawtoothWriteService implements WriteService {
 
   private synchronized Future sendToValidator(final Batch batch) {
     // Push to TraceTransaction class
-    LOGGER.warning("Put to trace");
     this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    LOGGER.warning("send to stream");
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
-    LOGGER.warning("Sent");
     return streamToValidator;
   }
 
   private synchronized CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
       final Batch batch, final Future streamToValidator) {
-    LOGGER.warning("Returning completable future");
     return CompletableFuture.supplyAsync(() -> {
       try {
         return submissionToResponse(batch.getHeaderSignature(), streamToValidator);
@@ -356,11 +351,10 @@ public final class SawtoothWriteService implements WriteService {
 
   private Batch operationToBatch(final SawtoothDamlOperation operation, final Collection<String> inputAddresses,
       final Collection<String> outputAddresses) {
-    LOGGER.warning("Make batch");
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), operation.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
-    LOGGER.warning(
+    LOGGER.fine(
         String.format("Batch %s has tx %s", sawtoothBatch.getHeaderSignature(), sawtoothTxn.getHeaderSignature()));
     return sawtoothBatch;
   }
@@ -399,11 +393,8 @@ public final class SawtoothWriteService implements WriteService {
       }
     }
 
-    LOGGER.warning("Start");
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
-    LOGGER.warning("Batch created");
     Future validatorFuture = sendToValidator(sawtoothBatch);
-    LOGGER.warning("Returning stage");
     return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
   }
 

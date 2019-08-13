@@ -11,6 +11,9 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.utils;
 
+import static org.bitcoinj.core.Utils.HEX;
+import static sawtooth.sdk.processor.Utils.hash512;
+
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.util.Collection;
@@ -18,13 +21,10 @@ import java.util.logging.Logger;
 
 import com.google.protobuf.ByteString;
 
-import static sawtooth.sdk.processor.Utils.hash512;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
 import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
-
-import static org.bitcoinj.core.Utils.HEX;
 
 /**
  * Utility methods and constants useful for interacting with Sawtooth as a
@@ -35,7 +35,15 @@ public final class SawtoothClientUtils {
   private SawtoothClientUtils() {
   }
 
+  /**
+   * A SecureRandom for use in creating batches.
+   */
+  private static SecureRandom secureRandom;
+  private static int randomBytesGenerated;
+
   private static final Logger LOGGER = Logger.getLogger(SawtoothClientUtils.class.getName());
+
+  private static final int MAX_BYTES_PER_SEED = 10 * 1024 * 1024;
 
   /**
    * Create a batch. Transaction passed are specified to be processed in order.
@@ -59,7 +67,6 @@ public final class SawtoothClientUtils {
 
   /**
    * Make a sawtooth transaction based on the provided parameters.
-   *
    * @param keyManager              a keymanager to provide the necessary identity
    *                                info
    * @param familyName              the family name
@@ -76,9 +83,7 @@ public final class SawtoothClientUtils {
   public static Transaction makeSawtoothTransaction(final KeyManager keyManager, final String familyName,
       final String familyVersion, final Collection<String> inputAddresses, final Collection<String> outputAddresses,
       final Collection<String> dependentTransactionIds, final ByteString payload) {
-    LOGGER.warning("Making hash");
     String payloadHash = getHash(payload);
-    LOGGER.warning("Assembling header protobuf");
     TransactionHeader.Builder txnHeaderBldr = TransactionHeader.newBuilder().setFamilyName(familyName)
         .setFamilyVersion(familyVersion).clearBatcherPublicKey().setBatcherPublicKey(keyManager.getPublicKeyInHex())
         .setNonce(SawtoothClientUtils.generateNonce()).setPayloadSha512(payloadHash).addAllInputs(inputAddresses)
@@ -87,30 +92,44 @@ public final class SawtoothClientUtils {
     TransactionHeader txnHeader = txnHeaderBldr.build();
 
     String signedHeader = keyManager.sign(txnHeader.toByteArray());
-    LOGGER.warning("Assembling tx protobuf and returning");
     return Transaction.newBuilder().setHeader(txnHeader.toByteString()).setHeaderSignature(signedHeader)
         .setPayload(payload).build();
   }
 
   /**
    * Generate a random nonce.
-   *
    * @return the nonce
    */
   public static String generateNonce() {
-    LOGGER.warning("Generating nonce - acquiring SecureRandom");
-    SecureRandom secureRandom = new SecureRandom();
     final int seedByteCount = 20;
-    LOGGER.warning("Generating nonce - generating seed");
-    byte[] seed = secureRandom.generateSeed(seedByteCount);
-    LOGGER.warning("Generating nonce - seed generated");
-    return HEX.encode(seed);
+    synchronized (SawtoothClientUtils.class) {
+      if (null == secureRandom) {
+        LOGGER.fine("Generating nonce - acquiring SecureRandom");
+        secureRandom = new SecureRandom();
+        randomBytesGenerated = -1;
+      }
+      if (randomBytesGenerated == -1) {
+        LOGGER.fine("Generating nonce - regenerating seed");
+        secureRandom.setSeed(secureRandom.generateSeed(seedByteCount));
+        randomBytesGenerated = seedByteCount;
+      } else {
+        randomBytesGenerated += seedByteCount;
+      }
+      if (randomBytesGenerated > MAX_BYTES_PER_SEED) {
+        randomBytesGenerated = -1;
+      }
+    }
+
+    byte[] nonceBytes = new byte[seedByteCount];
+    LOGGER.fine("Generating nonce - generating nonce");
+    secureRandom.nextBytes(nonceBytes);
+    LOGGER.fine("Generating nonce - nonce generated");
+    return HEX.encode(nonceBytes);
   }
 
   /**
    * For a given string return its sha512, transform the encoding problems into
    * RuntimeErrors.
-   *
    * @param arg a string
    * @return the hash512 of the string
    */
@@ -125,7 +144,6 @@ public final class SawtoothClientUtils {
 
   /**
    * For a given ByteString return its sha512.
-   *
    * @param arg a ByteString
    * @return the hash512 of the ByteString
    */
@@ -135,7 +153,6 @@ public final class SawtoothClientUtils {
 
   /**
    * For a given array of bytes return its sha512.
-   *
    * @param arg the bytes
    * @return the hash512 of the byte array
    */

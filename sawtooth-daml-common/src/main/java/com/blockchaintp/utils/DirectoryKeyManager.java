@@ -45,7 +45,6 @@ public final class DirectoryKeyManager implements KeyManager {
   /**
    * Creates an instance of secp256k1 based manager with a random private key and
    * corresponding public key.
-   *
    * @param path the path where this manager will store its keys
    * @return KeyManager.
    * @throws IOException there was a problem initializing the key manager
@@ -209,7 +208,7 @@ public final class DirectoryKeyManager implements KeyManager {
   }
 
   private Context getContextForKey(final PrivateKey key) {
-    LOGGER.warning(String.format("Getting context for algorithm=%s", key.getAlgorithmName()));
+    LOGGER.fine(String.format("Getting context for algorithm=%s", key.getAlgorithmName()));
     return CryptoFactory.createContext(key.getAlgorithmName());
   }
 
@@ -224,7 +223,7 @@ public final class DirectoryKeyManager implements KeyManager {
     if (privKey == null) {
       throw new RuntimeException(String.format("No private key with id %s is available", id));
     }
-    LOGGER.warning(String.format("Signing array of size=%s for id=%s", item.length, id));
+    LOGGER.fine(String.format("Signing array of size=%s for id=%s", item.length, id));
     return getContextForKey(privKey).sign(item, privKey);
   }
 
