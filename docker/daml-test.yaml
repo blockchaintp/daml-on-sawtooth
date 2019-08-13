@@ -23,6 +23,9 @@ services:
     depends_on:
       - validator
     entrypoint: settings-tp -v --connect tcp://validator:4004
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   validator:
     image: hyperledger/sawtooth-validator:1.1
@@ -46,6 +49,9 @@ services:
           --bind consensus:tcp://eth0:5050 \
           --bind network:tcp://eth0:8800 \
         \""
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
 
   devmode-engine:
@@ -54,6 +60,9 @@ services:
     depends_on:
       - validator
     entrypoint: devmode-engine-rust -C tcp://validator:5050
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.1
@@ -65,6 +74,9 @@ services:
     depends_on:
       - validator
     entrypoint: sawtooth-rest-api  --connect tcp://validator:4004 --bind rest-api:8008
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
@@ -74,6 +86,9 @@ services:
       - JAVA_ARGS=-verbose:gc
     depends_on:
       - validator
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   daml-rpc:
     image: sawtooth-daml-rpc:${ISOLATION_ID}
@@ -93,6 +108,8 @@ services:
     environment:
       - JAVA_ARGS=-verbose:gc
     volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
       - ../test-dars:/opt/sawtooth-daml-rpc/dar/
     depends_on:
       - validator
@@ -105,6 +122,9 @@ services:
       - JAVA_ARGS=-verbose:gc
     depends_on:
       - validator
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   # Run the integration tests at most twice to compensate for "piming the pump"
   ledger-api-testtool:
@@ -114,10 +134,14 @@ services:
       sleep 30 && \
       java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
         --timeout-scale-factor 5 \
-        --command-submission-ttl-scale-factor 5 || \
+        --command-submission-ttl-scale-factor 5 \
+        || \
       java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
         --timeout-scale-factor 5 \
-        --command-submission-ttl-scale-factor 5
+        --command-submission-ttl-scale-factor 5 \
         \""
     depends_on:
       - daml-rpc
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
