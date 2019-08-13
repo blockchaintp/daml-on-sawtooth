@@ -11,19 +11,20 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.utils;
 
+import static org.bitcoinj.core.Utils.HEX;
+import static sawtooth.sdk.processor.Utils.hash512;
+
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.util.Collection;
+import java.util.logging.Logger;
 
 import com.google.protobuf.ByteString;
 
-import static sawtooth.sdk.processor.Utils.hash512;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
 import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
-
-import static org.bitcoinj.core.Utils.HEX;
 
 /**
  * Utility methods and constants useful for interacting with Sawtooth as a
@@ -35,7 +36,18 @@ public final class SawtoothClientUtils {
   }
 
   /**
+   * A SecureRandom for use in creating batches.
+   */
+  private static SecureRandom secureRandom;
+  private static int randomBytesGenerated;
+
+  private static final Logger LOGGER = Logger.getLogger(SawtoothClientUtils.class.getName());
+
+  private static final int MAX_BYTES_PER_SEED = 10 * 1024 * 1024;
+
+  /**
    * Create a batch. Transaction passed are specified to be processed in order.
+   *
    * @param keyManager A key manager handling the identity to be used for signing
    *                   etc.
    * @param txns       a collection of transactions
@@ -71,7 +83,6 @@ public final class SawtoothClientUtils {
   public static Transaction makeSawtoothTransaction(final KeyManager keyManager, final String familyName,
       final String familyVersion, final Collection<String> inputAddresses, final Collection<String> outputAddresses,
       final Collection<String> dependentTransactionIds, final ByteString payload) {
-
     String payloadHash = getHash(payload);
     TransactionHeader.Builder txnHeaderBldr = TransactionHeader.newBuilder().setFamilyName(familyName)
         .setFamilyVersion(familyVersion).clearBatcherPublicKey().setBatcherPublicKey(keyManager.getPublicKeyInHex())
@@ -90,10 +101,30 @@ public final class SawtoothClientUtils {
    * @return the nonce
    */
   public static String generateNonce() {
-    SecureRandom secureRandom = new SecureRandom();
     final int seedByteCount = 20;
-    byte[] seed = secureRandom.generateSeed(seedByteCount);
-    return HEX.encode(seed);
+    synchronized (SawtoothClientUtils.class) {
+      if (null == secureRandom) {
+        LOGGER.fine("Generating nonce - acquiring SecureRandom");
+        secureRandom = new SecureRandom();
+        randomBytesGenerated = -1;
+      }
+      if (randomBytesGenerated == -1) {
+        LOGGER.fine("Generating nonce - regenerating seed");
+        secureRandom.setSeed(secureRandom.generateSeed(seedByteCount));
+        randomBytesGenerated = seedByteCount;
+      } else {
+        randomBytesGenerated += seedByteCount;
+      }
+      if (randomBytesGenerated > MAX_BYTES_PER_SEED) {
+        randomBytesGenerated = -1;
+      }
+    }
+
+    byte[] nonceBytes = new byte[seedByteCount];
+    LOGGER.fine("Generating nonce - generating nonce");
+    secureRandom.nextBytes(nonceBytes);
+    LOGGER.fine("Generating nonce - nonce generated");
+    return HEX.encode(nonceBytes);
   }
 
   /**

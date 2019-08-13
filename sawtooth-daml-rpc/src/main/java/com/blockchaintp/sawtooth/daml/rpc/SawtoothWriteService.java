@@ -142,7 +142,8 @@ public final class SawtoothWriteService implements WriteService {
     Batch batch = allocatePartyToBatch(newParty);
 
     final PartyDetails details = new PartyDetails(partyId, Option.apply(partyDisplayName), false);
-    return sendToValidator(batch).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+    Future fut = sendToValidator(batch);
+    return waitForSubmitResponse(batch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .<PartyAllocationResult>thenApply(result -> {
           switch (result.getValue()) {
           case COMMITTED:
@@ -252,14 +253,17 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  private synchronized CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> sendToValidator(
-      final Batch batch) {
+  private synchronized Future sendToValidator(final Batch batch) {
     // Push to TraceTransaction class
     this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+    return streamToValidator;
+  }
 
+  private synchronized CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
+      final Batch batch, final Future streamToValidator) {
     return CompletableFuture.supplyAsync(() -> {
       try {
         return submissionToResponse(batch.getHeaderSignature(), streamToValidator);
@@ -347,7 +351,6 @@ public final class SawtoothWriteService implements WriteService {
 
   private Batch operationToBatch(final SawtoothDamlOperation operation, final Collection<String> inputAddresses,
       final Collection<String> outputAddresses) {
-
     Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
         Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Arrays.asList(), operation.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(sawtoothTxn));
@@ -391,8 +394,8 @@ public final class SawtoothWriteService implements WriteService {
     }
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
-
-    return sendToValidator(sawtoothBatch).thenApply(x -> batchSubmitToSubmissionResult(x));
+    Future validatorFuture = sendToValidator(sawtoothBatch);
+    return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
   }
 
   @Override
@@ -422,8 +425,8 @@ public final class SawtoothWriteService implements WriteService {
     }
 
     Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
-
-    return sendToValidator(sawtoothBatch).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+    Future fut = sendToValidator(sawtoothBatch);
+    return waitForSubmitResponse(sawtoothBatch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .thenApply(x -> batchTerminalToUploadPackageResult(x));
   }
 }
