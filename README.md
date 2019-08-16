@@ -51,8 +51,8 @@ However, there may be times where maven is unable to download appropriate protob
 
 # License
 
-Repo is currently private but the intention is to open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+daml-on-sawtooth is open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 # Copyright
 
-Copyright @2019, Digital Asset (Switzerland) GmbH
+Copyright @2019 Blockchain Technology Partners
