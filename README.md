@@ -1,6 +1,6 @@
 # daml-on-sawtooth
 
-`daml-on-sawtooth` is an integration of the [Digital Asset's](https://digitalasset.com/) [DAML](https://daml.com/) Runtime engine with Hyperledger Sawtooth blockchain as the backing DLT.
+`daml-on-sawtooth` is an integration of the [DAML](https://daml.com/) smart contract runtime engine, created and open sourced by [Digital Asset](https://digitalasset.com/), with Hyperledger Sawtooth blockchain as the backing DLT.
 
 For build instructions see [BUILD.md](BUILD.md)
 
