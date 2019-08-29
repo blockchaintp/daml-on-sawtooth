@@ -192,7 +192,7 @@ public class DamlTransactionHandlerTest {
     Map<DamlStateKey, DamlStateValue> stateMap = new HashMap<>();
     DamlStateValue archiveValue = DamlStateValue.newBuilder().setArchive(archive).build();
     stateMap.put(archiveKey, archiveValue);
-    when(committer.processSubmission(any(), any(), any(), any(), any(), any()))
+    when(committer.processSubmission(any(), any(), any(), any(), any()))
         .thenReturn(Tuple2.apply(DamlLogEntry.getDefaultInstance(), stateMap));
     try {
       handler.apply(transactionRequest, state);

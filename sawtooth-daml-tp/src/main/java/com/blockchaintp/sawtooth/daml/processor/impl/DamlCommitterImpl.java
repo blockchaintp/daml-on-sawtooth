@@ -30,6 +30,7 @@ import scala.collection.immutable.Map;
 
 /**
  * The concrete implementation of DamlCommitter.
+ *
  * @author scealiontach
  */
 public class DamlCommitterImpl implements DamlCommitter {
@@ -38,6 +39,7 @@ public class DamlCommitterImpl implements DamlCommitter {
   /**
    * Build a DamlCommitterImpl. The Engine to be used is passed in to allow reuse
    * since Engine initialization can be costly.
+   *
    * @param damlEngine the Engine to be used for this committer
    */
   public DamlCommitterImpl(final Engine damlEngine) {
@@ -47,12 +49,10 @@ public class DamlCommitterImpl implements DamlCommitter {
   @Override
   public final Tuple2<DamlLogEntry, java.util.Map<DamlStateKey, DamlStateValue>> processSubmission(
       final Configuration config, final DamlLogEntryId entryId, final Timestamp recordTime,
-      final DamlSubmission submission, final java.util.Map<DamlLogEntryId, DamlLogEntry> inputLogEntries,
-      final java.util.Map<DamlStateKey, Option<DamlStateValue>> stateMap) {
+      final DamlSubmission submission, final java.util.Map<DamlStateKey, Option<DamlStateValue>> stateMap) {
 
-    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processedSubmission = KeyValueCommitting.processSubmission(
-        this.engine, config, entryId, recordTime, submission, mapToScalaImmutableMap(inputLogEntries),
-        mapToScalaImmutableMap(stateMap));
+    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processedSubmission = KeyValueCommitting
+        .processSubmission(this.engine, config, entryId, recordTime, submission, mapToScalaImmutableMap(stateMap));
     DamlLogEntry logEntry = processedSubmission._1;
     java.util.Map<DamlStateKey, DamlStateValue> stateUpdateMap = scalaMapToMap(processedSubmission._2);
     return Tuple2.apply(logEntry, stateUpdateMap);
