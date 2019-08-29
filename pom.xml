@@ -26,7 +26,6 @@
   <description>Implementation of DAML SDK with a Sawtooth backend</description>
   <modules>
     <module>daml-on-sawtooth-protobufs</module>
-    <module>noop-transaction-processor</module>
     <module>timekeeper</module>
     <module>sawtooth-daml-tp</module>
     <module>sawtooth-daml-rpc</module>
