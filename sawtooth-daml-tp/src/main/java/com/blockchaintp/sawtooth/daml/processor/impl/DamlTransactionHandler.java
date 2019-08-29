@@ -33,6 +33,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
+import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
@@ -194,7 +195,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     TimeModel tm = ledgerState.getTimeModel();
     if (tm == null) {
       LOGGER.info("No time model set on chain using defaults");
-      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+      tm = new TimeModel(Duration.ofSeconds(10), Duration.ofSeconds(1), Duration.ofSeconds(30));
     }
     LOGGER.fine(String.format("TimeModel set to %s", tm));
     Configuration config = new Configuration(tm);
@@ -222,6 +223,16 @@ public final class DamlTransactionHandler implements TransactionHandler {
       final List<String> currentLogEntryList) throws InternalError, InvalidTransactionException {
 
     long processStart = System.currentTimeMillis();
+    String ledgerEffectiveTime = null;
+    String maxRecordTime = null;
+    if (submission.hasTransactionEntry()) {
+      ledgerEffectiveTime = Conversions.parseTimestamp(submission.getTransactionEntry().getLedgerEffectiveTime())
+          .toString();
+      maxRecordTime = Conversions
+          .parseTimestamp(submission.getTransactionEntry().getSubmitterInfo().getMaximumRecordTime()).toString();
+    }
+    LOGGER.info(String.format("Processing submission.  recordTime=%s, ledgerEffectiveTime=%s, maxRecordTime=%s",
+        getRecordTime(ledgerState), ledgerEffectiveTime, maxRecordTime));
     Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer
         .processSubmission(getConfiguration(ledgerState), entryId, getRecordTime(ledgerState), submission, stateMap);
     long recordStart = System.currentTimeMillis();
