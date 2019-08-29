@@ -13,11 +13,12 @@ package com.blockchaintp.sawtooth.daml.rpc;
 
 import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -35,6 +36,7 @@ import com.blockchaintp.utils.KeyManager;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPartyAllocationEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
@@ -125,23 +127,22 @@ public final class SawtoothWriteService implements WriteService {
   @Override
   public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
       final Option<String> displayName) {
-    final String partyId;
-    if (hint.nonEmpty()) {
-      partyId = hint.get();
-    } else {
-      partyId = UUID.randomUUID().toString();
-    }
-    final String partyDisplayName;
-    if (displayName.nonEmpty()) {
-      partyDisplayName = displayName.get();
-    } else {
-      partyDisplayName = partyId;
-    }
-    SawtoothDamlParty newParty = SawtoothDamlParty.newBuilder().setHint(partyId).setDisplayName(partyDisplayName)
-        .build();
-    Batch batch = allocatePartyToBatch(newParty);
 
-    final PartyDetails details = new PartyDetails(partyId, Option.apply(partyDisplayName), false);
+    String submissionId = UUID.randomUUID().toString();
+    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
+        .build();
+
+    DamlSubmission submission = KeyValueSubmission.partyToSubmission(submissionId, hint, displayName,
+        getParticipantId());
+
+    Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
+    Collection<String> inputAddresses = makeInputAddresses(submission);
+    Collection<String> fixedAddresses = fixupAddresses(inputAddresses, outputAddresses);
+
+    SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
+    Batch batch = operationToBatch(operation, fixedAddresses, fixedAddresses);
+
+    final PartyDetails details = new PartyDetails(hint.get(), displayName, false);
     Future fut = sendToValidator(batch);
     return waitForSubmitResponse(batch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .<PartyAllocationResult>thenApply(result -> {
@@ -152,13 +153,14 @@ public final class SawtoothWriteService implements WriteService {
             return new PartyAllocationResult.AlreadyExists$();
           case UNKNOWN:
           default:
-            return new PartyAllocationResult.InvalidName(String.format("%s is not a valid party id", partyId));
+            return new PartyAllocationResult.InvalidName(String.format("%s is not a valid party id", hint.get()));
           }
         });
   }
 
   /**
    * Return this participants identifier as a string.
+   *
    * @return the id of the participant
    */
   public String getParticipantId() {
@@ -173,53 +175,60 @@ public final class SawtoothWriteService implements WriteService {
     return dedupStateAddress;
   }
 
-  private List<String> makeInputAddresses(final DamlSubmission submission) {
-    List<String> inputAddresses = new ArrayList<>();
+  private Collection<String> makeInputAddresses(final DamlSubmission submission) {
+    Set<String> addresses = new HashSet<>();
     Map<DamlStateKey, String> submissionToDamlStateAddress = KeyValueUtils.submissionToDamlStateAddress(submission);
-    inputAddresses.addAll(submissionToDamlStateAddress.values());
-    inputAddresses.add(TIMEKEEPER_GLOBAL_RECORD);
-    inputAddresses.add(Namespace.DAML_CONFIG_TIME_MODEL);
+    addresses.addAll(submissionToDamlStateAddress.values());
+    addresses.add(TIMEKEEPER_GLOBAL_RECORD);
+    addresses.add(Namespace.DAML_CONFIG_TIME_MODEL);
 
     Map<DamlLogEntryId, String> submissionToLogAddressMap = KeyValueUtils.submissionToLogAddressMap(submission);
     for (DamlLogEntryId e : submissionToLogAddressMap.keySet()) {
       String logAddresses = Namespace.makeAddressForType(e);
-      inputAddresses.add(logAddresses);
+      addresses.add(logAddresses);
     }
-    inputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
-    return inputAddresses;
+    addresses.add(Namespace.DAML_LOG_ENTRY_LIST);
+    return addresses;
   }
 
-  private Collection<String> makeOutputAddresses(final scala.collection.immutable.List<Archive> archives,
-      final DamlLogEntryId damlLogEntryId) {
-    Collection<Archive> archiveColl = JavaConverters.asJavaCollection(archives);
-    ArrayList<String> addresses = new ArrayList<>();
-    for (Archive arch : archiveColl) {
-      String packageId = arch.getHash();
-      DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
-      String address = Namespace.makeAddressForType(packageKey);
-      addresses.add(address);
+  private Collection<String> makeOutputAddresses(final DamlSubmission submission, final DamlLogEntryId damlLogEntryId) {
+    Set<String> addresses = new HashSet<>();
+    if (submission.hasPackageUploadEntry()) {
+      for (Archive arch : submission.getPackageUploadEntry().getArchivesList()) {
+        String packageId = arch.getHash();
+        DamlStateKey packageKey = DamlStateKey.newBuilder().setPackageId(packageId).build();
+        String address = Namespace.makeAddressForType(packageKey);
+        addresses.add(address);
+      }
+    }
+
+    if (submission.hasPartyAllocationEntry()) {
+      DamlPartyAllocationEntry pae = submission.getPartyAllocationEntry();
+      SawtoothDamlParty sdParty = SawtoothDamlParty.newBuilder().setDisplayName(pae.getDisplayName())
+          .setHint(pae.getParty()).build();
+      addresses.add(Namespace.makeAddressForType(sdParty));
     }
     String logEntryAddress = Namespace.makeAddressForType(damlLogEntryId);
     addresses.add(logEntryAddress);
     return addresses;
   }
 
-  private List<String> makeOutputAddresses(
+  private Collection<String> makeOutputAddresses(
       final GenTransaction<NodeId, ContractId, VersionedValue<ContractId>> transaction,
       final DamlLogEntryId logEntryId) {
     scala.collection.immutable.List<DamlStateKey> transactionOutputs = KeyValueSubmission.transactionOutputs(logEntryId,
         transaction);
     Collection<DamlStateKey> damlStateKeys = JavaConverters.asJavaCollection(transactionOutputs);
-    List<String> outputAddresses = new ArrayList<>();
+    Set<String> addresses = new HashSet<>();
 
     for (DamlStateKey dk : damlStateKeys) {
       String addr = Namespace.makeAddressForType(dk);
-      outputAddresses.add(addr);
+      addresses.add(addr);
       LOGGER.fine(String.format("Adding output address %s for key %s", addr, dk));
     }
-    outputAddresses.add(Namespace.makeAddressForType(logEntryId));
-    outputAddresses.add(Namespace.DAML_LOG_ENTRY_LIST);
-    return outputAddresses;
+    addresses.add(Namespace.makeAddressForType(logEntryId));
+    addresses.add(Namespace.DAML_LOG_ENTRY_LIST);
+    return addresses;
   }
 
   private Map.Entry<String, ClientBatchSubmitResponse.Status> submissionToResponse(final String batchid,
@@ -333,20 +342,12 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  private Batch allocatePartyToBatch(final SawtoothDamlParty partyToAllocate) {
-    Collection<String> inputAddresses = List.of(Namespace.makeAddressForType(partyToAllocate));
-    Collection<String> outputAddresses = List.of(Namespace.makeAddressForType(partyToAllocate));
-    SawtoothDamlOperation operation = SawtoothDamlOperation.newBuilder().setAllocateParty(partyToAllocate).build();
-    return operationToBatch(operation, inputAddresses, outputAddresses);
-  }
-
-  private Batch submissionToBatch(final DamlSubmission submission, final Collection<String> inputAddresses,
-      final Collection<String> outputAddresses, final DamlLogEntryId damlLogEntryId) {
+  private SawtoothDamlOperation submissionToOperation(final DamlSubmission submission,
+      final DamlLogEntryId damlLogEntryId) {
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(KeyValueSubmission.packDamlSubmission(submission))
         .setLogEntryId(KeyValueCommitting.packDamlLogEntryId(damlLogEntryId)).build();
-    SawtoothDamlOperation operation = SawtoothDamlOperation.newBuilder().setTransaction(payload).build();
-    return operationToBatch(operation, inputAddresses, outputAddresses);
+    return SawtoothDamlOperation.newBuilder().setTransaction(payload).build();
   }
 
   private Batch operationToBatch(final SawtoothDamlOperation operation, final Collection<String> inputAddresses,
@@ -369,33 +370,29 @@ public final class SawtoothWriteService implements WriteService {
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
 
-    List<String> outputAddresses = makeOutputAddresses(transaction, damlLogEntryId);
-
-    List<String> inputAddresses = makeInputAddresses(submission);
+    Collection<String> outputAddresses = makeOutputAddresses(transaction, damlLogEntryId);
+    Collection<String> inputAddresses = makeInputAddresses(submission);
+    Collection<String> fixedAddresses = fixupAddresses(inputAddresses, outputAddresses);
 
     // Have to add dedupStateKey since that is missed in transactionOutputs
     String dedupStateAddress = makeDamlCommandDedupKeyAddress(submitterInfo);
-    if (!outputAddresses.contains(dedupStateAddress)) {
-      LOGGER.warning(String.format("Output addresses do not contain the dedup key, adding addr=%s", dedupStateAddress));
-      outputAddresses.add(dedupStateAddress);
-    }
-    if (!inputAddresses.contains(dedupStateAddress)) {
+    if (!fixedAddresses.contains(dedupStateAddress)) {
       LOGGER.warning(String.format("Input addresses do not contain the dedup key, adding addr=%s", dedupStateAddress));
-      inputAddresses.add(dedupStateAddress);
+      fixedAddresses.add(dedupStateAddress);
     }
 
-    // Have to add all the input address to output addresses since
-    // some are missed on the KeyValueSubmission.transactionOutputs
-    for (String addr : inputAddresses) {
-      if (!outputAddresses.contains(addr)) {
-        LOGGER.warning(String.format("Output addresses do not contain an input key, adding addr=%s", addr));
-        outputAddresses.add(addr);
-      }
-    }
-
-    Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
+    SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
+    Batch sawtoothBatch = operationToBatch(operation, fixedAddresses, fixedAddresses);
     Future validatorFuture = sendToValidator(sawtoothBatch);
     return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
+  }
+
+  private Collection<String> fixupAddresses(final Collection<String> inputAddresses,
+      final Collection<String> outputAddresses) {
+    Set<String> unionSet = new HashSet<>();
+    unionSet.addAll(inputAddresses);
+    unionSet.addAll(outputAddresses);
+    return unionSet;
   }
 
   @Override
@@ -411,20 +408,12 @@ public final class SawtoothWriteService implements WriteService {
 
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
         .build();
-    Collection<String> outputAddresses = makeOutputAddresses(archives, damlLogEntryId);
-
+    Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
     Collection<String> inputAddresses = makeInputAddresses(submission);
+    Collection<String> fixedAddresses = fixupAddresses(inputAddresses, outputAddresses);
 
-    // Have to add all the input address to output addresses since
-    // some are missed on the KeyValueSubmission.transactionOutputs
-    for (String addr : inputAddresses) {
-      if (!outputAddresses.contains(addr)) {
-        LOGGER.warning(String.format("Output addresses do not contain an input key, adding addr=%s", addr));
-        outputAddresses.add(addr);
-      }
-    }
-
-    Batch sawtoothBatch = submissionToBatch(submission, inputAddresses, outputAddresses, damlLogEntryId);
+    SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
+    Batch sawtoothBatch = operationToBatch(operation, fixedAddresses, fixedAddresses);
     Future fut = sendToValidator(sawtoothBatch);
     return waitForSubmitResponse(sawtoothBatch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .thenApply(x -> batchTerminalToUploadPackageResult(x));
