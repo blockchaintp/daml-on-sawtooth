@@ -228,7 +228,7 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  private synchronized Future sendToValidator(final Batch batch) {
+  private Future sendToValidator(final Batch batch) {
     // Push to TraceTransaction class
 
     try {
