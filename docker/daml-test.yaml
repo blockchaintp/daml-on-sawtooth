@@ -133,12 +133,12 @@ services:
     entrypoint: "bash -c \"\
       sleep 30 && \
       java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 5 \
-        --command-submission-ttl-scale-factor 5 \
+        --timeout-scale-factor 1.5 \
+        --command-submission-ttl-scale-factor 1 \
         || \
       java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 5 \
-        --command-submission-ttl-scale-factor 5 \
+        --timeout-scale-factor 1 \
+        --command-submission-ttl-scale-factor 1 \
         \""
     depends_on:
       - daml-rpc

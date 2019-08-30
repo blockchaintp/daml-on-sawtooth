@@ -14,7 +14,6 @@ package com.blockchaintp.sawtooth.daml.processor.impl;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,17 +22,16 @@ import java.util.logging.Logger;
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.backport.TimeModel;
+import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
-import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
@@ -57,6 +55,10 @@ import scala.Tuple2;
  * @author scealiontach
  */
 public final class DamlTransactionHandler implements TransactionHandler {
+
+  private static final int DEFAULT_MAX_TTL = 40;
+
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 19;
 
   private static final Logger LOGGER = Logger.getLogger(DamlTransactionHandler.class.getName());
 
@@ -195,7 +197,11 @@ public final class DamlTransactionHandler implements TransactionHandler {
     TimeModel tm = ledgerState.getTimeModel();
     if (tm == null) {
       LOGGER.info("No time model set on chain using defaults");
-      tm = new TimeModel(Duration.ofSeconds(10), Duration.ofSeconds(1), Duration.ofSeconds(30));
+      // MinTxLatency set to 1 second
+      // MaxClockSkew set to .5 timekeeper clock tick - minTxLatency
+      // MaxTTL set to 2 timekeeper clock ticks
+      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+          Duration.ofSeconds(DEFAULT_MAX_TTL));
     }
     LOGGER.fine(String.format("TimeModel set to %s", tm));
     Configuration config = new Configuration(tm);
@@ -204,7 +210,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   @Override
   public Collection<String> getNameSpaces() {
-    return Arrays.asList(new String[] { this.namespace });
+    return Arrays.asList(new String[] {this.namespace});
   }
 
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
