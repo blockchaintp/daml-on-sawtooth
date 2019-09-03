@@ -264,7 +264,19 @@ public final class SawtoothWriteService implements WriteService {
 
   private synchronized Future sendToValidator(final Batch batch) {
     // Push to TraceTransaction class
-    this.sawtoothTransactionsTracer.putWriteTransactions(batch.toString());
+    StringBuilder txnInJson = new StringBuilder();
+    txnInJson.append("{")
+             .append("\"header\":").append("\"").append(batch.getHeader().toStringUtf8()).append("\",")
+             .append("\"headerSignature\":").append("\"").append(batch.getHeaderSignature()).append("\",")
+             .append("\"transactions\":").append("[");
+    for (Transaction txn: batch.getTransactionsList()){
+      txnInJson.append("{")
+               .append("\"header\":").append("\"").append(txn.getHeader().toStringUtf8()).append("\",")
+               .append("\"headerSignature\":").append("\"").append(txn.getHeaderSignature()).append("\",")
+               .append("\"payload\":").append("\"").append(txn.getPayload().toStringUtf8()).append("\"").append("}");
+    }
+    txnInJson.append("]}");
+    this.sawtoothTransactionsTracer.putWriteTransactions(txnInJson.toString());
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
