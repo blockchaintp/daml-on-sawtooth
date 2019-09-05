@@ -7,9 +7,9 @@ import Tab from '@material-ui/core/Tab';
 import SimpleTable from 'components/table/SimpleTable'
 
 const transactionFields =[{
-  title: 'Event Type',
+  title: 'Event Type/Batch',
 },{
-  title: 'Attributes',
+  title: 'Attributes/Transactions',
 }]
 
 const styles = theme => ({
@@ -33,8 +33,8 @@ class HomePage extends React.Component {
         <Tabs value={this.state.value} onChange={(event, newValue)=>{
           this.state.value = newValue
         }}>
-          <Tab label="Read Transactions" />
-          <Tab label="Write Transactions" />
+          <Tab label="Events" />
+          <Tab label="Transactions" />
         </Tabs>
         {this.state.value === 0 && <SimpleTable
           data={ readTransactions }

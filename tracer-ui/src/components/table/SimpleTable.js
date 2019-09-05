@@ -11,6 +11,10 @@ import TableRow from '@material-ui/core/TableRow'
 import List from '@material-ui/core/List'
 import ListItem from '@material-ui/core/ListItem'
 import ListItemText from '@material-ui/core/ListItemText';
+import Card from '@material-ui/core/Card';
+import CardHeader from '@material-ui/core/CardHeader';
+import CardContent from '@material-ui/core/CardContent';
+import Typography from '@material-ui/core/Typography';
 
 const styles = theme => {
   return {
@@ -81,72 +85,108 @@ class SimpleTable extends React.Component {
                         )
                       })
                     }
-                    {
-                      getActions ? (
-                        <TableCell align='right'>
-                          Actions
-                        </TableCell>
-                      ) : null
-                    }
                   </TableRow>
                 </TableHead>
               )
             }
             <TableBody>
-              {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(dataRow => {
-                return dataRow.events.map((event)=>{
-                  return (
-                    <TableRow
-                      hover
-                      onClick={event => {
-                        if(!onRowClick) return
-                        onRowClick(event, dataRow.id)
-                      }}
-                      tabIndex={-1}
-                      key={Math.floor(Math.random()*10000)}
-                    >
-                      {
-                        fields.map((field, i) => {
-                          if ( i == 0 ){
-                            return (
-                              <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
-                                {
-                                  event.eventType
+              {
+                (typeof data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map === 'function') &&
+                  data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(dataRow => {
+                    if (dataRow.events !== undefined){
+                      return dataRow.events.map((event)=>{
+                        return (
+                          <TableRow
+                            key={Math.floor(Math.random()*10000)}
+                          >
+                            {
+                              fields.map((field, i) => {
+                                if ( i == 0 ){
+                                  return (
+                                    <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
+                                      {
+                                        event.eventType
+                                      }
+                                    </TableCell>
+                                  )
+                                }else{
+                                  return (
+                                    <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
+                                      <List className={ classes.autoCell }>
+                                      {
+                                        event.attributes.map((attribute)=>{
+                                          return(
+                                            <ListItem className={ classes.autoCell }>
+                                              <ListItemText className={ classes.autoCell }>
+                                                { attribute.key + ' : ' + attribute.value }
+                                              </ListItemText>
+                                            </ListItem>
+                                          )
+                                        })
+                                      }
+                                      </List>
+                                    </TableCell>
+                                  )
                                 }
-                              </TableCell>
-                            )
-                          }else{
-                            return (
-                              <TableCell key={ i } align={ field.numeric ? 'right' : 'left' } className={ classes.autoCell }>
+                              })
+                            }
+                          </TableRow>
+                        );
+                      })
+                    }else{
+                        return (
+                        <TableRow
+                          key={Math.floor(Math.random()*10000)}>
+                            <TableCell key={0}>
+                              < List className={ classes.autoCell }>
+                                  <ListItem className={ classes.autoCell }>
+                                      <ListItemText className={ classes.autoCell }>
+                                        header: {dataRow.header}
+                                      </ListItemText>
+                                  </ListItem>
+                                  <ListItem className={ classes.autoCell }>
+                                      <ListItemText className={ classes.autoCell }>
+                                        signature: {dataRow.header_signature}
+                                      </ListItemText>
+                                  </ListItem>
+                                  <ListItem className={ classes.autoCell }>
+                                    <ListItemText className={ classes.autoCell }>
+                                      trace: {(dataRow.trace)? 'true' : 'false'}
+                                    </ListItemText>
+                                  </ListItem>
+                              </List>
+                            </TableCell>
+                            <TableCell key={1}>
+                              {
                                 <List className={ classes.autoCell }>
                                 {
-                                  event.attributes.map((attribute)=>{
+                                  dataRow.transactions.map(transaction => {
                                     return(
                                       <ListItem className={ classes.autoCell }>
-                                        <ListItemText className={ classes.autoCell }>
-                                          { attribute.key + ' : ' + attribute.value }
-                                        </ListItemText>
+                                        <Card>
+                                          <CardContent>
+                                            <Typography variant="subtitle1">
+                                              header: {transaction.header}
+                                            </Typography>
+                                            <Typography variant="subtitle1">
+                                              signature: {transaction.header_signature}
+                                            </Typography>
+                                            <Typography variant="subtitle1">
+                                              payload: {transaction.payload}
+                                            </Typography>
+                                          </CardContent>
+                                        </Card>
                                       </ListItem>
                                     )
                                   })
                                 }
                                 </List>
-                              </TableCell>
-                            )
-                          }
-                        })
-                      }
-                      {
-                        getActions ? (
-                          <TableCell align='right'>
-                            { getActions(dataRow) }
-                          </TableCell>
-                        ) : null
-                      }
-                    </TableRow>
-                  );
-                })
-              })}
+                              }
+                            </TableCell>
+                          </TableRow>)
+                    }
+                  })
+              }
             </TableBody>
           </Table>
         </div>
