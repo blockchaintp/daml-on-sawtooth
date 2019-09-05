@@ -269,7 +269,7 @@ public final class SawtoothWriteService implements WriteService {
              .append("\"header\":").append("\"").append(batch.getHeader().toStringUtf8()).append("\",")
              .append("\"headerSignature\":").append("\"").append(batch.getHeaderSignature()).append("\",")
              .append("\"transactions\":").append("[");
-    for (Transaction txn: batch.getTransactionsList()){
+    for (Transaction txn: batch.getTransactionsList()) {
       txnInJson.append("{")
                .append("\"header\":").append("\"").append(txn.getHeader().toStringUtf8()).append("\",")
                .append("\"headerSignature\":").append("\"").append(txn.getHeaderSignature()).append("\",")
