@@ -7,7 +7,7 @@ import Tab from '@material-ui/core/Tab';
 import SimpleTable from 'components/table/SimpleTable'
 
 const transactionFields =[{
-  title: 'Event Type/Transaction Batch',
+  title: 'Event Type/Batch',
 },{
   title: 'Attributes/Transactions',
 }]

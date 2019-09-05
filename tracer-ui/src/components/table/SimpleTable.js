@@ -11,6 +11,10 @@ import TableRow from '@material-ui/core/TableRow'
 import List from '@material-ui/core/List'
 import ListItem from '@material-ui/core/ListItem'
 import ListItemText from '@material-ui/core/ListItemText';
+import Card from '@material-ui/core/Card';
+import CardHeader from '@material-ui/core/CardHeader';
+import CardContent from '@material-ui/core/CardContent';
+import Typography from '@material-ui/core/Typography';
 
 const styles = theme => {
   return {
@@ -133,8 +137,52 @@ class SimpleTable extends React.Component {
                         return (
                         <TableRow
                           key={Math.floor(Math.random()*10000)}>
-                            <TableCell>{dataRow}</TableCell>
-                            <TableCell></TableCell>
+                            <TableCell key={0}>
+                              < List className={ classes.autoCell }>
+                                  <ListItem className={ classes.autoCell }>
+                                      <ListItemText className={ classes.autoCell }>
+                                        header: {dataRow.header}
+                                      </ListItemText>
+                                  </ListItem>
+                                  <ListItem className={ classes.autoCell }>
+                                      <ListItemText className={ classes.autoCell }>
+                                        signature: {dataRow.header_signature}
+                                      </ListItemText>
+                                  </ListItem>
+                                  <ListItem className={ classes.autoCell }>
+                                    <ListItemText className={ classes.autoCell }>
+                                      trace: {(dataRow.trace)? 'true' : 'false'}
+                                    </ListItemText>
+                                  </ListItem>
+                              </List>
+                            </TableCell>
+                            <TableCell key={1}>
+                              {
+                                <List className={ classes.autoCell }>
+                                {
+                                  dataRow.transactions.map(transaction => {
+                                    return(
+                                      <ListItem className={ classes.autoCell }>
+                                        <Card>
+                                          <CardContent>
+                                            <Typography variant="subtitle1">
+                                              header: {transaction.header}
+                                            </Typography>
+                                            <Typography variant="subtitle1">
+                                              signature: {transaction.header_signature}
+                                            </Typography>
+                                            <Typography variant="subtitle1">
+                                              payload: {transaction.payload}
+                                            </Typography>
+                                          </CardContent>
+                                        </Card>
+                                      </ListItem>
+                                    )
+                                  })
+                                }
+                                </List>
+                              }
+                            </TableCell>
                           </TableRow>)
                     }
                   })
