@@ -19,7 +19,6 @@ import com.blockchaintp.sawtooth.daml.processor.impl.DamlTransactionHandler;
 import com.digitalasset.daml.lf.engine.Engine;
 
 import sawtooth.sdk.processor.TransactionHandler;
-import sawtooth.sdk.processor.TransactionProcessor;
 
 /**
  * A basic Main class for DamlTransactionProcessor.
@@ -36,11 +35,10 @@ public final class DamlTransactionProcessorMain {
    */
   public static void main(final String[] args) {
     Logger.getGlobal().setLevel(Level.ALL);
-    TransactionProcessor transactionProcessor = new TransactionProcessor(args[0]);
     Engine engine = new Engine();
     DamlCommitter committer = new DamlCommitterImpl(engine);
     TransactionHandler handler = new DamlTransactionHandler(committer);
-    transactionProcessor.addHandler(handler);
+    MTTransactionProcessor transactionProcessor = new MTTransactionProcessor(handler, args[0]);
     LOGGER.info(String.format("Added handler %s", DamlTransactionHandler.class.getName()));
     Thread thread = new Thread(transactionProcessor);
     thread.start();
