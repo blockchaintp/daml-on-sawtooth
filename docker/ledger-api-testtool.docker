@@ -13,8 +13,8 @@
 # limitations under the License.
 FROM ubuntu:bionic
 
-ARG DAML_SDK_VERSION=0.13.16
-ARG DAML_REPO_VERSION=100.13.16
+ARG DAML_SDK_VERSION=0.13.21
+ARG DAML_REPO_VERSION=100.13.21
 
 RUN apt-get update -y && \
   apt-get upgrade -y && \
