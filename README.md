@@ -6,7 +6,7 @@ Contribution guildines in [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Running daml-on-sawtooth locally
 
-See [BUILD.md](build.md) for instruction to build and run `daml-on-sawtooth`.
+See [BUILD.md](BUILD.md) for instruction to build and run `daml-on-sawtooth`.
 
 #### Inspecting daml-on-sawtooth
 
