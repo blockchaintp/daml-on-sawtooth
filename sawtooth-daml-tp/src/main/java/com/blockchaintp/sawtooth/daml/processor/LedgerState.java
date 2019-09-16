@@ -172,14 +172,13 @@ public interface LedgerState {
   /**
    * @param entryId          Id of this log entry
    * @param entry            the log entry to set
-   * @param currentEntryList the current log entry index list
    * @return the new entry list after the addition
    * @throws InvalidTransactionException when there is an error relating to the
    *                                     client input
    * @throws InternalError               when there is an unexpected back end
    *                                     error.
    */
-  List<String> addDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry, List<String> currentEntryList)
+  List<String> addDamlLogEntry(DamlLogEntryId entryId, DamlLogEntry entry)
       throws InternalError, InvalidTransactionException;
 
   /**
@@ -187,12 +186,11 @@ public interface LedgerState {
    *
    * @param entryId the id of this log entry
    * @param entry   the entry itself
-   * @param offset  the offset of the entry itself
    * @throws InternalError               when there is an unexpected back end
    *                                     error
    * @throws InvalidTransactionException when the data itself is invalid
    */
-  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry, long offset)
+  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry)
       throws InternalError, InvalidTransactionException;
 
   /**

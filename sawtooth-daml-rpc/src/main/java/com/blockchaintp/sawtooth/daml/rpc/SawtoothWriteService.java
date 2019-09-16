@@ -137,10 +137,9 @@ public final class SawtoothWriteService implements WriteService {
 
     Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
     Collection<String> inputAddresses = makeInputAddresses(submission);
-    Collection<String> fixedAddresses = fixupAddresses(inputAddresses, outputAddresses);
 
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
-    Batch batch = operationToBatch(operation, fixedAddresses, fixedAddresses);
+    Batch batch = operationToBatch(operation, inputAddresses, outputAddresses);
 
     final PartyDetails details = new PartyDetails(hint.get(), displayName, false);
     Future fut = sendToValidator(batch);
@@ -181,7 +180,6 @@ public final class SawtoothWriteService implements WriteService {
     addresses.addAll(submissionToDamlStateAddress.values());
     addresses.add(TIMEKEEPER_GLOBAL_RECORD);
     addresses.add(Namespace.DAML_CONFIG_TIME_MODEL);
-    addresses.add(Namespace.DAML_LOG_ENTRY_LIST);
     return addresses;
   }
 
@@ -193,7 +191,6 @@ public final class SawtoothWriteService implements WriteService {
       addresses.add(Namespace.makeAddressForType(k));
     }
     addresses.add(Namespace.makeAddressForType(logEntryId));
-    addresses.add(Namespace.DAML_LOG_ENTRY_LIST);
     return addresses;
   }
 
@@ -345,26 +342,19 @@ public final class SawtoothWriteService implements WriteService {
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(UUID.randomUUID().toString())).build();
 
-    Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
-    Collection<String> inputAddresses = makeInputAddresses(submission);
-    Collection<String> fixedAddresses = fixupAddresses(inputAddresses, outputAddresses);
-
-    // Have to add dedupStateKey since that is missed in transactionOutputs
     String dedupStateAddress = makeDamlCommandDedupKeyAddress(submitterInfo);
-    fixedAddresses.add(dedupStateAddress);
+    Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
+    // Have to add dedupStateKey since that is missed in transactionOutputs
+    outputAddresses.add(dedupStateAddress);
+    Collection<String> inputAddresses = makeInputAddresses(submission);
+    // Have to add dedupStateKey since that is missed in transactionOutputs
+    inputAddresses.add(dedupStateAddress);
+
 
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
-    Batch sawtoothBatch = operationToBatch(operation, fixedAddresses, fixedAddresses);
+    Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future validatorFuture = sendToValidator(sawtoothBatch);
     return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
-  }
-
-  private Collection<String> fixupAddresses(final Collection<String> inputAddresses,
-      final Collection<String> outputAddresses) {
-    Set<String> unionSet = new HashSet<>();
-    unionSet.addAll(inputAddresses);
-    unionSet.addAll(outputAddresses);
-    return unionSet;
   }
 
   @Override
@@ -382,10 +372,9 @@ public final class SawtoothWriteService implements WriteService {
         .build();
     Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
     Collection<String> inputAddresses = makeInputAddresses(submission);
-    Collection<String> fixedAddresses = fixupAddresses(inputAddresses, outputAddresses);
 
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
-    Batch sawtoothBatch = operationToBatch(operation, fixedAddresses, fixedAddresses);
+    Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future fut = sendToValidator(sawtoothBatch);
     return waitForSubmitResponse(sawtoothBatch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .thenApply(x -> batchTerminalToUploadPackageResult(x));

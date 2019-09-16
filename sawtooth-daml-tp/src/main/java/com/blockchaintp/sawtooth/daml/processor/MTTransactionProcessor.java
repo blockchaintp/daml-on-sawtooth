@@ -29,7 +29,6 @@ import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.Context;
-import sawtooth.sdk.processor.StreamContext;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -38,12 +37,14 @@ import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.PingResponse;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TpProcessResponse;
-import sawtooth.sdk.protobuf.TpUnregisterRequest;
+import sawtooth.sdk.protobuf.TpRegisterRequest;
 
 /**
  * A multithreaded Sawtooth transaction processor.
  */
 public class MTTransactionProcessor implements Runnable {
+
+  private static final int DEFAULT_MAX_THREADS = 10;
 
   private static final Logger LOGGER = Logger.getLogger(MTTransactionProcessor.class.getName());
 
@@ -65,7 +66,7 @@ public class MTTransactionProcessor implements Runnable {
     this.handler = txHandler;
     this.outQueue = new LinkedBlockingQueue<>();
     this.stream = new ZmqStream(address);
-    this.executor = Executors.newCachedThreadPool();
+    this.executor = Executors.newFixedThreadPool(DEFAULT_MAX_THREADS);
   }
 
   @Override
@@ -108,8 +109,10 @@ public class MTTransactionProcessor implements Runnable {
         }
         outStandingTx += enqueueCount;
         outStandingTx -= dequeueCount;
-        LOGGER.info(String.format("Enqueued %s transactions, Dequeued %s responses, outStanding tx=%s", enqueueCount,
-            dequeueCount, outStandingTx));
+        if (enqueueCount > 0 || dequeueCount > 0 || outStandingTx > 0) {
+          LOGGER.info(String.format("Enqueued %s transactions, Dequeued %s responses, outStanding tx=%s", enqueueCount,
+              dequeueCount, outStandingTx));
+        }
       }
     } catch (InterruptedException e) {
       LOGGER.info("Processor interrupted, shutting down");
@@ -118,12 +121,14 @@ public class MTTransactionProcessor implements Runnable {
   }
 
   private void register() {
-    TpUnregisterRequest unregisterRequest = TpUnregisterRequest.newBuilder().build();
     LOGGER.info("Registering TP");
     boolean registered = false;
     while (!registered) {
       try {
-        Future fut = this.stream.send(Message.MessageType.TP_UNREGISTER_REQUEST, unregisterRequest.toByteString());
+        TpRegisterRequest registerRequest = TpRegisterRequest.newBuilder()
+            .setFamily(this.handler.transactionFamilyName()).addAllNamespaces(this.handler.getNameSpaces())
+            .setVersion(this.handler.getVersion()).setMaxOccupancy(DEFAULT_MAX_THREADS).build();
+        Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
         fut.getResult();
         registered = true;
       } catch (InterruptedException | ValidatorConnectionError e) {
@@ -152,7 +157,7 @@ public class MTTransactionProcessor implements Runnable {
     public void run() {
       try {
         TpProcessRequest transactionRequest = TpProcessRequest.parseFrom(this.message.getContent());
-        Context state = new StreamContext(stream, transactionRequest.getContextId());
+        Context state = new BlockingStreamContext(stream, transactionRequest.getContextId());
 
         TpProcessResponse.Builder builder = TpProcessResponse.newBuilder();
         try {
