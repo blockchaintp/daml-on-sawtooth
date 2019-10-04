@@ -20,7 +20,7 @@ Please follow these steps to get a running daml-on-sawtooth
 * Docker version 19.03.2
 * OpenJDK version 12.0.1
 * NodeJS version 10.16.2
-* DAML SDK
+* daml SDK
 
 ### 2. Build and executable daml-on-sawtooth
 
