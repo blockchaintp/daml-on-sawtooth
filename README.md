@@ -2,33 +2,68 @@
 
 `daml-on-sawtooth` is an integration of the [DAML](https://daml.com/) smart contract runtime engine, created and open sourced by [Digital Asset](https://digitalasset.com/), with Hyperledger Sawtooth blockchain as the backing DLT.
 
-Contribution guildines in [CONTRIBUTING.md](CONTRIBUTING.md)
+## Contributing to the project
 
-## Running daml-on-sawtooth locally
+This is an open source project. Anyone is welcome to contribute to the project.
 
-The following steps describes the steps needed to get `daml-on-sawtooth` to run locally
+If you wish to contribute, please refer to the guidelines mentioned in [CONTRIBUTING.md](CONTRIBUTING.md)
 
-### Prerequisite
+## Running daml-on-sawtooth
 
-1. Linux/macOS only
-1. Docker version 19.03.2
-1. OpenJDK version 12.0.1
-1. NodeJS version 10.16.2
+This project uses docker based technologies to build and run daml-on-sawtooth.
 
-### Build an executable daml-on-sawtooth
+Please follow these steps to get a running daml-on-sawtooth
 
-1. Clone the repository. `$ git clone git@github.com:blockchaintp/daml-on-sawtooth.git`
-1. Set export the build identifier environment variable.  This is used to distinguish different variations of builds on the same machine. `$ export ISOLATION_ID=my-local-buid`
-1. Execute the local build script. This will compile and package all of the java, as well as prepare docker images for local execution. `$ bin/build.sh`
+### 1. Prerequisite
 
-### Running and shutting down daml-on-sawtooth
+* Linux/macOS only
+* Docker version 19.03.2
+* OpenJDK version 12.0.1
+* NodeJS version 10.16.2
+* DAML SDK
 
-1. Run up a development copy of daml-on-sawtooth.  This contains a single node sawtooth environment, running the devmode consensus and a DAML environment. `$ docker-compose -f ./docker/compose/daml-local.yaml up`
-1. In order to restart this environment from scratch, be sure to down the docker-compose environment. `$ docker-compose -f ./docker/compose/daml-local.yaml down`
+### 2. Build and executable daml-on-sawtooth
 
-### Inspecting daml-on-sawtooth transactions
+You must first ensure you have installed the necessary docker tools and build the daml-on-sawtooth source code.
 
-To inspect transactions on `daml-on-sawtooth`, start your browser and open the url `http://localhost`.
+Please refer to [BUILD.md](./BUILD.md) for further instructions.
+
+### 3. Running and shutting down daml-on-sawtooth
+
+* Open a terminal and `cd` into the project folder (i.e. location where you git clone the daml-on-sawtooth project) described in step 2.
+
+* To run up a development copy of daml-on-sawtooth, run this command `docker-compose -f ./docker/compose/daml-local.yaml up`. This will start-up single node sawtooth environment, running the devmode consensus and a DAML environment.
+
+* To shutdown the application by running the following command `docker-compose -f ./docker/compose/daml-local.yaml down`.
+
+### 4. Interacting with daml-on-sawtooth using daml navigator
+
+4.1 Open a terminal (one where you are not hosting a running daml-on-sawtooth see STEP 3).
+
+4.2 Install [daml sdk](https://docs.daml.com/getting-started/installation.html)
+
+4.3 Run the command `daml ledger navigator --host localhost --port 9000` or `daml ledger navigator --host <url of your daml-on-sawtooth deployment> --port 9000`. When you run this command successfully, you will see the following message
+
+```text
+Opening navigator at localhost:9000
+   _  __          _           __
+  / |/ /__ __  __(_)__ ____ _/ /____  ____
+ /    / _ `/ |/ / / _ `/ _ `/ __/ _ \/ __/
+/_/|_/\_,_/|___/_/\_, /\_,_/\__/\___/_/
+                 /___/
+Version 100.13.27
+Frontend running at http://localhost:4000.
+```
+
+**Note:** Port 9000 is the port where daml-on-sawtooth is opened for communications with the outside world. If you have a custom daml application, you can connect to it via this port.
+
+4.4 Open the browser `http://localhost:4000` (see above) and you will be presented with daml navigator interface. **NOTE:** Port 4000 is the default entry point for daml navigator.
+
+### 5. Inspecting daml-on-sawtooth transactions
+
+This project provides you with a browser based interface to inspect inspect transactions on `daml-on-sawtooth`.  
+
+To inspect transactions, open your browser with this url `http://localhost`.
 
 **NOTE:**
 
