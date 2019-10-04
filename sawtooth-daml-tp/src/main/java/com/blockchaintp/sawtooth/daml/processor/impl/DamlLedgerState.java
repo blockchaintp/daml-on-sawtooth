@@ -205,15 +205,13 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public List<String> addDamlLogEntry(final DamlLogEntryId entryId, final DamlLogEntry entry,
-      final List<String> currentEntryList) throws InternalError, InvalidTransactionException {
+  public List<String> addDamlLogEntry(final DamlLogEntryId entryId, final DamlLogEntry entry)
+      throws InternalError, InvalidTransactionException {
     Map<DamlLogEntryId, DamlLogEntry> setMap = new HashMap<>();
     setMap.put(entryId, entry);
-    String[] addresses = addDamlLogEntries(setMap.entrySet());
-    List<String> retList = new ArrayList<>(currentEntryList);
-    retList.addAll(Arrays.asList(addresses));
-    sendLogEvent(entryId, entry, retList.size());
-    return retList;
+    addDamlLogEntries(setMap.entrySet());
+    sendLogEvent(entryId, entry);
+    return new ArrayList<>();
   }
 
   @Override
@@ -248,11 +246,11 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry, final long offset)
+  public void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry)
       throws InternalError, InvalidTransactionException {
     Map<String, String> attrMap = new HashMap<>();
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
-    attrMap.put(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE, Long.toString(offset));
+    attrMap.put(EventConstants.DAML_OFFSET_EVENT_ATTRIBUTE, Long.toString(1));
     ByteString packedData = KeyValueCommitting.packDamlLogEntry(entry);
     ByteString compressedData = compressByteString(packedData);
     LOGGER.info(String.format("Sending event for %s, size=%s, compressed=%s", entryId.getEntryId().toStringUtf8(),

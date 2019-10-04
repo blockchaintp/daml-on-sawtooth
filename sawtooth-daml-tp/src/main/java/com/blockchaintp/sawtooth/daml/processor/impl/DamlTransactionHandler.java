@@ -110,9 +110,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
     long fetchStateStart = System.currentTimeMillis();
     Map<DamlStateKey, Option<DamlStateValue>> stateMap = buildStateMap(ledgerState, txHeader, submission);
 
-    List<String> currentLogEntryList = ledgerState.getLogEntryIndex();
     long recordStateStart = System.currentTimeMillis();
-    recordState(ledgerState, submission, stateMap, entryId, currentLogEntryList);
+    recordState(ledgerState, submission, stateMap, entryId);
 
     long processFinished = System.currentTimeMillis();
     long recordStateTime = processFinished - recordStateStart;
@@ -163,9 +162,6 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
     if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
       throw new InvalidTransactionException(String.format("TIMEKEEPER_GLOBAL_RECORD not declared as input"));
-    }
-    if (!inputList.contains(Namespace.DAML_LOG_ENTRY_LIST)) {
-      throw new InvalidTransactionException(String.format("DAML_LOG_ENTRY_LIST not declared as input"));
     }
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
 
@@ -225,8 +221,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   private void recordState(final LedgerState ledgerState, final DamlSubmission submission,
-      final Map<DamlStateKey, Option<DamlStateValue>> stateMap, final DamlLogEntryId entryId,
-      final List<String> currentLogEntryList) throws InternalError, InvalidTransactionException {
+      final Map<DamlStateKey, Option<DamlStateValue>> stateMap, final DamlLogEntryId entryId)
+      throws InternalError, InvalidTransactionException {
 
     long processStart = System.currentTimeMillis();
     String ledgerEffectiveTime = null;
@@ -248,8 +244,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     DamlLogEntry newLogEntry = processSubmission._1;
     LOGGER.fine(String.format("Recording log at %s, address=%s", entryId, Namespace.makeAddressForType(entryId),
         newLogEntry.toByteString().size()));
-    List<String> newLogEntryList = ledgerState.addDamlLogEntry(entryId, newLogEntry, currentLogEntryList);
-    ledgerState.updateLogEntryIndex(newLogEntryList);
+    ledgerState.addDamlLogEntry(entryId, newLogEntry);
     long recordFinish = System.currentTimeMillis();
     long processTime = recordStart - processStart;
     long setStateTime = recordFinish - recordStart;

@@ -44,6 +44,7 @@ services:
         sawset genesis && \
         sawadm genesis config-genesis.batch && \
         sawtooth-validator -v \
+          --scheduler parallel \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \
@@ -132,13 +133,24 @@ services:
     container_name: ledger-api-testtool
     entrypoint: "bash -c \"\
       sleep 30 && \
-      java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
+      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
+        --timeout-scale-factor 1.5 \
+         \
+        --command-submission-ttl-scale-factor 1 \
+        || \
+      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
+        --timeout-scale-factor 1.5 \
+         \
+        --command-submission-ttl-scale-factor 1 \
+        && \
+      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
         --timeout-scale-factor 1.5 \
         --command-submission-ttl-scale-factor 1 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar -v --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1 \
+      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
+        --timeout-scale-factor 1.5 \
         --command-submission-ttl-scale-factor 1 \
+
         \""
     depends_on:
       - daml-rpc
