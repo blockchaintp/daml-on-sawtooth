@@ -37,3 +37,7 @@
 
 # exclude node modules
 **/node_modules/
+
+# exclude intellij items
+*.iml
+**/.idea
