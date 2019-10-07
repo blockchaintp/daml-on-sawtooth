@@ -17,15 +17,6 @@ The basic build uses docker to pull down its toolchain and compile.
 
 ```$ bin/build.sh```
 
-6. Run up a development copy of daml-on-sawtooth.  This contains a single node sawtooth environment, running the devmode consensus and a DAML environment.
-
-```$ docker-compose -f ./docker/compose/daml-local.yaml up```
-
-7. In order to restart this environment from scratch, be sure to down the docker-compose environment
-
-```$ docker-compose -f ./docker/compose/daml-local.yaml down```
-
-
 ## Developing in an IDE
 
 While the final build should be tested using the docker toolchain, it can be easier to develop the project using an IDE of your choice.  The project is a conventional maven project, with one caveat
