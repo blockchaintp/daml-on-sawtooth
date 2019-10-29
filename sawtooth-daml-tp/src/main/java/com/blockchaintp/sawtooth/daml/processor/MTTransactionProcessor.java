@@ -44,7 +44,7 @@ import sawtooth.sdk.protobuf.TpRegisterRequest;
  */
 public class MTTransactionProcessor implements Runnable {
 
-  private static final int DEFAULT_MAX_THREADS = 10;
+  private static final int DEFAULT_MAX_THREADS = 1;
 
   private static final Logger LOGGER = Logger.getLogger(MTTransactionProcessor.class.getName());
 
@@ -127,7 +127,7 @@ public class MTTransactionProcessor implements Runnable {
       try {
         TpRegisterRequest registerRequest = TpRegisterRequest.newBuilder()
             .setFamily(this.handler.transactionFamilyName()).addAllNamespaces(this.handler.getNameSpaces())
-            .setVersion(this.handler.getVersion()).setMaxOccupancy(DEFAULT_MAX_THREADS).build();
+            .setVersion(this.handler.getVersion()).setMaxOccupancy(2).build();
         Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
         fut.getResult();
         registered = true;
@@ -187,6 +187,8 @@ public class MTTransactionProcessor implements Runnable {
         LOGGER.log(Level.WARNING, "InvalidProtocolBufferException!: " + e.toString(), e);
       } catch (InterruptedException e) {
         LOGGER.log(Level.WARNING, "Interrupted while queueing a response!: " + e.toString(), e);
+      } catch (Throwable e) {
+        LOGGER.log(Level.WARNING, "Unknown error while processing a response!: " + e.toString(), e);
       }
     }
 
