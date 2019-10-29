@@ -192,9 +192,9 @@ public class DamlTransactionHandlerTest {
     Map<DamlStateKey, DamlStateValue> stateMap = new HashMap<>();
     DamlStateValue archiveValue = DamlStateValue.newBuilder().setArchive(archive).build();
     stateMap.put(archiveKey, archiveValue);
-    when(committer.processSubmission(any(), any(), any(), any(), any()))
-        .thenReturn(Tuple2.apply(DamlLogEntry.getDefaultInstance(), stateMap));
     try {
+      when(committer.processSubmission(any(), any(), any(), any(), any(), any()))
+          .thenReturn(Tuple2.apply(DamlLogEntry.getDefaultInstance(), stateMap));
       handler.apply(transactionRequest, state);
     } catch (InvalidTransactionException | InternalError exc) {
       exc.printStackTrace();

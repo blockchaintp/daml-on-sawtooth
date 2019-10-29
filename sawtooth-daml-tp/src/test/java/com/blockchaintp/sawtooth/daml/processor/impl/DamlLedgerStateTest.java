@@ -37,7 +37,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlRejectionEntry;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlTransactionRejectionEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.google.protobuf.ByteString;
@@ -148,8 +148,8 @@ public class DamlLedgerStateTest {
     DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntry firstVal = DamlLogEntry.newBuilder()
-        .setRejectionEntry(DamlRejectionEntry.newBuilder()
-            .setMaximumRecordTimeExceeded(DamlKvutils.DamlRejectionEntry.MaximumRecordTimeExceeded.getDefaultInstance())
+        .setTransactionRejectionEntry(DamlTransactionRejectionEntry.newBuilder()
+            .setMaximumRecordTimeExceeded(DamlKvutils.DamlTransactionRejectionEntry.MaximumRecordTimeExceeded.getDefaultInstance())
             .build())
         .build();
     try {

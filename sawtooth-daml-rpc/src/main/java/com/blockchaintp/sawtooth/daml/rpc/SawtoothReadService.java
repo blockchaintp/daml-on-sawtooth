@@ -60,6 +60,7 @@ public class SawtoothReadService implements ReadService {
 
   /**
    * Build a ReadService based on a zmq address URL.
+   *
    * @param zmqUrl the url of the zmq endpoint
    */
   public SawtoothReadService(final String zmqUrl) {
@@ -72,6 +73,7 @@ public class SawtoothReadService implements ReadService {
 
   /**
    * Build a ReadService based on a zmq address URL.
+   *
    * @param zmqUrl     the url of the zmq endpoint
    * @param tracer     a transaction tracer
    * @param indexReset set to true if this reader should start at the first offset
@@ -131,8 +133,9 @@ public class SawtoothReadService implements ReadService {
     if (data != null) {
       ledgerId = data.toStringUtf8();
     }
+    Configuration blankConfiguration = new Configuration(0, tm, Option.empty(), true);
     Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
-        new LedgerInitialConditions(ledgerId, new Configuration(tm), BEGINNING_OF_EPOCH)});
+        new LedgerInitialConditions(ledgerId, blankConfiguration, BEGINNING_OF_EPOCH) });
     return Source.fromPublisher(f);
   }
 
@@ -144,7 +147,7 @@ public class SawtoothReadService implements ReadService {
     } else {
       if (this.startAtTheBeginning) {
         LOGGER.info("Starting at the beginning of the chain (offset=1-0) as requested");
-        Offset offset = new Offset(new long[] {1, 0});
+        Offset offset = new Offset(new long[] {1, 0 });
         this.handler.sendSubscribe(offset);
       } else {
         LOGGER.info(String.format("Starting event handling at wherever is current"));
