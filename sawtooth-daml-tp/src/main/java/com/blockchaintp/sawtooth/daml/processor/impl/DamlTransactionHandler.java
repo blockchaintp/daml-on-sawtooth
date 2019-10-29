@@ -133,6 +133,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
    */
   private void basicRequestChecks(final TpProcessRequest tpProcessRequest)
       throws InvalidTransactionException, InternalError {
+    LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
+
     TransactionHeader header = tpProcessRequest.getHeader();
     if (header == null) {
       throw new InvalidTransactionException("Header expected");

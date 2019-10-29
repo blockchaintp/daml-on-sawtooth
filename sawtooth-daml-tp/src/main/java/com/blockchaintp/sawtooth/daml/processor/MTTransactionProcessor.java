@@ -178,6 +178,10 @@ public class MTTransactionProcessor implements Runnable {
           if (ie.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
           }
+        } catch (Throwable t) {
+          LOGGER.log(Level.WARNING, "Unknown Exception!: " + t.toString(), t);
+          builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+          builder.setMessage(t.getMessage());
         }
         responses.put(Map.entry(message.getCorrelationId(), builder.build()));
       } catch (InvalidProtocolBufferException e) {
