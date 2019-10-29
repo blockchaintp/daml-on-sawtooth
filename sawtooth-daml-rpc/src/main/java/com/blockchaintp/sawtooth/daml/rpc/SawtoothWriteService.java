@@ -245,7 +245,7 @@ public final class SawtoothWriteService implements WriteService {
     return streamToValidator;
   }
 
-  private synchronized CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
+  private CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
       final Batch batch, final Future streamToValidator) {
     return CompletableFuture.supplyAsync(() -> {
       try {
