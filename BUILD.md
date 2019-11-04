@@ -11,7 +11,7 @@ The basic build uses docker to pull down its toolchain and compile.
 
 4. set export the build identifier environment variable.  This is used to distinguish different variations of builds on the same machine.
 
-```$ export ISOLATION_ID=my-local-buid```
+```$ export ISOLATION_ID=my-local-build```
 
 5. Execute the local build script. This will compile and package all of the java, as well as prepare docker images for local execution.
 

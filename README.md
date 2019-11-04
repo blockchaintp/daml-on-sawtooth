@@ -22,7 +22,7 @@ Please follow these steps to get a running daml-on-sawtooth
 * NodeJS version 10.16.2
 * daml SDK
 
-### 2. Build and executable daml-on-sawtooth
+### 2. Build an executable daml-on-sawtooth
 
 You must first ensure you have installed the necessary docker tools and build the daml-on-sawtooth source code.
 
