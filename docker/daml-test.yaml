@@ -41,8 +41,13 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen && \
-        sawset genesis && \
-        sawadm genesis config-genesis.batch && \
+        sawset genesis -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.min_wait_time=0 \
+          sawtooth.consensus.max_wait_time=2 \
+          -o consensus-settings.batch && \
+        sawadm genesis config-genesis.batch consensus-settings.batch && \
         sawtooth-validator -v \
           --scheduler parallel \
           --endpoint tcp://validator:8800 \
@@ -54,6 +59,9 @@ services:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
 
+  postgres:
+    image: postgres
+    container_name: postgres
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:1.1
@@ -101,19 +109,18 @@ services:
       - "9000:9000"
       - "5051:5051"
     entrypoint: "bash -c \"\
-      sleep 10 && \
       /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
         --connect tcp://validator:4004 \
-        `ls /opt/sawtooth-daml-rpc/dar/*.dar` \
-        \""
-    environment:
-      - JAVA_ARGS=-verbose:gc
+        --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
+        --participant-id test-participant \
+        `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     volumes:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
       - ../test-dars:/opt/sawtooth-daml-rpc/dar/
     depends_on:
       - validator
+      - postgres
 
   timekeeper:
     image: timekeeper:${ISOLATION_ID}
@@ -131,26 +138,27 @@ services:
   ledger-api-testtool:
     image: ledger-api-testtool:${ISOLATION_ID}
     container_name: ledger-api-testtool
-    entrypoint: "bash -c \"\
-      sleep 30 && \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-         \
-        --command-submission-ttl-scale-factor 1 \
+    entrypoint: "bash -xc \"\
+      sleep 120 && \
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 4 \
+        --concurrent-test-runs 1 \
+        daml-rpc:9000 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-         \
-        --command-submission-ttl-scale-factor 1 \
-        && \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-        --command-submission-ttl-scale-factor 1 \
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 4 \
+        --concurrent-test-runs 1 \
+        daml-rpc:9000 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-        --command-submission-ttl-scale-factor 1 \
-
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 4 \
+        --concurrent-test-runs 1 \
+        daml-rpc:9000 \
+        || \
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 4 \
+        --concurrent-test-runs 1 \
+        daml-rpc:9000 \
         \""
     depends_on:
       - daml-rpc

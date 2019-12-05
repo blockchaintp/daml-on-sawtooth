@@ -49,6 +49,10 @@ public class SawtoothReadService implements ReadService {
   private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
   private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
 
+  private static final int DEFAULT_MAX_TTL = 40;
+
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 19;
+
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
   private final String url;
@@ -91,9 +95,9 @@ public class SawtoothReadService implements ReadService {
 
   private TimeModel parseTimeModel(final ByteString data) throws InvalidProtocolBufferException {
     ConfigurationMap cm = ConfigurationMap.parseFrom(data);
-    Duration maxClockSkew = Duration.ofMinutes(2);
-    Duration maxTtl = Duration.ofMinutes(2);
-    Duration minTransactionLatency = Duration.ofSeconds(2);
+    Duration maxClockSkew = Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW);
+    Duration maxTtl = Duration.ofSeconds(DEFAULT_MAX_TTL);
+    Duration minTransactionLatency = Duration.ofSeconds(1);
     for (ConfigurationEntry e : cm.getEntriesList()) {
       String key = e.getKey();
       String valString = e.getValue().toStringUtf8();
@@ -117,7 +121,8 @@ public class SawtoothReadService implements ReadService {
     TimeModel tm;
     if (data == null) {
       LOGGER.info("No time model set on chain using defaults");
-      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+          Duration.ofSeconds(DEFAULT_MAX_TTL));
     } else {
       try {
         tm = parseTimeModel(data);

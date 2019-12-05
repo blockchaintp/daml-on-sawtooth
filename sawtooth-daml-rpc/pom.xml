@@ -107,12 +107,13 @@
 
     <!-- DAML -->
     <dependency>
-      <groupId>com.daml.ledger</groupId>
-      <artifactId>reference-participant-state-index_${scala.lang.version}</artifactId>
+      <groupId>com.digitalasset.ledger</groupId>
+      <artifactId>ledger-api-auth_${scala.lang.version}</artifactId>
     </dependency>
+    <!-- Required for the index server -->
     <dependency>
-      <groupId>com.daml.ledger</groupId>
-      <artifactId>api-server-damlonx_${scala.lang.version}</artifactId>
+      <groupId>com.digitalasset.platform</groupId>
+      <artifactId>sandbox_${scala.lang.version}</artifactId>
     </dependency>
 
     <!-- Hyperledger Sawtooth -->

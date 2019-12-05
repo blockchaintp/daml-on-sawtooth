@@ -52,7 +52,7 @@ import com.digitalasset.daml.lf.transaction.GenTransaction;
 import com.digitalasset.daml.lf.value.Value.ContractId;
 import com.digitalasset.daml.lf.value.Value.NodeId;
 import com.digitalasset.daml.lf.value.Value.VersionedValue;
-import com.digitalasset.daml_lf.DamlLf.Archive;
+import com.digitalasset.daml_lf_dev.DamlLf;
 import com.digitalasset.ledger.api.domain.PartyDetails;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -241,7 +241,8 @@ public final class SawtoothWriteService implements WriteService {
 
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
+        cbsReq.toByteString());
     return streamToValidator;
   }
 
@@ -376,8 +377,8 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public CompletionStage<UploadPackagesResult> uploadPackages(final scala.collection.immutable.List<Archive> archives,
-      final Option<String> optionalDescription) {
+  public CompletionStage<UploadPackagesResult> uploadPackages(
+      final scala.collection.immutable.List<DamlLf.Archive> archives, final Option<String> optionalDescription) {
     String sourceDescription = "Uploaded package";
     if (optionalDescription.nonEmpty()) {
       sourceDescription = optionalDescription.get();

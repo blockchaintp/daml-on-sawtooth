@@ -37,7 +37,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEn
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
-import com.digitalasset.daml_lf.DamlLf.Archive;
+import com.digitalasset.daml_lf_dev.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 
 import net.bytebuddy.utility.RandomString;

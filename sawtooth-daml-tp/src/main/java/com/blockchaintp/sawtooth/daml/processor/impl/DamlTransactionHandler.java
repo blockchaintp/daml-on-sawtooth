@@ -86,7 +86,6 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throws InvalidTransactionException, InternalError {
     LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
     basicRequestChecks(tpProcessRequest);
-
     LedgerState ledgerState = new DamlLedgerState(state);
     TransactionHeader txHeader = tpProcessRequest.getHeader();
     try {

@@ -17,7 +17,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
-import com.blockchaintp.daml.kvutils.KeyValueCommittingWrapper;
+import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.daml.lf.engine.Engine;
@@ -50,11 +50,10 @@ public class DamlCommitterImpl implements DamlCommitter {
   @Override
   public final Tuple2<DamlLogEntry, java.util.Map<DamlStateKey, DamlStateValue>> processSubmission(
       final Configuration defaultConfig, final DamlLogEntryId entryId, final Timestamp recordTime,
-      final DamlSubmission submission, final String participantId, final java.util.Map<DamlStateKey,
-      Option<DamlStateValue>> stateMap) throws InvalidTransactionException {
-    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processedSubmission = KeyValueCommittingWrapper
-        .processSubmission(this.engine, entryId, recordTime, defaultConfig, submission, participantId,
-        mapToScalaImmutableMap(stateMap));
+      final DamlSubmission submission, final String participantId,
+      final java.util.Map<DamlStateKey, Option<DamlStateValue>> stateMap) throws InvalidTransactionException {
+    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processedSubmission = KeyValueCommitting.processSubmission(
+        this.engine, entryId, recordTime, defaultConfig, submission, participantId, mapToScalaImmutableMap(stateMap));
     DamlLogEntry logEntry = processedSubmission._1;
     java.util.Map<DamlStateKey, DamlStateValue> stateUpdateMap = scalaMapToMap(processedSubmission._2);
     return Tuple2.apply(logEntry, stateUpdateMap);
