@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
+import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteServiceException;
@@ -58,7 +59,6 @@ import com.google.protobuf.util.JsonFormat.Printer;
 
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
-import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.ClientBatchStatus;
