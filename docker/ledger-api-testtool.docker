@@ -14,7 +14,7 @@
 FROM ubuntu:bionic
 
 ARG DAML_SDK_VERSION=0.13.37
-ARG DAML_REPO_VERSION=100.13.36
+ARG DAML_REPO_VERSION=100.13.37
 
 RUN apt-get update -y && \
   apt-get upgrade -y && \
@@ -41,8 +41,8 @@ ENV PATH=/opt/daml-sdk/bin:$PATH
 
 RUN mkdir -p /opt/ledger-api-test-tool && \
   cd  /opt/ledger-api-test-tool && \
-  wget -nv https://digitalassetsdk.bintray.com/DigitalAssetSDK/com/daml/ledger/testtool/ledger-api-test-tool_2.12/${DAML_REPO_VERSION}/ledger-api-test-tool_2.12-${DAML_REPO_VERSION}.jar && \
-  mv ledger-api-test-tool_2.12-${DAML_REPO_VERSION}.jar ledger-api-test-tool_2.12.jar
+  wget -nv https://digitalassetsdk.bintray.com/DigitalAssetSDK/com/daml/ledger/testtool/ledger-api-test-tool/${DAML_REPO_VERSION}/ledger-api-test-tool-${DAML_REPO_VERSION}.jar && \
+  mv ledger-api-test-tool-${DAML_REPO_VERSION}.jar ledger-api-test-tool.jar
 
 WORKDIR /opt/ledger-api-test-tool
 

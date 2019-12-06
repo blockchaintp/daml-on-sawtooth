@@ -83,7 +83,7 @@ public class MTTransactionProcessor implements Runnable {
           Message inMessage = this.stream.receive(1);
           while (inMessage != null) {
             if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
-              LOGGER.info("Recieved Ping Message.");
+              LOGGER.fine("Recieved Ping Message.");
               PingResponse pingResponse = PingResponse.newBuilder().build();
               this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
                   pingResponse.toByteString());

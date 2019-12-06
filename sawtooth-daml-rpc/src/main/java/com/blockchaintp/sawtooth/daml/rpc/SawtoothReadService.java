@@ -49,9 +49,9 @@ public class SawtoothReadService implements ReadService {
   private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
   private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
 
-  private static final int DEFAULT_MAX_TTL = 40;
+  private static final int DEFAULT_MAX_TTL = 80; //4x the TimeKeeper period
 
-  private static final int DEFAULT_MAX_CLOCK_SKEW = 19;
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; //2x the TimeKeeper period
 
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
