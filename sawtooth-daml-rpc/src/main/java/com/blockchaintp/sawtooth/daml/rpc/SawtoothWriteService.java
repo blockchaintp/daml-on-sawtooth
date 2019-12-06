@@ -307,7 +307,6 @@ public final class SawtoothWriteService implements WriteService {
         case INVALID:
           return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
         case UNKNOWN:
-          return Map.entry(batchid, ClientBatchStatus.Status.UNKNOWN);
         case PENDING:
         default:
         }
