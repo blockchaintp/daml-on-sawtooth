@@ -31,6 +31,7 @@ import org.zeromq.ZLoop;
 import org.zeromq.ZMQ.PollItem;
 import org.zeromq.ZMsg;
 
+import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
@@ -47,7 +48,6 @@ import com.google.protobuf.util.JsonFormat;
 import io.reactivex.processors.UnicastProcessor;
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
-import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.exceptions.ValidatorConnectionError;
 import sawtooth.sdk.protobuf.ClientBlockGetByNumRequest;
 import sawtooth.sdk.protobuf.ClientBlockGetResponse;

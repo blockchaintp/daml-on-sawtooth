@@ -22,13 +22,14 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
-import sawtooth.sdk.messaging.ZmqStream;
 import sawtooth.sdk.processor.Context;
+import sawtooth.sdk.processor.StreamContext;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -157,7 +158,7 @@ public class MTTransactionProcessor implements Runnable {
     public void run() {
       try {
         TpProcessRequest transactionRequest = TpProcessRequest.parseFrom(this.message.getContent());
-        Context state = new BlockingStreamContext(stream, transactionRequest.getContextId());
+        Context state = new StreamContext(stream, transactionRequest.getContextId());
 
         TpProcessResponse.Builder builder = TpProcessResponse.newBuilder();
         try {
