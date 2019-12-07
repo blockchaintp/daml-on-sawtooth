@@ -19,7 +19,6 @@ services:
 
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:1.1
-    container_name: sawtooth-settings-tp-default
     depends_on:
       - validator
     entrypoint: settings-tp -v --connect tcp://validator:4004
@@ -29,15 +28,10 @@ services:
 
   validator:
     image: hyperledger/sawtooth-validator:1.1
-    container_name: sawtooth-validator-default
     expose:
       - 4004
       - 8800
       - 5050
-    ports:
-      - "4004:4004"
-      - "8800:8800"
-      - "5050:5050"
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen && \
@@ -57,7 +51,6 @@ services:
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:1.1
-    container_name: sawtooth-devmode-engine-rust-default
     depends_on:
       - validator
     entrypoint: devmode-engine-rust -C tcp://validator:5050
@@ -67,11 +60,8 @@ services:
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.1
-    container_name: sawtooth-rest-api-default
     expose:
       - 8008
-    ports:
-      - "8008:8008"
     depends_on:
       - validator
     entrypoint: sawtooth-rest-api  --connect tcp://validator:4004 --bind rest-api:8008
@@ -81,7 +71,6 @@ services:
 
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
-    container_name: sawtooth-daml-tp
     command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
     environment:
       - JAVA_ARGS=-verbose:gc
@@ -93,13 +82,9 @@ services:
 
   daml-rpc:
     image: sawtooth-daml-rpc:${ISOLATION_ID}
-    container_name: sawtooth-daml-rpc
     expose:
       - 9000
       - 5051
-    ports:
-      - "9000:9000"
-      - "5051:5051"
     entrypoint: "bash -c \"\
       sleep 10 && \
       /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
@@ -117,7 +102,6 @@ services:
 
   timekeeper:
     image: timekeeper:${ISOLATION_ID}
-    container_name: timekeeper
     command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
     environment:
       - JAVA_ARGS=-verbose:gc
@@ -130,27 +114,27 @@ services:
   # Run the integration tests at most twice to compensate for "piming the pump"
   ledger-api-testtool:
     image: ledger-api-testtool:${ISOLATION_ID}
-    container_name: ledger-api-testtool
     entrypoint: "bash -c \"\
-      sleep 30 && \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-         \
-        --command-submission-ttl-scale-factor 1 \
+      sleep 120 && \
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 10 \
+        --command-submission-ttl-scale-factor 6 \
+        daml-rpc:9000 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-         \
-        --command-submission-ttl-scale-factor 1 \
-        && \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-        --command-submission-ttl-scale-factor 1 \
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 10 \
+        --command-submission-ttl-scale-factor 6 \
+        daml-rpc:9000 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-        --command-submission-ttl-scale-factor 1 \
-
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 10 \
+        --command-submission-ttl-scale-factor 6 \
+        daml-rpc:9000 \
+        || \
+      java -jar ledger-api-test-tool_2.12.jar \
+        --timeout-scale-factor 10 \
+        --command-submission-ttl-scale-factor 6 \
+        daml-rpc:9000 \
         \""
     depends_on:
       - daml-rpc
