@@ -126,7 +126,7 @@ public final class DamlLedgerState implements LedgerState {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.warning(String.format("Skipping key %s since value is null", k));
+        LOGGER.fine(String.format("Skipping key %s since value is null", k));
       }
     }
     return retMap;
@@ -171,7 +171,7 @@ public final class DamlLedgerState implements LedgerState {
       DamlStateValue val = e.getValue();
       ByteString packDamlStateValue;
       if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-        LOGGER.info("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
+        LOGGER.fine("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
         packDamlStateValue = KeyValueCommitting.packDamlStateKey(key);
       } else {
         packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);

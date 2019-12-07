@@ -67,7 +67,7 @@ public class MTTransactionProcessor implements Runnable {
     this.handler = txHandler;
     this.outQueue = new LinkedBlockingQueue<>();
     this.stream = new ZmqStream(address);
-    this.executor = Executors.newFixedThreadPool(DEFAULT_MAX_THREADS);
+    this.executor = Executors.newWorkStealingPool();
   }
 
   @Override
@@ -83,7 +83,7 @@ public class MTTransactionProcessor implements Runnable {
           Message inMessage = this.stream.receive(1);
           while (inMessage != null) {
             if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
-              LOGGER.info("Recieved Ping Message.");
+              LOGGER.fine("Recieved Ping Message.");
               PingResponse pingResponse = PingResponse.newBuilder().build();
               this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
                   pingResponse.toByteString());
@@ -128,7 +128,7 @@ public class MTTransactionProcessor implements Runnable {
       try {
         TpRegisterRequest registerRequest = TpRegisterRequest.newBuilder()
             .setFamily(this.handler.transactionFamilyName()).addAllNamespaces(this.handler.getNameSpaces())
-            .setVersion(this.handler.getVersion()).setMaxOccupancy(DEFAULT_MAX_THREADS).build();
+            .setVersion(this.handler.getVersion()).setMaxOccupancy(2).build();
         Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
         fut.getResult();
         registered = true;
@@ -178,6 +178,10 @@ public class MTTransactionProcessor implements Runnable {
           if (ie.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
           }
+        } catch (Throwable t) {
+          LOGGER.log(Level.WARNING, "Unknown Exception!: " + t.toString(), t);
+          builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+          builder.setMessage(t.getMessage());
         }
         responses.put(Map.entry(message.getCorrelationId(), builder.build()));
       } catch (InvalidProtocolBufferException e) {

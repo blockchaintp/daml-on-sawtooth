@@ -40,17 +40,19 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
+import com.daml.ledger.participant.state.v1.Configuration;
 import com.daml.ledger.participant.state.v1.PartyAllocationResult;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
 import com.daml.ledger.participant.state.v1.UploadPackagesResult;
 import com.daml.ledger.participant.state.v1.WriteService;
+import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.daml.lf.transaction.GenTransaction;
 import com.digitalasset.daml.lf.value.Value.ContractId;
 import com.digitalasset.daml.lf.value.Value.NodeId;
 import com.digitalasset.daml.lf.value.Value.VersionedValue;
-import com.digitalasset.daml_lf.DamlLf.Archive;
+import com.digitalasset.daml_lf.DamlLf;
 import com.digitalasset.ledger.api.domain.PartyDetails;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -239,11 +241,12 @@ public final class SawtoothWriteService implements WriteService {
 
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
+        cbsReq.toByteString());
     return streamToValidator;
   }
 
-  private synchronized CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
+  private CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
       final Batch batch, final Future streamToValidator) {
     return CompletableFuture.supplyAsync(() -> {
       try {
@@ -304,7 +307,6 @@ public final class SawtoothWriteService implements WriteService {
         case INVALID:
           return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
         case UNKNOWN:
-          return Map.entry(batchid, ClientBatchStatus.Status.UNKNOWN);
         case PENDING:
         default:
         }
@@ -319,7 +321,8 @@ public final class SawtoothWriteService implements WriteService {
     SawtoothDamlTransaction payload = SawtoothDamlTransaction.newBuilder()
         .setSubmission(KeyValueSubmission.packDamlSubmission(submission))
         .setLogEntryId(KeyValueCommitting.packDamlLogEntryId(damlLogEntryId)).build();
-    return SawtoothDamlOperation.newBuilder().setTransaction(payload).build();
+    return SawtoothDamlOperation.newBuilder().setTransaction(payload).setSubmittingParticipant(getParticipantId())
+        .build();
   }
 
   private Batch operationToBatch(final SawtoothDamlOperation operation, final Collection<String> inputAddresses,
@@ -330,6 +333,22 @@ public final class SawtoothWriteService implements WriteService {
     LOGGER.fine(
         String.format("Batch %s has tx %s", sawtoothBatch.getHeaderSignature(), sawtoothTxn.getHeaderSignature()));
     return sawtoothBatch;
+  }
+
+  @Override
+  public CompletionStage<SubmissionResult> submitConfiguration(final Timestamp maxRecordTime, final String submissionId,
+      final Configuration config) {
+    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, config);
+    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
+        .build();
+
+    Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
+    Collection<String> inputAddresses = makeInputAddresses(submission);
+
+    SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
+    Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
+    Future validatorFuture = sendToValidator(sawtoothBatch);
+    return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
   }
 
   @Override
@@ -350,7 +369,6 @@ public final class SawtoothWriteService implements WriteService {
     // Have to add dedupStateKey since that is missed in transactionOutputs
     inputAddresses.add(dedupStateAddress);
 
-
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future validatorFuture = sendToValidator(sawtoothBatch);
@@ -358,8 +376,8 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public CompletionStage<UploadPackagesResult> uploadPackages(final scala.collection.immutable.List<Archive> archives,
-      final Option<String> optionalDescription) {
+  public CompletionStage<UploadPackagesResult> uploadPackages(
+      final scala.collection.immutable.List<DamlLf.Archive> archives, final Option<String> optionalDescription) {
     String sourceDescription = "Uploaded package";
     if (optionalDescription.nonEmpty()) {
       sourceDescription = optionalDescription.get();
@@ -379,4 +397,5 @@ public final class SawtoothWriteService implements WriteService {
     return waitForSubmitResponse(sawtoothBatch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .thenApply(x -> batchTerminalToUploadPackageResult(x));
   }
+
 }
