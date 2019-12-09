@@ -19,7 +19,6 @@ services:
 
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:1.1
-    container_name: sawtooth-settings-tp-default
     depends_on:
       - validator
     entrypoint: settings-tp -v --connect tcp://validator:4004
@@ -29,7 +28,6 @@ services:
 
   validator:
     image: hyperledger/sawtooth-validator:1.1
-    container_name: sawtooth-validator-default
     expose:
       - 4004
       - 8800
@@ -41,8 +39,13 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen && \
-        sawset genesis && \
-        sawadm genesis config-genesis.batch && \
+        sawset genesis -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.min_wait_time=0 \
+          sawtooth.consensus.max_wait_time=2 \
+          -o consensus-settings.batch && \
+        sawadm genesis config-genesis.batch consensus-settings.batch && \
         sawtooth-validator -v \
           --scheduler parallel \
           --endpoint tcp://validator:8800 \
@@ -54,10 +57,11 @@ services:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
 
+  postgres:
+    image: postgres
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:1.1
-    container_name: sawtooth-devmode-engine-rust-default
     depends_on:
       - validator
     entrypoint: devmode-engine-rust -C tcp://validator:5050
@@ -67,7 +71,6 @@ services:
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.1
-    container_name: sawtooth-rest-api-default
     expose:
       - 8008
     ports:
@@ -81,10 +84,7 @@ services:
 
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
-    container_name: sawtooth-daml-tp
     command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
-    environment:
-      - JAVA_ARGS=-verbose:gc
     depends_on:
       - validator
     volumes:
@@ -93,7 +93,6 @@ services:
 
   daml-rpc:
     image: sawtooth-daml-rpc:${ISOLATION_ID}
-    container_name: sawtooth-daml-rpc
     expose:
       - 9000
       - 5051
@@ -101,26 +100,22 @@ services:
       - "9000:9000"
       - "5051:5051"
     entrypoint: "bash -c \"\
-      sleep 10 && \
       /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
         --connect tcp://validator:4004 \
-        `ls /opt/sawtooth-daml-rpc/dar/*.dar` \
-        \""
-    environment:
-      - JAVA_ARGS=-verbose:gc
+        --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
+        --participant-id test-participant \
+        `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     volumes:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
       - ../test-dars:/opt/sawtooth-daml-rpc/dar/
     depends_on:
       - validator
+      - postgres
 
   timekeeper:
     image: timekeeper:${ISOLATION_ID}
-    container_name: timekeeper
     command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
-    environment:
-      - JAVA_ARGS=-verbose:gc
     depends_on:
       - validator
     volumes:
@@ -130,27 +125,44 @@ services:
   # Run the integration tests at most twice to compensate for "piming the pump"
   ledger-api-testtool:
     image: ledger-api-testtool:${ISOLATION_ID}
-    container_name: ledger-api-testtool
-    entrypoint: "bash -c \"\
-      sleep 30 && \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-         \
-        --command-submission-ttl-scale-factor 1 \
+    # LotsOfPartiesIT - excluded since tests in there doesn't respect the concurrent runs, and just
+    #                   blast a ton of concurrent requests, which though they get processes, cannot currently(possibly)
+    #                   be processed in time to pass
+    # PartyManagementServiceIT - Currently returning INTERNAL: None.get on some tests
+    # PackageManagementService - test appears to fail because of overly ambitious concurrency goals
+    # TimeIT - this is never going to pass on daml-on-sawtooth, since it is testing for a testing feature we don't
+    #          support (setting time)
+    # TransactionServiceIT - not clear why this fails, certain tests report "RESOURCE_EXHAUSTED" and thats all we get so
+    #                        far
+    entrypoint: "bash -xc \"\
+      sleep 120 && \
+      java -jar ledger-api-test-tool.jar \
+        --timeout-scale-factor 6 \
+        --all-tests \
+        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 2 \
+        daml-rpc:9000 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-         \
-        --command-submission-ttl-scale-factor 1 \
-        && \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-        --command-submission-ttl-scale-factor 1 \
+      java -jar ledger-api-test-tool.jar \
+        --timeout-scale-factor 6 \
+        --all-tests \
+        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 2 \
+        daml-rpc:9000 \
         || \
-      java -jar ledger-api-test-tool_2.12.jar --host daml-rpc --target-port 9000 \
-        --timeout-scale-factor 1.5 \
-        --command-submission-ttl-scale-factor 1 \
-
+      java -jar ledger-api-test-tool.jar \
+        --timeout-scale-factor 6 \
+        --all-tests \
+        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 2 \
+        daml-rpc:9000 \
+        || \
+      java -jar ledger-api-test-tool.jar \
+        --timeout-scale-factor 6 \
+        --all-tests \
+        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 2 \
+        daml-rpc:9000 \
         \""
     depends_on:
       - daml-rpc

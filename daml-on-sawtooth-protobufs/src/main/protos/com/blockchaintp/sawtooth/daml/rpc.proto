@@ -24,6 +24,7 @@ message SawtoothDamlOperation {
     SawtoothDamlTransaction transaction = 1;
     SawtoothDamlParty allocateParty = 2;
   };
+  string submittingParticipant = 3;
 }
 
 /**

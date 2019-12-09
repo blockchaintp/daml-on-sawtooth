@@ -56,9 +56,9 @@ import scala.Tuple2;
  */
 public final class DamlTransactionHandler implements TransactionHandler {
 
-  private static final int DEFAULT_MAX_TTL = 40;
+  private static final int DEFAULT_MAX_TTL = 80; // 4x the TimeKeeper period
 
-  private static final int DEFAULT_MAX_CLOCK_SKEW = 19;
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; // 2x the TimeKeeper period
 
   private static final Logger LOGGER = Logger.getLogger(DamlTransactionHandler.class.getName());
 
@@ -86,16 +86,16 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throws InvalidTransactionException, InternalError {
     LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
     basicRequestChecks(tpProcessRequest);
-
     LedgerState ledgerState = new DamlLedgerState(state);
     TransactionHeader txHeader = tpProcessRequest.getHeader();
     try {
       SawtoothDamlOperation operation = SawtoothDamlOperation.parseFrom(tpProcessRequest.getPayload());
       if (operation.hasTransaction()) {
         SawtoothDamlTransaction tx = operation.getTransaction();
+        String participantId = operation.getSubmittingParticipant();
         DamlLogEntryId entryId = KeyValueCommitting.unpackDamlLogEntryId(tx.getLogEntryId());
         DamlSubmission submission = KeyValueSubmission.unpackDamlSubmission(tx.getSubmission());
-        processTransaction(ledgerState, txHeader, submission, entryId);
+        processTransaction(ledgerState, txHeader, submission, participantId, entryId);
       }
     } catch (InvalidProtocolBufferException e) {
       InvalidTransactionException ite = new InvalidTransactionException(
@@ -106,12 +106,13 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   private void processTransaction(final LedgerState ledgerState, final TransactionHeader txHeader,
-      final DamlSubmission submission, final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
+      final DamlSubmission submission, final String participantId, final DamlLogEntryId entryId)
+      throws InternalError, InvalidTransactionException {
     long fetchStateStart = System.currentTimeMillis();
     Map<DamlStateKey, Option<DamlStateValue>> stateMap = buildStateMap(ledgerState, txHeader, submission);
 
     long recordStateStart = System.currentTimeMillis();
-    recordState(ledgerState, submission, stateMap, entryId);
+    recordState(ledgerState, submission, participantId, stateMap, entryId);
 
     long processFinished = System.currentTimeMillis();
     long recordStateTime = processFinished - recordStateStart;
@@ -131,6 +132,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
    */
   private void basicRequestChecks(final TpProcessRequest tpProcessRequest)
       throws InvalidTransactionException, InternalError {
+    LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
+
     TransactionHeader header = tpProcessRequest.getHeader();
     if (header == null) {
       throw new InvalidTransactionException("Header expected");
@@ -188,25 +191,17 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return inputStatesWithOption;
   }
 
-  private Configuration getConfiguration(final LedgerState ledgerState)
-      throws InternalError, InvalidTransactionException {
-    TimeModel tm = ledgerState.getTimeModel();
-    if (tm == null) {
-      LOGGER.info("No time model set on chain using defaults");
-      // MinTxLatency set to 1 second
-      // MaxClockSkew set to .5 timekeeper clock tick - minTxLatency
-      // MaxTTL set to 2 timekeeper clock ticks
-      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
-          Duration.ofSeconds(DEFAULT_MAX_TTL));
-    }
-    LOGGER.fine(String.format("TimeModel set to %s", tm));
-    Configuration config = new Configuration(tm);
-    return config;
+  private Configuration getDefaultConfiguration() throws InternalError, InvalidTransactionException {
+    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+        Duration.ofSeconds(DEFAULT_MAX_TTL));
+    LOGGER.fine(String.format("Default TimeModel set to %s", tm));
+    Configuration blankConfiguration = new Configuration(0, tm, Option.empty(), true);
+    return blankConfiguration;
   }
 
   @Override
   public Collection<String> getNameSpaces() {
-    return Arrays.asList(new String[] {this.namespace});
+    return Arrays.asList(new String[] {this.namespace });
   }
 
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
@@ -221,8 +216,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   private void recordState(final LedgerState ledgerState, final DamlSubmission submission,
-      final Map<DamlStateKey, Option<DamlStateValue>> stateMap, final DamlLogEntryId entryId)
-      throws InternalError, InvalidTransactionException {
+      final String participantId, final Map<DamlStateKey, Option<DamlStateValue>> stateMap,
+      final DamlLogEntryId entryId)throws InternalError, InvalidTransactionException {
 
     long processStart = System.currentTimeMillis();
     String ledgerEffectiveTime = null;
@@ -236,7 +231,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
     LOGGER.info(String.format("Processing submission.  recordTime=%s, ledgerEffectiveTime=%s, maxRecordTime=%s",
         getRecordTime(ledgerState), ledgerEffectiveTime, maxRecordTime));
     Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer
-        .processSubmission(getConfiguration(ledgerState), entryId, getRecordTime(ledgerState), submission, stateMap);
+        .processSubmission(getDefaultConfiguration(), entryId, getRecordTime(ledgerState), submission, participantId,
+        stateMap);
     long recordStart = System.currentTimeMillis();
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
     ledgerState.setDamlStates(newState.entrySet());

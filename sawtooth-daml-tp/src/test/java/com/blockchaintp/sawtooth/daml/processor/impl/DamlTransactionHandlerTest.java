@@ -37,7 +37,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEn
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
-import com.digitalasset.daml_lf.DamlLf.Archive;
+import com.digitalasset.daml_lf_dev.DamlLf.Archive;
 import com.google.protobuf.ByteString;
 
 import net.bytebuddy.utility.RandomString;
@@ -192,9 +192,9 @@ public class DamlTransactionHandlerTest {
     Map<DamlStateKey, DamlStateValue> stateMap = new HashMap<>();
     DamlStateValue archiveValue = DamlStateValue.newBuilder().setArchive(archive).build();
     stateMap.put(archiveKey, archiveValue);
-    when(committer.processSubmission(any(), any(), any(), any(), any()))
-        .thenReturn(Tuple2.apply(DamlLogEntry.getDefaultInstance(), stateMap));
     try {
+      when(committer.processSubmission(any(), any(), any(), any(), any(), any()))
+          .thenReturn(Tuple2.apply(DamlLogEntry.getDefaultInstance(), stateMap));
       handler.apply(transactionRequest, state);
     } catch (InvalidTransactionException | InternalError exc) {
       exc.printStackTrace();

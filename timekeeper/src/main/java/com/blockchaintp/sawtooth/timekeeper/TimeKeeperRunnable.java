@@ -14,6 +14,7 @@ package com.blockchaintp.sawtooth.timekeeper;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -27,6 +28,7 @@ import com.blockchaintp.utils.SawtoothClientUtils;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
@@ -78,7 +80,8 @@ public final class TimeKeeperRunnable implements Runnable {
     Batch batch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(updateTransaction));
 
     try {
-      LOGGER.info("Sending a participant time update {} says {}", this.keyManager.getPublicKeyInHex(), ts.toString());
+      LOGGER.info("Sending a participant time update {} time={}", this.keyManager.getPublicKeyInHex(),
+          new Date(Timestamps.toMillis(ts)));
       sendBatch(batch);
     } catch (TimeKeeperException exc) {
       LOGGER.warn("Error updating TimeKeeper records", exc);

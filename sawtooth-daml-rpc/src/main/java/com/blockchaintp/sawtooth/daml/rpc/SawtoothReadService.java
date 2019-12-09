@@ -49,6 +49,10 @@ public class SawtoothReadService implements ReadService {
   private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
   private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
 
+  private static final int DEFAULT_MAX_TTL = 80; //4x the TimeKeeper period
+
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; //2x the TimeKeeper period
+
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
   private final String url;
@@ -60,6 +64,7 @@ public class SawtoothReadService implements ReadService {
 
   /**
    * Build a ReadService based on a zmq address URL.
+   *
    * @param zmqUrl the url of the zmq endpoint
    */
   public SawtoothReadService(final String zmqUrl) {
@@ -72,6 +77,7 @@ public class SawtoothReadService implements ReadService {
 
   /**
    * Build a ReadService based on a zmq address URL.
+   *
    * @param zmqUrl     the url of the zmq endpoint
    * @param tracer     a transaction tracer
    * @param indexReset set to true if this reader should start at the first offset
@@ -89,9 +95,9 @@ public class SawtoothReadService implements ReadService {
 
   private TimeModel parseTimeModel(final ByteString data) throws InvalidProtocolBufferException {
     ConfigurationMap cm = ConfigurationMap.parseFrom(data);
-    Duration maxClockSkew = Duration.ofMinutes(2);
-    Duration maxTtl = Duration.ofMinutes(2);
-    Duration minTransactionLatency = Duration.ofSeconds(2);
+    Duration maxClockSkew = Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW);
+    Duration maxTtl = Duration.ofSeconds(DEFAULT_MAX_TTL);
+    Duration minTransactionLatency = Duration.ofSeconds(1);
     for (ConfigurationEntry e : cm.getEntriesList()) {
       String key = e.getKey();
       String valString = e.getValue().toStringUtf8();
@@ -115,7 +121,8 @@ public class SawtoothReadService implements ReadService {
     TimeModel tm;
     if (data == null) {
       LOGGER.info("No time model set on chain using defaults");
-      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
+      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+          Duration.ofSeconds(DEFAULT_MAX_TTL));
     } else {
       try {
         tm = parseTimeModel(data);
@@ -131,8 +138,9 @@ public class SawtoothReadService implements ReadService {
     if (data != null) {
       ledgerId = data.toStringUtf8();
     }
+    Configuration blankConfiguration = new Configuration(0, tm, Option.empty(), true);
     Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
-        new LedgerInitialConditions(ledgerId, new Configuration(tm), BEGINNING_OF_EPOCH)});
+        new LedgerInitialConditions(ledgerId, blankConfiguration, BEGINNING_OF_EPOCH) });
     return Source.fromPublisher(f);
   }
 
@@ -144,7 +152,7 @@ public class SawtoothReadService implements ReadService {
     } else {
       if (this.startAtTheBeginning) {
         LOGGER.info("Starting at the beginning of the chain (offset=1-0) as requested");
-        Offset offset = new Offset(new long[] {1, 0});
+        Offset offset = new Offset(new long[] {1, 0 });
         this.handler.sendSubscribe(offset);
       } else {
         LOGGER.info(String.format("Starting event handling at wherever is current"));

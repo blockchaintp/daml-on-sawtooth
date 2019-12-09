@@ -12,6 +12,7 @@
 **/.cache-tests
 **/.externalToolBuilders
 **/.metals
+**/.scalafmt.conf
 
 # Exclude macOS system
 .DS_Store
@@ -41,3 +42,7 @@
 # exclude intellij items
 *.iml
 **/.idea
+
+# test-dars
+test-dars
+
