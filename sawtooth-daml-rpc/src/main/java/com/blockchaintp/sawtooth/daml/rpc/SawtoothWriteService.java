@@ -57,7 +57,7 @@ import com.digitalasset.daml.lf.value.Value.NodeId;
 import com.digitalasset.daml.lf.value.Value.VersionedValue;
 import com.digitalasset.daml_lf_dev.DamlLf;
 import com.digitalasset.ledger.api.health.HealthStatus;
-import com.digitalasset.ledger.api.health.Healthy$;
+import com.digitalasset.ledger.api.health.Healthy;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -430,6 +430,6 @@ public final class SawtoothWriteService implements WriteService {
 
   @Override
   public HealthStatus currentHealth() {
-    return Healthy$.MODULE$.healthy();
+    return Healthy.healthy();
   }
 }

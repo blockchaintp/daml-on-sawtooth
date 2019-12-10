@@ -373,7 +373,7 @@ public final class DamlLedgerState implements LedgerState {
       if (null == maxTtl || null == maxClockSkew || null == minTxLatency) {
         return null;
       } else {
-        return TimeModel.apply(minTxLatency, maxClockSkew, maxTtl).get();
+        return new TimeModel(minTxLatency, maxClockSkew, maxTtl);
       }
     } catch (InvalidProtocolBufferException exc) {
       InternalError internalError = new InternalError(exc.getMessage());

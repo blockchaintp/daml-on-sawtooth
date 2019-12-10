@@ -35,7 +35,6 @@ import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.daml.ledger.participant.state.v1.TimeModel;
-import com.digitalasset.daml.lf.data.Time;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -193,8 +192,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   private Configuration getDefaultConfiguration() throws InternalError, InvalidTransactionException {
-    TimeModel tm = TimeModel.apply(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
-        Duration.ofSeconds(DEFAULT_MAX_TTL)).get();
+    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+        Duration.ofSeconds(DEFAULT_MAX_TTL));
     LOGGER.fine(String.format("Default TimeModel set to %s", tm));
     Configuration blankConfiguration = new Configuration(0, tm);
     return blankConfiguration;
@@ -208,7 +207,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
     com.google.protobuf.Timestamp recordTime = ledgerState.getRecordTime();
     long micros = Timestamps.toMicros(recordTime);
-    return Time.Timestamp$.MODULE$.assertFromLong(micros);
+    return new Timestamp(micros);
   }
 
   @Override

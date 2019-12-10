@@ -26,10 +26,9 @@ import com.daml.ledger.participant.state.v1.ReadService;
 import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.v1.Update;
 import com.daml.ledger.participant.state.v1.Offset;
-import com.digitalasset.daml.lf.data.Time;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.ledger.api.health.HealthStatus;
-import com.digitalasset.ledger.api.health.Healthy$;
+import com.digitalasset.ledger.api.health.Healthy;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -56,7 +55,7 @@ public class SawtoothReadService implements ReadService {
 
   private static final int DEFAULT_MAX_CLOCK_SKEW = 40; //2x the TimeKeeper period
 
-  private static final Timestamp BEGINNING_OF_EPOCH = Time.Timestamp$.MODULE$.assertFromLong(0);
+  private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
   private final String url;
   private final ExecutorService executorService;
@@ -114,7 +113,7 @@ public class SawtoothReadService implements ReadService {
         maxTtl = Duration.parse(valString);
       }
     }
-    return TimeModel.apply(minTransactionLatency, maxClockSkew, maxTtl).get();
+    return new TimeModel(minTransactionLatency, maxClockSkew, maxTtl);
   }
 
   @Override
@@ -124,14 +123,14 @@ public class SawtoothReadService implements ReadService {
     TimeModel tm;
     if (data == null) {
       LOGGER.info("No time model set on chain using defaults");
-      tm = TimeModel.apply(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
-          Duration.ofSeconds(DEFAULT_MAX_TTL)).get();
+      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+          Duration.ofSeconds(DEFAULT_MAX_TTL));
     } else {
       try {
         tm = parseTimeModel(data);
       } catch (InvalidProtocolBufferException exc) {
         LOGGER.severe(String.format("Unparseable TimeModel data %s, using defaults", data));
-        tm = TimeModel.apply(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2)).get();
+        tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
       }
     }
     LOGGER.info(String.format("TimeModel set to %s", tm));
@@ -169,6 +168,6 @@ public class SawtoothReadService implements ReadService {
 
   @Override
   public final HealthStatus currentHealth() {
-    return Healthy$.MODULE$.healthy();
+    return Healthy.healthy();
   }
 }
