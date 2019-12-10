@@ -14,39 +14,18 @@ package com.blockchaintp.sawtooth.daml.rpc
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
-import com.codahale.metrics.SharedMetricRegistries
-import scala.concurrent.duration._
 import com.blockchaintp.utils.DirectoryKeyManager
-
-import com.daml.ledger.participant.state.v1.{
-  ParticipantId,
-  ReadService,
-  WriteService,
-  UploadPackagesResult
-}
-import com.digitalasset.ledger.api.domain.LedgerId
-import com.digitalasset.ledger.server.apiserver.{
-  ApiServer,
-  ApiServices,
-  LedgerApiServer
-}
-import com.digitalasset.daml.lf.engine.Engine
-import com.digitalasset.platform.index.{
-  StandaloneIndexServer,
-  StandaloneIndexerServer
-}
-import com.digitalasset.api.util.TimeProvider
-import com.digitalasset.platform.common.logging.NamedLoggerFactory
+import com.codahale.metrics.SharedMetricRegistries
 import com.digitalasset.daml.lf.archive.DarReader
 import com.digitalasset.daml_lf_dev.DamlLf.Archive
 import com.digitalasset.ledger.api.auth.AuthServiceWildcard
-import java.util.concurrent.CompletionStage;
-
+import com.digitalasset.platform.common.logging.NamedLoggerFactory
+import com.digitalasset.platform.index.{StandaloneIndexServer, StandaloneIndexerServer}
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContext, Await, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -92,27 +71,30 @@ object SawtoothDamlRpc extends App {
     for {
       dar <- DarReader { case (_, x) => Try(Archive.parseFrom(x)) }
         .readArchiveFromFile(file)
-    } yield writeService.uploadPackages(
-      dar.all,
-      Some("uploaded on participant startup")
-    )
+    } yield
+      writeService.uploadPackages(
+        dar.all,
+        Some("uploaded on participant startup")
+      )
   }
 
   val indexer = Await.result(
     StandaloneIndexerServer(
       readService,
       config.makePlatformConfig,
-      NamedLoggerFactory.forParticipant(config.participantId)
+      NamedLoggerFactory.forParticipant(config.participantId),
+      SharedMetricRegistries.getOrCreate(s"ledger-api-server-${config.participantId}")
     ),
     30 second
   )
   val indexServer = Await.result(
-    StandaloneIndexServer(
+    new StandaloneIndexServer(
       config.makePlatformConfig,
       readService,
       writeService,
       authService,
-      NamedLoggerFactory.forParticipant(config.participantId)
+      NamedLoggerFactory.forParticipant(config.participantId),
+      SharedMetricRegistries.getOrCreate(s"indexer-${config.participantId}")
     ).start(),
     60 second
   )
@@ -131,12 +113,11 @@ object SawtoothDamlRpc extends App {
   try {
     Runtime.getRuntime.addShutdownHook(new Thread(() => closeServer()))
   } catch {
-    case NonFatal(t) => {
+    case NonFatal(t) =>
       logger.error(
         "Shutting down Sandbox application because of initialization error",
         t
       )
       closeServer()
-    }
   }
 }

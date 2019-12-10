@@ -25,16 +25,19 @@ import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
-import com.daml.ledger.participant.state.backport.TimeModel;
 import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
+import com.daml.ledger.participant.state.kvutils.Err;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
+import com.daml.ledger.participant.state.v1.TimeModel;
+import com.daml.ledger.participant.state.v1.TimeModel$;
+import com.digitalasset.daml.lf.data.Time;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -192,10 +195,10 @@ public final class DamlTransactionHandler implements TransactionHandler {
   }
 
   private Configuration getDefaultConfiguration() throws InternalError, InvalidTransactionException {
-    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
-        Duration.ofSeconds(DEFAULT_MAX_TTL));
+    TimeModel tm = TimeModel.apply(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+        Duration.ofSeconds(DEFAULT_MAX_TTL)).get();
     LOGGER.fine(String.format("Default TimeModel set to %s", tm));
-    Configuration blankConfiguration = new Configuration(0, tm, Option.empty(), true);
+    Configuration blankConfiguration = new Configuration(0, tm);
     return blankConfiguration;
   }
 
@@ -204,10 +207,10 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return Arrays.asList(new String[] {this.namespace });
   }
 
-  private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
+  private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError, IllegalArgumentException {
     com.google.protobuf.Timestamp recordTime = ledgerState.getRecordTime();
     long micros = Timestamps.toMicros(recordTime);
-    return new Timestamp(micros);
+    return Time.Timestamp$.MODULE$.assertFromLong(micros);
   }
 
   @Override
