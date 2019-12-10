@@ -20,7 +20,12 @@ import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.rpc.events.DamlLogEventHandler;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
-import com.daml.ledger.participant.state.v1.*;
+import com.daml.ledger.participant.state.v1.Configuration;
+import com.daml.ledger.participant.state.v1.LedgerInitialConditions;
+import com.daml.ledger.participant.state.v1.ReadService;
+import com.daml.ledger.participant.state.v1.TimeModel;
+import com.daml.ledger.participant.state.v1.Update;
+import com.daml.ledger.participant.state.v1.Offset;
 import com.digitalasset.daml.lf.data.Time;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.ledger.api.health.HealthStatus;
@@ -137,8 +142,7 @@ public class SawtoothReadService implements ReadService {
       ledgerId = data.toStringUtf8();
     }
     Configuration blankConfiguration = new Configuration(0, tm);
-    Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
-        new LedgerInitialConditions(ledgerId, blankConfiguration, BEGINNING_OF_EPOCH) });
+    var f = Flowable.fromArray(new LedgerInitialConditions(ledgerId, blankConfiguration, BEGINNING_OF_EPOCH));
     return Source.fromPublisher(f);
   }
 
@@ -153,7 +157,7 @@ public class SawtoothReadService implements ReadService {
         Offset offset = new Offset(new long[] {1, 0 });
         this.handler.sendSubscribe(offset);
       } else {
-        LOGGER.info(String.format("Starting event handling at wherever is current"));
+        LOGGER.info("Starting event handling at wherever is current");
         this.handler.sendSubscribe();
       }
     }
@@ -164,7 +168,7 @@ public class SawtoothReadService implements ReadService {
   }
 
   @Override
-  public HealthStatus currentHealth() {
+  public final HealthStatus currentHealth() {
     return Healthy$.MODULE$.healthy();
   }
 }

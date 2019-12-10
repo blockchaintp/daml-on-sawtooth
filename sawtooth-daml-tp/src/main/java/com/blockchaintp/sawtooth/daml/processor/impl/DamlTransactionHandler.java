@@ -31,12 +31,10 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
-import com.daml.ledger.participant.state.kvutils.Err;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.daml.ledger.participant.state.v1.TimeModel;
-import com.daml.ledger.participant.state.v1.TimeModel$;
 import com.digitalasset.daml.lf.data.Time;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
@@ -207,7 +205,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return Arrays.asList(new String[] {this.namespace });
   }
 
-  private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError, IllegalArgumentException {
+  private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
     com.google.protobuf.Timestamp recordTime = ledgerState.getRecordTime();
     long micros = Timestamps.toMicros(recordTime);
     return Time.Timestamp$.MODULE$.assertFromLong(micros);

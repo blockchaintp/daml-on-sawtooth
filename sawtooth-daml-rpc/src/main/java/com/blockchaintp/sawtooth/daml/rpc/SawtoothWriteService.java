@@ -143,8 +143,9 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
-      final Option<String> displayName) {
+  public CompletionStage<SubmissionResult> allocateParty(final Option<String> hint,
+                                                         final Option<String> displayName,
+                                                         final String submissionId) {
 
     String submissionId = UUID.randomUUID().toString();
 
@@ -359,8 +360,11 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public CompletionStage<SubmissionResult> submitConfiguration(final Timestamp maxRecordTime, final String submissionId, final Configuration config) {
-    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, participantId, config);
+  public CompletionStage<SubmissionResult> submitConfiguration(final Timestamp maxRecordTime,
+                                                               final String submissionId,
+                                                               final Configuration config) {
+    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(
+            maxRecordTime, submissionId, participantId, config);
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
         .build();
 

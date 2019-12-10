@@ -17,8 +17,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -373,7 +373,7 @@ public final class DamlLedgerState implements LedgerState {
       if (null == maxTtl || null == maxClockSkew || null == minTxLatency) {
         return null;
       } else {
-        return new TimeModel(minTxLatency, maxClockSkew, maxTtl);
+        return TimeModel.apply(minTxLatency, maxClockSkew, maxTtl).get();
       }
     } catch (InvalidProtocolBufferException exc) {
       InternalError internalError = new InternalError(exc.getMessage());
