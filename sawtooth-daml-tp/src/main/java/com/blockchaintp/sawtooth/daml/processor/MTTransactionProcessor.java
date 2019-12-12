@@ -17,8 +17,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,7 +25,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import sawtooth.sdk.messaging.Future;
-import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.StreamContext;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -45,6 +42,8 @@ import sawtooth.sdk.protobuf.TpRegisterRequest;
  */
 public class MTTransactionProcessor implements Runnable {
 
+  private static final int LOG_METRICS_INTERVAL = 1000;
+
   private static final int DEFAULT_MAX_THREADS = 10;
 
   private static final Logger LOGGER = Logger.getLogger(MTTransactionProcessor.class.getName());
@@ -53,13 +52,14 @@ public class MTTransactionProcessor implements Runnable {
 
   private BlockingQueue<Map.Entry<String, TpProcessResponse>> outQueue;
 
-  private Stream stream;
+  private ZmqStream stream;
 
   private ExecutorService executor;
 
   /**
    * Constructs a MTTransactionProcessor utilizing the given transaction handler.
    * NOTE: The TransactionHandler.apply() method must be thread-safe.
+   *
    * @param txHandler The handler to apply to this processor
    * @param address   the address of the ZMQ stream
    */
@@ -73,52 +73,53 @@ public class MTTransactionProcessor implements Runnable {
   @Override
   public final void run() {
     boolean stopped = false;
-    try {
-      this.register();
-      int outStandingTx = 0;
-      while (!stopped) {
-        int enqueueCount = 0;
-        int dequeueCount = 0;
-        try {
-          Message inMessage = this.stream.receive(1);
-          while (inMessage != null) {
-            if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
-              LOGGER.fine("Recieved Ping Message.");
-              PingResponse pingResponse = PingResponse.newBuilder().build();
-              this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
-                  pingResponse.toByteString());
-            } else {
-              Runnable processMessage = new ProcessRunnable(inMessage, this.handler, this.outQueue);
-              this.executor.submit(processMessage);
-              enqueueCount++;
-              inMessage = this.stream.receive(1);
-            }
-          }
-          if (inMessage == null) {
-            // Then the validator has disconnected and we need to reregister.
-            this.register();
-          }
-        } catch (TimeoutException e) {
-          LOGGER.log(Level.FINER, "Nothing to process on this iteration.");
-        }
-        Map.Entry<String, TpProcessResponse> outPair = outQueue.poll(1, TimeUnit.MILLISECONDS);
-        while (outPair != null) {
-          this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(),
-              outPair.getValue().toByteString());
-          dequeueCount++;
-          outPair = outQueue.poll(1, TimeUnit.MILLISECONDS);
-        }
-        outStandingTx += enqueueCount;
-        outStandingTx -= dequeueCount;
-        if (enqueueCount > 0 || dequeueCount > 0 || outStandingTx > 0) {
-          LOGGER.info(String.format("Enqueued %s transactions, Dequeued %s responses, outStanding tx=%s", enqueueCount,
-              dequeueCount, outStandingTx));
-        }
+    this.register();
+    long outStandingTx = 0;
+    long enqueueCount = 0;
+    long dequeueCount = 0;
+  while (!stopped) {
+      Message inMessage = this.stream.receiveNoException(1);
+      while (inMessage != null) {
+        enqueueCount += handleInbound(inMessage);
+        Map.Entry<String, TpProcessResponse> outPair = outQueue.poll();
+        dequeueCount += handleOutbound(outPair);
+        inMessage = this.stream.receiveNoException(1);
       }
-    } catch (InterruptedException e) {
-      LOGGER.info("Processor interrupted, shutting down");
+      Map.Entry<String, TpProcessResponse> outPair = outQueue.poll();
+      while (outPair != null) {
+        dequeueCount += handleOutbound(outPair);
+        outPair = outQueue.poll();
+      }
+      outStandingTx = enqueueCount - dequeueCount;
+      if (enqueueCount % LOG_METRICS_INTERVAL == 0) {
+        LOGGER.info(String.format("Enqueued %s transactions, Dequeued %s responses, outStanding tx=%s", enqueueCount,
+            dequeueCount, outStandingTx));
+      }
     }
 
+  }
+
+  private int handleOutbound(final Map.Entry<String, TpProcessResponse> outPair) {
+    if (outPair != null) {
+      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(),
+          outPair.getValue().toByteString());
+      return 1;
+    }
+    return 0;
+  }
+
+  private int handleInbound(final Message inMessage) {
+    if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
+      LOGGER.fine("Recieved Ping Message.");
+      PingResponse pingResponse = PingResponse.newBuilder().build();
+      this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
+          pingResponse.toByteString());
+      return 0;
+    } else {
+      Runnable processMessage = new ProcessRunnable(inMessage, this.handler, this.outQueue);
+      this.executor.submit(processMessage);
+      return 1;
+    }
   }
 
   private void register() {
@@ -128,7 +129,7 @@ public class MTTransactionProcessor implements Runnable {
       try {
         TpRegisterRequest registerRequest = TpRegisterRequest.newBuilder()
             .setFamily(this.handler.transactionFamilyName()).addAllNamespaces(this.handler.getNameSpaces())
-            .setVersion(this.handler.getVersion()).setMaxOccupancy(2).build();
+            .setVersion(this.handler.getVersion()).setMaxOccupancy(Runtime.getRuntime().availableProcessors()).build();
         Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
         fut.getResult();
         registered = true;

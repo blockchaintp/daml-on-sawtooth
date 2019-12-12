@@ -24,6 +24,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
@@ -94,6 +97,18 @@ public final class SawtoothWriteService implements WriteService {
   private final String participantId;
 
   private ExecutorService watchThreadPool = Executors.newWorkStealingPool();
+
+  /**
+   * Lock associated with the Condition.
+   */
+  private final Lock lock = new ReentrantLock();
+
+  /**
+   * Condition to wait for setup to happen.
+   */
+  private final Condition condition = lock.newCondition();
+
+  private int outstandingBatches = 0;
 
   /**
    * Construct a SawtoothWriteService instance from a concrete stream.
@@ -229,7 +244,6 @@ public final class SawtoothWriteService implements WriteService {
 
   private Future sendToValidator(final Batch batch) {
     // Push to TraceTransaction class
-
     try {
       Printer includingDefaultValueFields = JsonFormat.printer().preservingProtoFieldNames()
           .includingDefaultValueFields();
@@ -239,15 +253,21 @@ public final class SawtoothWriteService implements WriteService {
       // Can't do anything so not passing information to tracer
     }
 
+    lock.lock();
+
+    while (this.outstandingBatches > Runtime.getRuntime().availableProcessors()) {
+      this.condition.awaitUninterruptibly();
+    }
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
-        cbsReq.toByteString());
+    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
+    this.outstandingBatches++;
+    this.lock.unlock();
     return streamToValidator;
   }
 
-  private CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
-      final Batch batch, final Future streamToValidator) {
+  private CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(final Batch batch,
+      final Future streamToValidator) {
     return CompletableFuture.supplyAsync(() -> {
       try {
         return submissionToResponse(batch.getHeaderSignature(), streamToValidator);
@@ -260,6 +280,10 @@ public final class SawtoothWriteService implements WriteService {
 
   private SubmissionResult batchSubmitToSubmissionResult(
       final Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
+    lock.lock();
+    this.outstandingBatches--;
+    this.condition.signalAll();
+    lock.unlock();
     switch (submission.getValue()) {
     case OK:
       return new SubmissionResult.Acknowledged$();
@@ -301,18 +325,29 @@ public final class SawtoothWriteService implements WriteService {
             consolidatedStatus = thisStatus.getStatus();
           }
         }
+        this.lock.lock();
         switch (consolidatedStatus) {
         case COMMITTED:
+          this.outstandingBatches--;
+          this.condition.signalAll();
+          lock.unlock();
           return Map.entry(batchid, ClientBatchStatus.Status.COMMITTED);
         case INVALID:
+          this.outstandingBatches--;
+          this.condition.signalAll();
+          lock.unlock();
           return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
         case UNKNOWN:
         case PENDING:
         default:
         }
       } catch (InvalidProtocolBufferException | InterruptedException | ValidatorConnectionError e) {
+        this.outstandingBatches--;
+        this.condition.signalAll();
+        lock.unlock();
         return Map.entry(batchid, ClientBatchStatus.Status.UNKNOWN);
       }
+      this.lock.unlock();
     }
   }
 
