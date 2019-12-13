@@ -44,8 +44,6 @@ public class MTTransactionProcessor implements Runnable {
 
   private static final int LOG_METRICS_INTERVAL = 1000;
 
-  private static final int DEFAULT_MAX_THREADS = 10;
-
   private static final Logger LOGGER = Logger.getLogger(MTTransactionProcessor.class.getName());
 
   private TransactionHandler handler;

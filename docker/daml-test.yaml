@@ -43,7 +43,7 @@ services:
           -o config-genesis.batch && \
         sawset proposal create -k /etc/sawtooth/keys/validator.priv \
           sawtooth.consensus.min_wait_time=0 \
-          sawtooth.consensus.max_wait_time=2 \
+          sawtooth.consensus.max_wait_time=0 \
           -o consensus-settings.batch && \
         sawadm genesis config-genesis.batch consensus-settings.batch && \
         sawtooth-validator -v \
@@ -135,33 +135,33 @@ services:
     # TransactionServiceIT - not clear why this fails, certain tests report "RESOURCE_EXHAUSTED" and thats all we get so
     #                        far
     entrypoint: "bash -xc \"\
-      sleep 120 && \
+      sleep 60 && \
       java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 6 \
+        --timeout-scale-factor 4 \
         --all-tests \
-        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 2 \
+        --exclude TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 1 \
         daml-rpc:9000 \
         || \
       java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 6 \
+        --timeout-scale-factor 4 \
         --all-tests \
-        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 2 \
+        --exclude TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 1 \
         daml-rpc:9000 \
         || \
       java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 6 \
+        --timeout-scale-factor 4 \
         --all-tests \
-        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 2 \
+        --exclude TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 1 \
         daml-rpc:9000 \
         || \
       java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 6 \
+        --timeout-scale-factor 4 \
         --all-tests \
-        --exclude LotsOfPartiesIT,PartyManagementServiceIT,PackageManagementServiceIT,TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 2 \
+        --exclude TimeIT,TransactionServiceIT \
+        --concurrent-test-runs 1 \
         daml-rpc:9000 \
         \""
     depends_on:

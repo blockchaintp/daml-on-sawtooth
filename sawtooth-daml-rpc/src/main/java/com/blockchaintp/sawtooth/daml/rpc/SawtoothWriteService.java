@@ -256,7 +256,7 @@ public final class SawtoothWriteService implements WriteService {
           .includingDefaultValueFields();
       String txnInJson = includingDefaultValueFields.print(batch);
       this.sawtoothTransactionsTracer.putWriteTransactions(txnInJson);
-    } catch (Exception e) {
+    } catch (Throwable e) {
       // Can't do anything so not passing information to tracer
     }
 
@@ -285,17 +285,13 @@ public final class SawtoothWriteService implements WriteService {
     }, watchThreadPool);
   }
 
-  private SubmissionResult batchSubmitToSubmissionResult(
-      final Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
-    lock.lock();
-    this.outstandingBatches--;
-    this.condition.signalAll();
-    lock.unlock();
+  private SubmissionResult batchTerminalToSubmissionResult(
+      final Map.Entry<String, ClientBatchStatus.Status> submission) {
     switch (submission.getValue()) {
-    case OK:
+    case COMMITTED:
       return new SubmissionResult.Acknowledged$();
-    case QUEUE_FULL:
-      return new SubmissionResult.Overloaded$();
+    case INVALID:
+      return new SubmissionResult.InternalError("Invalid transaction was submitted");
     default:
       return new SubmissionResult.Overloaded$();
     }
@@ -390,7 +386,9 @@ public final class SawtoothWriteService implements WriteService {
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future validatorFuture = sendToValidator(sawtoothBatch);
-    return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
+    return waitForSubmitResponse(sawtoothBatch, validatorFuture)
+        .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+        .thenApply(x -> batchTerminalToSubmissionResult(x));
   }
 
   @Override
@@ -414,7 +412,9 @@ public final class SawtoothWriteService implements WriteService {
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future validatorFuture = sendToValidator(sawtoothBatch);
-    return waitForSubmitResponse(sawtoothBatch, validatorFuture).thenApply(x -> batchSubmitToSubmissionResult(x));
+    return waitForSubmitResponse(sawtoothBatch, validatorFuture)
+        .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+        .thenApply(x -> batchTerminalToSubmissionResult(x));
   }
 
   @Override
