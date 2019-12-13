@@ -146,10 +146,17 @@ public final class SawtoothWriteService implements WriteService {
       final Option<String> displayName) {
 
     String submissionId = UUID.randomUUID().toString();
+
+    String finalHint;
+    if (hint.isEmpty()) {
+      finalHint = submissionId;
+    } else {
+      finalHint = hint.get();
+    }
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
         .build();
 
-    DamlSubmission submission = KeyValueSubmission.partyToSubmission(submissionId, hint, displayName,
+    DamlSubmission submission = KeyValueSubmission.partyToSubmission(submissionId, Option.apply(finalHint), displayName,
         getParticipantId());
 
     Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
@@ -158,7 +165,7 @@ public final class SawtoothWriteService implements WriteService {
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch batch = operationToBatch(operation, inputAddresses, outputAddresses);
 
-    final PartyDetails details = new PartyDetails(hint.get(), displayName, false);
+    final PartyDetails details = new PartyDetails(finalHint, displayName, false);
     Future fut = sendToValidator(batch);
     return waitForSubmitResponse(batch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
         .<PartyAllocationResult>thenApply(result -> {
