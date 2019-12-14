@@ -19,6 +19,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.codahale.metrics.SharedMetricRegistries
 import scala.concurrent.duration._
 import com.blockchaintp.utils.DirectoryKeyManager
+import com.digitalasset.jwt.{HMAC256Verifier, JwksVerifier, RSA256Verifier}
 
 import com.daml.ledger.participant.state.v1.{
   ParticipantId,
@@ -86,7 +87,7 @@ object SawtoothDamlRpc extends App {
   )
   val readService = new SawtoothReadService(validatorAddress, swTxnTracer, true)
   //Replace this with a key based JWT service
-  val authService = AuthServiceWildcard
+  //val authService = AuthServiceJWT(RSA256Verifier.fromCrtFile(path))
 
   config.archiveFiles.foreach { file =>
     for {
