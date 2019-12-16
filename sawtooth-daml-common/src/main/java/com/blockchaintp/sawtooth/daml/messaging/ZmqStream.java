@@ -148,6 +148,26 @@ public class ZmqStream implements Stream {
     return result.getMessage();
   }
 
+
+  /**
+   * Get a message that has been received. If the timeout is expired, return null.
+   * Also put the resolution of the timer down to millis.
+   * @param timeout time to wait for a message.
+   * @return result, a protobuf Message
+   */
+  public final Message receiveNoException(final long timeout) {
+    SendReceiveThread.MessageWrapper result = null;
+    try {
+      result = this.receiveQueue.poll(timeout, TimeUnit.MILLISECONDS);
+      if (result == null) {
+        return null;
+      }
+    } catch (InterruptedException ie) {
+      return null;
+    }
+    return result.getMessage();
+
+  }
   /**
    * generate a random String, to correlate sent messages. with futures
    * @return a random String
