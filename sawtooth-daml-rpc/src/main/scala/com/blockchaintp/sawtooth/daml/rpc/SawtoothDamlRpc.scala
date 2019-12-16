@@ -19,7 +19,6 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.codahale.metrics.SharedMetricRegistries
 import scala.concurrent.duration._
 import com.blockchaintp.utils.DirectoryKeyManager
-import com.digitalasset.jwt.{HMAC256Verifier, JwksVerifier, RSA256Verifier}
 
 import com.daml.ledger.participant.state.v1.{
   ParticipantId,
@@ -43,6 +42,8 @@ import com.digitalasset.platform.common.logging.NamedLoggerFactory
 import com.digitalasset.daml.lf.archive.DarReader
 import com.digitalasset.daml_lf_dev.DamlLf.Archive
 import com.digitalasset.ledger.api.auth.AuthServiceWildcard
+import com.digitalasset.ledger.api.auth.AuthServiceJWT
+import com.digitalasset.jwt.{HMAC256Verifier, JwksVerifier, RSA256Verifier}
 import java.util.concurrent.CompletionStage;
 
 import org.slf4j.LoggerFactory
@@ -87,7 +88,8 @@ object SawtoothDamlRpc extends App {
   )
   val readService = new SawtoothReadService(validatorAddress, swTxnTracer, true)
   //Replace this with a key based JWT service
-  //val authService = AuthServiceJWT(RSA256Verifier.fromCrtFile(path))
+  var url = "http://keypairstore"
+  val authService = AuthServiceJWT(JwksVerifier(url))
 
   config.archiveFiles.foreach { file =>
     for {
