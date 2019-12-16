@@ -44,7 +44,6 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
-import com.daml.ledger.participant.state.v1.PartyAllocationResult;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
@@ -147,15 +146,15 @@ public final class SawtoothWriteService implements WriteService {
                                                          final Option<String> displayName,
                                                          final String submissionId) {
 
-    String submissionId = UUID.randomUUID().toString();
+    String randomPartyId = UUID.randomUUID().toString();
 
     String finalHint;
     if (hint.isEmpty()) {
-      finalHint = submissionId;
+      finalHint = randomPartyId;
     } else {
       finalHint = hint.get();
     }
-    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
+    DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(randomPartyId))
         .build();
 
     DamlSubmission submission = KeyValueSubmission.partyToSubmission(submissionId, Option.apply(finalHint), displayName,
@@ -166,21 +165,10 @@ public final class SawtoothWriteService implements WriteService {
 
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch batch = operationToBatch(operation, inputAddresses, outputAddresses);
-
-    final PartyDetails details = new PartyDetails(finalHint, displayName, false);
     Future fut = sendToValidator(batch);
-    return waitForSubmitResponse(batch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
-        .<PartyAllocationResult>thenApply(result -> {
-          switch (result.getValue()) {
-          case COMMITTED:
-            return new PartyAllocationResult.Ok(details);
-          case INVALID:
-            return new PartyAllocationResult.AlreadyExists$();
-          case UNKNOWN:
-          default:
-            return new PartyAllocationResult.InvalidName(String.format("%s is not a valid party id", hint.get()));
-          }
-        });
+    return waitForSubmitResponse(batch, fut)
+            .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+            .thenApply(x -> batchTerminalToSubmissionResult(x));
   }
 
   /**
@@ -282,15 +270,15 @@ public final class SawtoothWriteService implements WriteService {
     }, watchThreadPool);
   }
 
-  private SubmissionResult batchSubmitToSubmissionResult(
-      final Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
+  private SubmissionResult batchTerminalToSubmissionResult(
+          final Map.Entry<String, ClientBatchStatus.Status> submission) {
     switch (submission.getValue()) {
-    case OK:
-      return new SubmissionResult.Acknowledged$();
-    case QUEUE_FULL:
-      return new SubmissionResult.Overloaded$();
-    default:
-      return new SubmissionResult.Overloaded$();
+      case COMMITTED:
+        return new SubmissionResult.Acknowledged$();
+      case INVALID:
+        return new SubmissionResult.InternalError("Invalid transaction was submitted");
+      default:
+        return new SubmissionResult.Overloaded$();
     }
   }
 
@@ -401,8 +389,8 @@ public final class SawtoothWriteService implements WriteService {
     Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future validatorFuture = sendToValidator(sawtoothBatch);
     return waitForSubmitResponse(sawtoothBatch, validatorFuture)
-        .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
-        .thenApply(x -> batchTerminalToSubmissionResult(x));
+            .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+            .thenApply(x -> batchTerminalToSubmissionResult(x));
   }
 
   @Override
