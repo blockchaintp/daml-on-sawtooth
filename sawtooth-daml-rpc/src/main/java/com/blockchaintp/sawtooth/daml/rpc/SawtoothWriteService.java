@@ -247,19 +247,27 @@ public final class SawtoothWriteService implements WriteService {
           .includingDefaultValueFields();
       String txnInJson = includingDefaultValueFields.print(batch);
       this.sawtoothTransactionsTracer.putWriteTransactions(txnInJson);
-    } catch (Exception e) {
+    } catch (Throwable e) {
       // Can't do anything so not passing information to tracer
+    }
+
+    lock.lock();
+
+    while (this.outstandingBatches > Runtime.getRuntime().availableProcessors()) {
+      this.condition.awaitUninterruptibly();
     }
 
     LOGGER.info(String.format("Batch submission %s", batch.getHeaderSignature()));
     ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
     Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
         cbsReq.toByteString());
+    this.outstandingBatches++;
+    this.lock.unlock();
     return streamToValidator;
   }
 
-  private CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(
-      final Batch batch, final Future streamToValidator) {
+  private CompletionStage<Map.Entry<String, ClientBatchSubmitResponse.Status>> waitForSubmitResponse(final Batch batch,
+      final Future streamToValidator) {
     return CompletableFuture.supplyAsync(() -> {
       try {
         return submissionToResponse(batch.getHeaderSignature(), streamToValidator);
@@ -313,18 +321,29 @@ public final class SawtoothWriteService implements WriteService {
             consolidatedStatus = thisStatus.getStatus();
           }
         }
+        this.lock.lock();
         switch (consolidatedStatus) {
         case COMMITTED:
+          this.outstandingBatches--;
+          this.condition.signalAll();
+          lock.unlock();
           return Map.entry(batchid, ClientBatchStatus.Status.COMMITTED);
         case INVALID:
+          this.outstandingBatches--;
+          this.condition.signalAll();
+          lock.unlock();
           return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
         case UNKNOWN:
         case PENDING:
         default:
         }
       } catch (InvalidProtocolBufferException | InterruptedException | ValidatorConnectionError e) {
+        this.outstandingBatches--;
+        this.condition.signalAll();
+        lock.unlock();
         return Map.entry(batchid, ClientBatchStatus.Status.UNKNOWN);
       }
+      this.lock.unlock();
     }
   }
 
