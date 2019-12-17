@@ -17,7 +17,7 @@
 
 
 pipeline {
-  agent any
+  agent { node { label 'worker' } }
 
   triggers {cron('H H * * *')}
 
