@@ -137,6 +137,13 @@
       <version>3.8.3</version>
     </dependency>
 
+    <!-- JCE -->
+    <dependency>
+        <groupId>bouncycastle</groupId>
+        <artifactId>bouncycastle-jce-jdk13</artifactId>
+        <version>112</version>
+    </dependency>
+
     <!-- Hyperledger Sawtooth -->
 
     <!-- Apache Commons -->
