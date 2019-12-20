@@ -74,7 +74,8 @@ services:
           --bind consensus:tcp://eth0:5050 \
           --bind network:tcp://eth0:8800 \
         \""
-
+    volumes:
+      - ../keys:/etc/sawtooth/keys
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:1.1
@@ -118,6 +119,7 @@ services:
         `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     volumes:
       - ../test-dars:/opt/sawtooth-daml-rpc/dar/
+      - ../keys:/opt/sawtooth-daml-rpc/keys
     depends_on:
       - validator
       - postgres

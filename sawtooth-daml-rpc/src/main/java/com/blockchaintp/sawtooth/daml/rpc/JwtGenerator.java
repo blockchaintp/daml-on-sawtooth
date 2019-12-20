@@ -32,7 +32,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 
 import akka.protobuf.ByteString;
 
-import org.json.JSONArray;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -58,8 +58,8 @@ public class JwtGenerator {
   public String generateToken() {
     Algorithm ecdsa512Algorithm = Algorithm.ECDSA256(null, this.privateKey);
     
-    JSONArray jsonaActAs = (JSONArray) this.jsonObject.get("ActAs");
-    String[] actAs = new String[jsonaActAs.toList().size()];
+    JSONArray jsonaActAs = (JSONArray) this.jsonObject.get("actAs");
+    String[] actAs = new String[jsonaActAs.size()];
     int index = 0;
     for (Object value : actAs){
         actAs[index] = (String) value;
@@ -67,18 +67,23 @@ public class JwtGenerator {
     }
 
     JSONArray jsonReadAs = (JSONArray) this.jsonObject.get("readAs");
-    String[] readAs = new String[jsonReadAs.toList().size()];
+    String[] readAs = new String[jsonReadAs.size()];
     index = 0;
     for (Object value : readAs){
         readAs[index] = (String) value;
         index++;
     }
 
+    String ledgerId = (String) this.jsonObject.get("ledgerId");
+    String participantId = (String) this.jsonObject.get("participantId");
+    String applicationId = (String) this.jsonObject.get("applicationId");
+    Long exp = (Long) this.jsonObject.get("exp");
+
     String token = JWT.create()
-        .withClaim("ledgerId", (String) this.jsonObject.get("ledgerId"))
-        .withClaim("participantId", (String) this.jsonObject.get("participantId"))
-        .withClaim("applicationId", (String) this.jsonObject.get("applicationId"))
-        .withClaim("exp", (String) this.jsonObject.get("exp"))
+        .withClaim("ledgerId", ledgerId)
+        .withClaim("participantId", participantId)
+        .withClaim("applicationId", applicationId)
+        .withClaim("exp", exp)
         .withArrayClaim("actAs", actAs) 
         .withArrayClaim("readAs", readAs) 
         .sign(ecdsa512Algorithm);
