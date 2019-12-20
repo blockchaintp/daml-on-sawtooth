@@ -122,7 +122,7 @@ public class JwtGenerator {
     String pathToPayloadSpec = null;
 
     if (args.length != 4) {
-        System.out.println("Usage JwtGenerator -pk <path to private key> -claim <claim spec in json>");
+        System.out.println("Usage: jwtgenerator.sh -pk <path to private key> -claim <claim spec in json>");
         System.exit(1);
     }
 
