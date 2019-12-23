@@ -88,6 +88,50 @@ router:
 
 You will now need to start your browser with this url `http://localhost:{port-of-your-choice}`.
 
+## Authentication service
+
+With the authentication service in place, you will need to get appropriate token inject it into your your client such as `daml navigator`.
+
+When you run `daml-on-sawtooth`, run the following command to extract a token:
+
+STEP 1: Run the command to give you access to a `daml-on-sawtooth` cli:
+```
+  docker exec -it sawtooth-daml-rpc /bin/bash
+```
+
+STEP 2: In the `daml-on-sawtooth` cli, run the command:
+```
+  root@<generated-id>:/opt/sawtooth-daml-rpc# ls -l
+```
+and you will see the following:
+```
+-rw-r--r-- 1 root root   211 Dec 20 16:32 claims.json
+drwxr-xr-x 2 root root    64 Dec 20 14:51 dar
+-rwxr-xr-x 1 root root   655 Dec  9 10:13 entrypoint.sh
+-rwxr-xr-x 1 root root   809 Dec 20 14:55 jwtgenerator.sh
+drwxr-xr-x 4 root root   128 Dec 20 17:03 keys
+drwxr-xr-x 2 root root 12288 Dec 23 15:50 lib
+-rw-r--r-- 1 root root 66468 Dec 23 15:50 sawtooth-daml-rpc-0.0.1-SNAPSHOT.jar
+```
+You will notice that there is a folder named `keys`. This will contain the appropriate key pair.
+
+STEP 3: In the cli, run the command:
+```
+  ./jwtgenerator.sh -pk ./keys/validator.priv -claim ./claims.json
+```
+NOTE: `daml-on-sawtooth` comes with default private key and default claims json configuration. Please use this default values for now.
+
+STEP 4: The `daml-on-sawtooth` cli will display a string representation of the Token/
+```
+root@ee2dcd0c53d1:/opt/sawtooth-daml-rpc# ./jwtgenerator.sh -pk ./keys/validator.priv -claim ./claims.json
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJsZWRnZXJJZCI6ImFhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhY3RBcyI6W251bGxdLCJleHAiOjEzMDA4MTkzODAsInJlYWRBcyI6W251bGwsbnVsbF19.Gm9-dXUEpQORss_zGMP3TKQEiiUkDMtJpyftZGD9gLrWWGRKYfDdXa5QWhslff_YQs0UIDvQ2TFapep0UJXMAg
+```
+
+STEP 5: Copy the token string and copy the value into a file (e.g. `token.txt`). Load it to daml naviator via this command:
+```
+  daml ledger navigator --host localhost --port 9000 --access-token-file <path-to-token-file>
+```
+
 ## License
 
 daml-on-sawtooth is open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
