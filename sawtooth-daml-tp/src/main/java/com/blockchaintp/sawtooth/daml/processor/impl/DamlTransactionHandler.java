@@ -25,7 +25,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
-import com.daml.ledger.participant.state.backport.TimeModel;
+import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -195,7 +195,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
         Duration.ofSeconds(DEFAULT_MAX_TTL));
     LOGGER.fine(String.format("Default TimeModel set to %s", tm));
-    Configuration blankConfiguration = new Configuration(0, tm, Option.empty(), true);
+    Configuration blankConfiguration = new Configuration(0, tm);
     return blankConfiguration;
   }
 

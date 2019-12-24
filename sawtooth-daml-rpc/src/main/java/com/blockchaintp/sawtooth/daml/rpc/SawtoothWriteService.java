@@ -44,11 +44,9 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
-import com.daml.ledger.participant.state.v1.PartyAllocationResult;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
 import com.daml.ledger.participant.state.v1.SubmitterInfo;
 import com.daml.ledger.participant.state.v1.TransactionMeta;
-import com.daml.ledger.participant.state.v1.UploadPackagesResult;
 import com.daml.ledger.participant.state.v1.WriteService;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.daml.lf.transaction.GenTransaction;
@@ -56,7 +54,8 @@ import com.digitalasset.daml.lf.value.Value.ContractId;
 import com.digitalasset.daml.lf.value.Value.NodeId;
 import com.digitalasset.daml.lf.value.Value.VersionedValue;
 import com.digitalasset.daml_lf_dev.DamlLf;
-import com.digitalasset.ledger.api.domain.PartyDetails;
+import com.digitalasset.ledger.api.health.HealthStatus;
+import com.digitalasset.ledger.api.health.Healthy;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -142,10 +141,8 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public CompletionStage<PartyAllocationResult> allocateParty(final Option<String> hint,
-      final Option<String> displayName) {
-
-    String submissionId = UUID.randomUUID().toString();
+  public CompletionStage<SubmissionResult> allocateParty(final Option<String> hint,
+      final Option<String> displayName, String submissionId) {
 
     String finalHint;
     if (hint.isEmpty()) {
@@ -165,20 +162,10 @@ public final class SawtoothWriteService implements WriteService {
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch batch = operationToBatch(operation, inputAddresses, outputAddresses);
 
-    final PartyDetails details = new PartyDetails(finalHint, displayName, false);
     Future fut = sendToValidator(batch);
-    return waitForSubmitResponse(batch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
-        .<PartyAllocationResult>thenApply(result -> {
-          switch (result.getValue()) {
-          case COMMITTED:
-            return new PartyAllocationResult.Ok(details);
-          case INVALID:
-            return new PartyAllocationResult.AlreadyExists$();
-          case UNKNOWN:
-          default:
-            return new PartyAllocationResult.InvalidName(String.format("%s is not a valid party id", hint.get()));
-          }
-        });
+    return waitForSubmitResponse(batch, fut)
+            .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+            .thenApply(x -> batchTerminalToSubmissionResult(x));
   }
 
   /**
@@ -297,20 +284,6 @@ public final class SawtoothWriteService implements WriteService {
     }
   }
 
-  private UploadPackagesResult batchTerminalToUploadPackageResult(
-      final Map.Entry<String, ClientBatchStatus.Status> submission) {
-    switch (submission.getValue()) {
-    case COMMITTED:
-      return new UploadPackagesResult.Ok$();
-    case INVALID:
-      return new UploadPackagesResult.InvalidPackage(
-          String.format("Package submission %s is invalid", submission.getKey()));
-    default:
-      return new UploadPackagesResult.InvalidPackage(
-          String.format("Package submission %s has been lost", submission.getKey()));
-    }
-  }
-
   private Map.Entry<String, ClientBatchStatus.Status> checkBatchWaitForTerminal(
       final Map.Entry<String, ClientBatchSubmitResponse.Status> submission) {
     String batchid = submission.getKey();
@@ -376,7 +349,7 @@ public final class SawtoothWriteService implements WriteService {
   @Override
   public CompletionStage<SubmissionResult> submitConfiguration(final Timestamp maxRecordTime, final String submissionId,
       final Configuration config) {
-    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, config);
+    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, this.participantId, config);
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
         .build();
 
@@ -418,13 +391,12 @@ public final class SawtoothWriteService implements WriteService {
   }
 
   @Override
-  public CompletionStage<UploadPackagesResult> uploadPackages(
+  public CompletionStage<SubmissionResult> uploadPackages(final String submissionId,
       final scala.collection.immutable.List<DamlLf.Archive> archives, final Option<String> optionalDescription) {
     String sourceDescription = "Uploaded package";
     if (optionalDescription.nonEmpty()) {
       sourceDescription = optionalDescription.get();
     }
-    String submissionId = UUID.randomUUID().toString();
     DamlSubmission submission = KeyValueSubmission.archivesToSubmission(submissionId, archives, sourceDescription,
         this.getParticipantId());
 
@@ -436,8 +408,14 @@ public final class SawtoothWriteService implements WriteService {
     SawtoothDamlOperation operation = submissionToOperation(submission, damlLogEntryId);
     Batch sawtoothBatch = operationToBatch(operation, inputAddresses, outputAddresses);
     Future fut = sendToValidator(sawtoothBatch);
-    return waitForSubmitResponse(sawtoothBatch, fut).thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
-        .thenApply(x -> batchTerminalToUploadPackageResult(x));
+
+    return waitForSubmitResponse(sawtoothBatch, fut)
+            .thenApplyAsync(x -> checkBatchWaitForTerminal(x), watchThreadPool)
+            .thenApply(x -> batchTerminalToSubmissionResult(x));
   }
 
+  @Override
+  public HealthStatus currentHealth() {
+    return Healthy.healthy();
+  }
 }
