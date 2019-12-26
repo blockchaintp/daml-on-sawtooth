@@ -34,7 +34,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
-import io.grpc.health.v1.health.HealthGrpc;
 import io.reactivex.Flowable;
 import scala.Option;
 import scala.Tuple2;
@@ -169,7 +168,7 @@ public class SawtoothReadService implements ReadService {
   }
 
   @Override
-  public HealthStatus currentHealth() {
+  public final HealthStatus currentHealth() {
     return Healthy.healthy();
   }
 }

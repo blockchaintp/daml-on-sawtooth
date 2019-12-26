@@ -142,7 +142,7 @@ public final class SawtoothWriteService implements WriteService {
 
   @Override
   public CompletionStage<SubmissionResult> allocateParty(final Option<String> hint,
-      final Option<String> displayName, String submissionId) {
+      final Option<String> displayName, final String submissionId) {
 
     String finalHint;
     if (hint.isEmpty()) {
@@ -349,7 +349,8 @@ public final class SawtoothWriteService implements WriteService {
   @Override
   public CompletionStage<SubmissionResult> submitConfiguration(final Timestamp maxRecordTime, final String submissionId,
       final Configuration config) {
-    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, this.participantId, config);
+    DamlSubmission submission =
+            KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, this.participantId, config);
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
         .build();
 
