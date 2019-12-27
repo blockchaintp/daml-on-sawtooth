@@ -125,43 +125,40 @@ services:
   # Run the integration tests at most twice to compensate for "piming the pump"
   ledger-api-testtool:
     image: ledger-api-testtool:${ISOLATION_ID}
-    # LotsOfPartiesIT - excluded since tests in there doesn't respect the concurrent runs, and just
-    #                   blast a ton of concurrent requests, which though they get processes, cannot currently(possibly)
-    #                   be processed in time to pass
-    # PartyManagementServiceIT - Currently returning INTERNAL: None.get on some tests
-    # PackageManagementService - test appears to fail because of overly ambitious concurrency goals
     # TimeIT - this is never going to pass on daml-on-sawtooth, since it is testing for a testing feature we don't
     #          support (setting time)
-    # TransactionServiceIT - not clear why this fails, certain tests report "RESOURCE_EXHAUSTED" and thats all we get so
-    #                        far
     entrypoint: "bash -xc \"\
       sleep 60 && \
       java -jar ledger-api-test-tool.jar \
         --timeout-scale-factor 4 \
         --all-tests \
-        --exclude TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 1 \
+        --exclude TimeIT \
+        --concurrent-test-runs 2 \
+        --load-scale-factor 0.5 \
         daml-rpc:9000 \
         || \
       java -jar ledger-api-test-tool.jar \
         --timeout-scale-factor 4 \
         --all-tests \
-        --exclude TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 1 \
+        --exclude TimeIT \
+        --concurrent-test-runs 2 \
+        --load-scale-factor 0.5 \
         daml-rpc:9000 \
         || \
       java -jar ledger-api-test-tool.jar \
         --timeout-scale-factor 4 \
         --all-tests \
-        --exclude TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 1 \
+        --exclude TimeIT \
+        --concurrent-test-runs 2 \
+        --load-scale-factor 0.5 \
         daml-rpc:9000 \
         || \
       java -jar ledger-api-test-tool.jar \
         --timeout-scale-factor 4 \
         --all-tests \
-        --exclude TimeIT,TransactionServiceIT \
-        --concurrent-test-runs 1 \
+        --exclude TimeIT \
+        --concurrent-test-runs 2 \
+        --load-scale-factor 0.5 \
         daml-rpc:9000 \
         \""
     depends_on:
