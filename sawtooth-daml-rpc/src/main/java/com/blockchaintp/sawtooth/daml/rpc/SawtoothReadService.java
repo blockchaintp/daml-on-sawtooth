@@ -28,7 +28,6 @@ import com.daml.ledger.participant.state.v1.ReadService;
 import com.daml.ledger.participant.state.v1.Update;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.digitalasset.ledger.api.health.HealthStatus;
-import com.digitalasset.ledger.api.health.Healthy;
 import com.digitalasset.ledger.api.health.Healthy$;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
