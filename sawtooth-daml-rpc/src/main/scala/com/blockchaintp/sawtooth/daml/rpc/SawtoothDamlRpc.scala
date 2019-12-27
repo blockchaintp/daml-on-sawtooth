@@ -15,7 +15,6 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.codahale.metrics.SharedMetricRegistries
 
@@ -42,7 +41,7 @@ object SawtoothDamlRpc extends App {
     .parse(
       args,
       "sawtooth-daml-rpc",
-      "A DAML Ledger API server backed by a Hyperledger Sawtooth blockchain network.\n"
+      "A DAML Ledger API standaloneApiServer backed by a Hyperledger Sawtooth blockchain network.\n"
     )
     .getOrElse(sys.exit(1))
 
@@ -89,19 +88,20 @@ object SawtoothDamlRpc extends App {
       readService,
       IndexerConfig(config.participantId, config.jdbcUrl, config.startupMode),
       NamedLoggerFactory.forParticipant(config.participantId),
-      SharedMetricRegistries.getOrCreate(s"indexer-server-${config.participantId}")
+      SharedMetricRegistries.getOrCreate(s"indexer-standaloneApiServer-${config.participantId}")
     ),
     30 second
   )
-  val indexServer = Await.result(
-    new StandaloneApiServer(
-      ApiServerConfig(config.participantId, config.archiveFiles, config.port, config.jdbcUrl, config.tlsConfig, TimeProvider.UTC, config.maxInboundMessageSize, None),
-      readService,
-      writeService,
-      authService,
-      NamedLoggerFactory.forParticipant(config.participantId),
-      SharedMetricRegistries.getOrCreate(s"ledger-api-server-${config.participantId}")
-    ).start(),
+  private val standaloneApiServer = new StandaloneApiServer(
+    ApiServerConfig(config.participantId, config.archiveFiles, config.port, config.jdbcUrl, config.tlsConfig, TimeProvider.UTC, config.maxInboundMessageSize, None),
+    readService,
+    writeService,
+    authService,
+    NamedLoggerFactory.forParticipant(config.participantId),
+    SharedMetricRegistries.getOrCreate(s"ledger-api-standaloneApiServer-${config.participantId}")
+  )
+  val apiServer = Await.result(
+    standaloneApiServer.start(),
     60 second
   )
 
@@ -110,7 +110,7 @@ object SawtoothDamlRpc extends App {
   def closeServer(): Unit = {
     if (closed.compareAndSet(false, true)) {
       indexer.close()
-      indexServer.close()
+      apiServer.close()
       materializer.shutdown()
       val _ = system.terminate()
     }
