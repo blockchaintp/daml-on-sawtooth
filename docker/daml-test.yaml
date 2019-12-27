@@ -134,7 +134,7 @@ services:
         --timeout-scale-factor 4 \
         --all-tests \
         --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 2 \
+        --concurrent-test-runs 1 \
         --load-scale-factor 0.5 \
         daml-rpc:9000 \
         || \
@@ -142,7 +142,7 @@ services:
         --timeout-scale-factor 4 \
         --all-tests \
         --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 2 \
+        --concurrent-test-runs 1 \
         --load-scale-factor 0.5 \
         daml-rpc:9000 \
         || \
@@ -150,7 +150,7 @@ services:
         --timeout-scale-factor 4 \
         --all-tests \
         --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 2 \
+        --concurrent-test-runs 1 \
         --load-scale-factor 0.5 \
         daml-rpc:9000 \
         || \
@@ -158,7 +158,7 @@ services:
         --timeout-scale-factor 4 \
         --all-tests \
         --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 2 \
+        --concurrent-test-runs 1 \
         --load-scale-factor 0.5 \
         daml-rpc:9000 \
         \""
