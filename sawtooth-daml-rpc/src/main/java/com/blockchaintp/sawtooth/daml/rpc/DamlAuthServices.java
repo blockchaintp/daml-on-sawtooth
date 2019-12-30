@@ -159,7 +159,7 @@ public class DamlAuthServices implements AuthService {
 
     payload.actAs().foreach(name -> ClaimActAsParty$.MODULE$.apply(Ref.Party().assertFromString(name)));
 
-    Claims claims = new Claims(claimsList.toList(), payload.exp());
+    Claims claims = new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), payload.exp());
     return claims;
 
   }

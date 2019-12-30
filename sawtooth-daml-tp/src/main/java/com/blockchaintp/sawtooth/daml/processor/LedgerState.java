@@ -21,7 +21,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
-import com.daml.ledger.participant.state.backport.TimeModel;
+import com.daml.ledger.participant.state.v1.TimeModel;
 import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
