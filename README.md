@@ -51,7 +51,7 @@ Opening navigator at localhost:9000
  /    / _ `/ |/ / / _ `/ _ `/ __/ _ \/ __/
 /_/|_/\_,_/|___/_/\_, /\_,_/\__/\___/_/
                  /___/
-Version 100.13.27
+Version 100.13.41
 Frontend running at http://localhost:4000.
 ```
 

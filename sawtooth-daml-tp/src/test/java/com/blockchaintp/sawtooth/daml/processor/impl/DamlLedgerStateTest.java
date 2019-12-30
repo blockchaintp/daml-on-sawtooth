@@ -149,7 +149,7 @@ public class DamlLedgerStateTest {
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntry firstVal = DamlLogEntry.newBuilder()
         .setTransactionRejectionEntry(DamlTransactionRejectionEntry.newBuilder()
-            .setMaximumRecordTimeExceeded(DamlKvutils.DamlTransactionRejectionEntry.MaximumRecordTimeExceeded.getDefaultInstance())
+            .setMaximumRecordTimeExceeded(DamlKvutils.MaximumRecordTimeExceeded.newBuilder().build())
             .build())
         .build();
     try {

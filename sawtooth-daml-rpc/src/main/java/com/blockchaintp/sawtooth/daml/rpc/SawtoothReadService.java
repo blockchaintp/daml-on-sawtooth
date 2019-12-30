@@ -20,13 +20,15 @@ import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.rpc.events.DamlLogEventHandler;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
-import com.daml.ledger.participant.state.backport.TimeModel;
+import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.daml.ledger.participant.state.v1.LedgerInitialConditions;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.ReadService;
 import com.daml.ledger.participant.state.v1.Update;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
+import com.digitalasset.ledger.api.health.HealthStatus;
+import com.digitalasset.ledger.api.health.Healthy$;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -138,7 +140,7 @@ public class SawtoothReadService implements ReadService {
     if (data != null) {
       ledgerId = data.toStringUtf8();
     }
-    Configuration blankConfiguration = new Configuration(0, tm, Option.empty(), true);
+    Configuration blankConfiguration = new Configuration(0, tm);
     Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
         new LedgerInitialConditions(ledgerId, blankConfiguration, BEGINNING_OF_EPOCH) });
     return Source.fromPublisher(f);
@@ -165,4 +167,8 @@ public class SawtoothReadService implements ReadService {
     return Source.fromPublisher(this.handler.getPublisher());
   }
 
+  @Override
+  public final HealthStatus currentHealth() {
+    return Healthy$.MODULE$;
+  }
 }
