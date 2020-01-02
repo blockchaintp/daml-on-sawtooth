@@ -32,9 +32,9 @@ Please refer to [BUILD.md](./BUILD.md) for further instructions.
 
 * Open a terminal and `cd` into the project folder (i.e. location where you git clone the daml-on-sawtooth project) described in step 2.
 
-* To run up a development copy of daml-on-sawtooth, run this command `docker-compose -f ./docker/compose/daml-local.yaml up`. This will start-up single node sawtooth environment, running the devmode consensus and a DAML environment.
+* To run up a development copy of daml-on-sawtooth, and at the top level ot the project, run this command `./docker/run.sh stop`. This will start-up single node sawtooth environment, running the devmode consensus and a DAML environment.
 
-* To shutdown the application by running the following command `docker-compose -f ./docker/compose/daml-local.yaml down`.
+* To shutdown the application by running the following command `./docker/run.sh stop`.
 
 ### 4. Interacting with daml-on-sawtooth using daml navigator
 
