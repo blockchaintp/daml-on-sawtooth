@@ -15,20 +15,23 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Materializer, Supervision}
 import com.codahale.metrics.SharedMetricRegistries
 
 import scala.concurrent.duration._
 import com.blockchaintp.utils.DirectoryKeyManager
+import com.daml.ledger.participant.state.v1.{ReadService, WriteService}
 import com.digitalasset.api.util.TimeProvider
 import com.digitalasset.platform.common.logging.NamedLoggerFactory
 import com.digitalasset.daml.lf.archive.DarReader
 import com.digitalasset.daml_lf_dev.DamlLf.Archive
 import com.digitalasset.ledger.api.auth.{AuthServiceWildcard, AuthServiceJWT}
 import com.digitalasset.jwt.{JwtVerifier, HMAC256Verifier}
-
+import com.digitalasset.platform.indexer.StandaloneIndexerServer
 import com.digitalasset.platform.apiserver.{ApiServerConfig, StandaloneApiServer}
-import com.digitalasset.platform.indexer.{IndexerConfig, StandaloneIndexerServer}
+import com.digitalasset.ledger.api.auth.{AuthService, AuthServiceWildcard}
+import com.digitalasset.platform.indexer.IndexerConfig
+import com.digitalasset.platform.resources.{Resource, ResourceOwner}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -42,19 +45,13 @@ object SawtoothDamlRpc extends App {
     .parse(
       args,
       "sawtooth-daml-rpc",
-      "A DAML Ledger API standaloneApiServer backed by a Hyperledger Sawtooth blockchain network.\n"
+      "A DAML Ledger API server backed by a Hyperledger Sawtooth blockchain network."
     )
     .getOrElse(sys.exit(1))
 
   // Initialize Akka and log exceptions in flows.
   implicit val system: ActorSystem = ActorSystem("sawtooth-daml-rpc")
-  implicit val materializer: ActorMaterializer = ActorMaterializer(
-    ActorMaterializerSettings(system)
-      .withSupervisionStrategy { e =>
-        logger.error(s"Supervision caught exception: $e")
-        Supervision.Stop
-      }
-  )
+  implicit val materializer: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
 
   logger.error(s"Connecting to " + config.connect)
@@ -63,6 +60,7 @@ object SawtoothDamlRpc extends App {
 
   val keyManager = DirectoryKeyManager.create(config.keystore)
   // This should be a more arbitrary identifier, which is set via CLI,
+
   val writeService = new SawtoothWriteService(
     validatorAddress,
     keyManager,
@@ -85,7 +83,13 @@ object SawtoothDamlRpc extends App {
     case _ => AuthServiceWildcard
   }
 
-  config.archiveFiles.foreach { file =>
+  val resource = for {
+    _ <- ResourceOwner.forActorSystem(() => system).acquire()
+    _ <- ResourceOwner.forMaterializer(() => materializer).acquire()
+    // Take ownership of the actor system and materializer so they're cleaned up properly.
+    // This is necessary because we can't declare them as implicits within a `for` comprehension.
+
+  _ = config.archiveFiles.foreach { file =>
     for {
       dar <- DarReader { case (_, x) => Try(Archive.parseFrom(x)) }
         .readArchiveFromFile(file)
@@ -96,48 +100,42 @@ object SawtoothDamlRpc extends App {
     )
   }
 
-  val indexer = Await.result(
-    StandaloneIndexerServer(
+  _ <- startIndexerServer(config, readService)
+  _ <- startApiServer(config, readService, writeService, authService)
+
+  } yield ()
+
+  resource.asFuture.failed.foreach { exception =>
+    logger.error("Shutting down because of an initialization error.", exception)
+    System.exit(1)
+  }
+
+  Runtime.getRuntime.addShutdownHook(new Thread(() => Await.result(resource.release(), 10.seconds)))
+
+  private def startIndexerServer (config: SawtoothDamlRpcConfig, readService: ReadService): Resource[Unit] =
+    new StandaloneIndexerServer(
       readService,
       IndexerConfig(config.participantId, config.jdbcUrl, config.startupMode),
       NamedLoggerFactory.forParticipant(config.participantId),
       SharedMetricRegistries.getOrCreate(s"indexer-standaloneApiServer-${config.participantId}")
-    ),
-    30 second
-  )
-  private val standaloneApiServer = new StandaloneApiServer(
-    ApiServerConfig(config.participantId, config.archiveFiles, config.port, config.jdbcUrl, config.tlsConfig, TimeProvider.UTC, config.maxInboundMessageSize, None),
+    ).acquire()
+
+  private def startApiServer(config: SawtoothDamlRpcConfig,
+                             readService: ReadService,
+                             writeService: WriteService,
+                             authService: AuthService): Resource[Unit] = new StandaloneApiServer(
+    ApiServerConfig(config.participantId,
+      config.archiveFiles,
+      config.port,
+      config.jdbcUrl,
+      config.tlsConfig,
+      TimeProvider.UTC,
+      config.maxInboundMessageSize,
+      portFile = None),
     readService,
     writeService,
     authService,
     NamedLoggerFactory.forParticipant(config.participantId),
     SharedMetricRegistries.getOrCreate(s"ledger-api-standaloneApiServer-${config.participantId}")
-  )
-  val apiServer = Await.result(
-    standaloneApiServer.start(),
-    60 second
-  )
-
-  val closed = new AtomicBoolean(false)
-
-  def closeServer(): Unit = {
-    if (closed.compareAndSet(false, true)) {
-      indexer.close()
-      apiServer.close()
-      materializer.shutdown()
-      val _ = system.terminate()
-    }
-  }
-
-  try {
-    Runtime.getRuntime.addShutdownHook(new Thread(() => closeServer()))
-  } catch {
-    case NonFatal(t) => {
-      logger.error(
-        "Shutting down Sandbox application because of initialization error",
-        t
-      )
-      closeServer()
-    }
-  }
+  ).acquire()
 }
