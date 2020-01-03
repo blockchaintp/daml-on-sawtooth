@@ -54,15 +54,18 @@ import scala.collection.immutable.List$;
 import scala.collection.mutable.ListBuffer;
 
 /**
- * Responsible for decoding JWTToken sent from GRPC
+ * Responsible for decoding JWTToken sent from GRPC.
  *
  */
-public class DamlAuthServices implements AuthService {
+public final class DamlAuthServices implements AuthService {
 
   private final Algorithm ecdsa512Algorithm;
   private ECPublicKey publicKey;
 
-  public DamlAuthServices(String pubKeyInHex) {
+  /**
+   * @param pubKeyInHex  public key in hexadecimal format
+   */
+  public DamlAuthServices(final String pubKeyInHex) {
     byte[] pubKey = ByteString.copyFromUtf8(pubKeyInHex).toByteArray();
     int midPoint = pubKey.length / 2;
     byte[] pubKeyX = Arrays.copyOfRange(pubKey, 0, midPoint);
@@ -86,7 +89,11 @@ public class DamlAuthServices implements AuthService {
 
   }
 
-  public final CompletionStage<Claims> decodeMetadata(final io.grpc.Metadata headers) {
+  /**
+   * @param headers grpc metadata
+   * @return CompletionStage of Claims
+   */
+  public CompletionStage<Claims> decodeMetadata(final io.grpc.Metadata headers) {
     try {
       return CompletableFuture.completedFuture(decodeAndParse(headers));
     } catch (final Exception e) {
