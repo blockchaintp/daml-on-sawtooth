@@ -13,7 +13,6 @@
 package com.blockchaintp.sawtooth.daml.rpc;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
@@ -37,13 +36,24 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-public class JwtGenerator {
+/**
+ * JwtGenerator generates Jwt token for authorisation.
+ */
+public final class JwtGenerator {
+  static final int NUMBER_OF_PARAMS = 4;
+  static final int PRIVATE_KEY_POSITION = 0;
+  static final int CLAIM_SPEC_POSITION = 2;
 
   private ECPrivateKey privateKey;
   private JSONObject jsonObject;
 
-  public JwtGenerator(final String privKeyFilename, JSONObject jsonObject) {
-    this.jsonObject = jsonObject;
+    /**
+     * Constructor for JwtGenerator.
+     * @param privKeyFilename Filename of private key
+     * @param payload body of jwt token in json format
+     */
+  public JwtGenerator(final String privKeyFilename, final JSONObject payload) {
+    this.jsonObject = payload;
     try {
       extractKeys(privKeyFilename);
     } catch (final Exception e) {
@@ -51,17 +61,21 @@ public class JwtGenerator {
     }
   }
 
+    /**
+     * Determine whether privateKey is null.
+     * @return boolean indicating whether privateKey is not null
+     */
   public boolean noPrivateKey() {
-    return (this.privateKey != null) ? true : false;
+    return this.privateKey != null;
   }
 
-  public String generateToken() {
+  private String generateToken() {
     Algorithm ecdsa512Algorithm = Algorithm.ECDSA256(null, this.privateKey);
-    
+
     JSONArray jsonaActAs = (JSONArray) this.jsonObject.get("actAs");
     String[] actAs = new String[jsonaActAs.size()];
     int index = 0;
-    for (Object value : actAs){
+    for (Object value : actAs) {
         actAs[index] = (String) value;
         index++;
     }
@@ -69,7 +83,7 @@ public class JwtGenerator {
     JSONArray jsonReadAs = (JSONArray) this.jsonObject.get("readAs");
     String[] readAs = new String[jsonReadAs.size()];
     index = 0;
-    for (Object value : readAs){
+    for (Object value : readAs) {
         readAs[index] = (String) value;
         index++;
     }
@@ -84,8 +98,8 @@ public class JwtGenerator {
         .withClaim("participantId", participantId)
         .withClaim("applicationId", applicationId)
         .withClaim("exp", exp)
-        .withArrayClaim("actAs", actAs) 
-        .withArrayClaim("readAs", readAs) 
+        .withArrayClaim("actAs", actAs)
+        .withArrayClaim("readAs", readAs)
         .sign(ecdsa512Algorithm);
 
     return token;
@@ -121,46 +135,44 @@ public class JwtGenerator {
     }
   }
 
-  public static void main(String[] args){
-
+  /**
+   * Basic main method to generate a JWT compliant token.
+   * @param args -pk path to private key -claim claim spec in json
+   */
+  public static void main(final String[] args) {
     String pathToPrivateKey = null;
     String pathToPayloadSpec = null;
 
-    if (args.length != 4) {
-        System.out.println("Usage: jwtgenerator.sh -pk <path to private key> -claim <claim spec in json>");
+    if (args.length != NUMBER_OF_PARAMS) {
+        System.out.println("Usage: -pk <path to private key> -claim <claim spec in json>");
         System.exit(1);
     }
 
-    if (args[0].equals("-pk")) {
-        pathToPrivateKey = args[1];
+    if (args[PRIVATE_KEY_POSITION].equals("-pk")) {
+        pathToPrivateKey = args[PRIVATE_KEY_POSITION + 1];
     }
 
-    if (args[2].equals("-claim")){
-        pathToPayloadSpec = args[3];
+    if (args[CLAIM_SPEC_POSITION].equals("-claim")) {
+      pathToPayloadSpec = args[CLAIM_SPEC_POSITION + 1];
     }
 
-    if (pathToPayloadSpec == null){
+    if (pathToPayloadSpec == null) {
         System.exit(1);
     }
 
     File jsonFile = new File(pathToPayloadSpec);
     JSONParser jsonParser = new JSONParser();
-    
+
     try {
         FileReader reader = new FileReader(jsonFile);
         JSONObject jsonObj = (JSONObject) jsonParser.parse(reader);
         JwtGenerator jwtGenerator = new JwtGenerator(pathToPrivateKey, jsonObj);
-        
+
         System.out.println(jwtGenerator.generateToken());
 
-    }catch (FileNotFoundException e){
-        System.exit(1);
-    } catch(IOException e){
-        System.exit(1);
-    }catch(ParseException e){
+    } catch (IOException | ParseException e) {
+        System.out.print(e);
         System.exit(1);
     }
-
   }
-
 }
