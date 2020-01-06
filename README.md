@@ -32,9 +32,11 @@ Please refer to [BUILD.md](./BUILD.md) for further instructions.
 
 * Open a terminal and `cd` into the project folder (i.e. location where you git clone the daml-on-sawtooth project) described in step 2.
 
-* To run up a development copy of daml-on-sawtooth, and at the top level ot the project, run this command `./docker/run.sh stop`. This will start-up single node sawtooth environment, running the devmode consensus and a DAML environment.
+* To run up a development copy of daml-on-sawtooth, and at the top level ot the project, run this command `./docker/run.sh start`. This will start-up single node sawtooth environment, running the devmode consensus and a DAML environment.
 
 * To shutdown the application by running the following command `./docker/run.sh stop`.
+
+NOTE: By default, it will start `daml-on-sawtooth` with `AuthService` switched on.
 
 ### 4. Interacting with daml-on-sawtooth using daml navigator
 
@@ -127,7 +129,12 @@ root@ee2dcd0c53d1:/opt/sawtooth-daml-rpc# ./jwtgenerator.sh -pk ./keys/validator
 eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJsZWRnZXJJZCI6ImFhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhY3RBcyI6W251bGxdLCJleHAiOjEzMDA4MTkzODAsInJlYWRBcyI6W251bGwsbnVsbF19.Gm9-dXUEpQORss_zGMP3TKQEiiUkDMtJpyftZGD9gLrWWGRKYfDdXa5QWhslff_YQs0UIDvQ2TFapep0UJXMAg
 ```
 
-STEP 5: Copy the token string and copy the value into a file (e.g. `token.txt`). Load it to daml naviator via this command:
+STEP 5: Copy the token string and copy the value into a file (e.g. `token.txt`). Ensure the content of the file is this form `Bearer <token string>`. For example:
+```
+Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJsZWRnZXJJZCI6ImFhYWFhYWFhYS1iYmJiLWNjY2MtZGRkZC1lZWVlZWVlZWVlZWUiLCJhY3RBcyI6W251bGxdLCJleHAiOjEzMDA4MTkzODAsInJlYWRBcyI6W251bGwsbnVsbF19.Gm9-dXUEpQORss_zGMP3TKQEiiUkDMtJpyftZGD9gLrWWGRKYfDdXa5QWhslff_YQs0UIDvQ2TFapep0UJXMAg
+```
+
+STEP 6: Load it to daml naviator via this command:
 ```
   daml ledger navigator --host localhost --port 9000 --access-token-file <path-to-token-file>
 ```
