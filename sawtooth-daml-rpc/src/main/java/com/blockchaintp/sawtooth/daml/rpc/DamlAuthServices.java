@@ -53,38 +53,38 @@ import scala.collection.immutable.List;
 import scala.collection.immutable.List$;
 import scala.collection.mutable.ListBuffer;
 
+import sawtooth.sdk.signing.Secp256k1PublicKey;
+
 /**
  * Responsible for decoding JWTToken sent from GRPC.
  *
  */
 public final class DamlAuthServices implements AuthService {
 
-  private final Algorithm ecdsa512Algorithm;
-  private ECPublicKey publicKey;
+  private Algorithm ecdsa512Algorithm = null;
 
   /**
    * @param pubKeyInHex  public key in hexadecimal format
    */
   public DamlAuthServices(final String pubKeyInHex) {
-    byte[] pubKey = ByteString.copyFromUtf8(pubKeyInHex).toByteArray();
-    int midPoint = pubKey.length / 2;
-    byte[] pubKeyX = Arrays.copyOfRange(pubKey, 0, midPoint);
-    byte[] pubKeyY = Arrays.copyOfRange(pubKey, midPoint, pubKey.length);
-    Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-    ECPoint publicPoint = new ECPoint(new BigInteger(1, pubKeyX), new BigInteger(1, pubKeyY));
+    final Secp256k1PublicKey pubKey = Secp256k1PublicKey.fromHex(pubKeyInHex);
+    final byte[] pubKeyBytes = pubKey.getBytes();
+    final int midPoint = pubKeyBytes.length / 2;
+    final byte[] pubKeyX = Arrays.copyOfRange(pubKeyBytes, 0, midPoint);
+    final byte[] pubKeyY = Arrays.copyOfRange(pubKeyBytes, midPoint, pubKeyBytes.length);
     try {
-      AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
-      parameters.init(new ECGenParameterSpec("secp256k1"));
+      final AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
+      parameters.init(new ECGenParameterSpec("secp256r1"));
+      final ECParameterSpec ecParameterSpec = parameters.getParameterSpec(ECParameterSpec.class);
 
-      ECParameterSpec params = parameters.getParameterSpec(ECParameterSpec.class);
-      ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(publicPoint, params);
+      final ECPublicKeySpec ecPublicKeySpec = new ECPublicKeySpec(
+          new ECPoint(new BigInteger(1, pubKeyX), new BigInteger(1, pubKeyY)), ecParameterSpec);
 
-      KeyFactory kf = KeyFactory.getInstance("EC");
-      this.publicKey = (ECPublicKey) kf.generatePublic(pubKeySpec);
-
-      this.ecdsa512Algorithm = Algorithm.ECDSA512(this.publicKey, null);
-    } catch (InvalidParameterSpecException | NoSuchAlgorithmException | InvalidKeySpecException nse) {
-      throw new RuntimeException(nse);
+      final KeyFactory kf = KeyFactory.getInstance("EC");
+      final ECPublicKey ecPublicKey = (ECPublicKey) kf.generatePublic(ecPublicKeySpec);
+      this.ecdsa512Algorithm = Algorithm.ECDSA512(ecPublicKey, null);
+    } catch (NoSuchAlgorithmException | InvalidParameterSpecException | InvalidKeySpecException e) {
+      System.out.println("exception thrown");
     }
 
   }
@@ -166,7 +166,7 @@ public final class DamlAuthServices implements AuthService {
 
     payload.actAs().foreach(name -> ClaimActAsParty$.MODULE$.apply(Ref.Party().assertFromString(name)));
 
-    Claims claims = new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), payload.exp());
+    final Claims claims = new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), payload.exp());
     return claims;
 
   }
