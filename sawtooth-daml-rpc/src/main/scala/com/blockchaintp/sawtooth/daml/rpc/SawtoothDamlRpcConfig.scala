@@ -13,6 +13,7 @@ import com.digitalasset.platform.indexer.IndexerStartupMode
 final case class SawtoothDamlRpcConfig(
     port: Int,
     connect: String,
+    auth: String,
     archiveFiles: List[File],
     maxInboundMessageSize: Int,
     jdbcUrl: String,
@@ -28,6 +29,7 @@ object SawtoothDamlRpcConfig {
     new SawtoothDamlRpcConfig(
       0,
       "tcp://localhost:4004",
+      "off",
       List.empty,
       DefaultMaxInboundMessageSize,
       "",

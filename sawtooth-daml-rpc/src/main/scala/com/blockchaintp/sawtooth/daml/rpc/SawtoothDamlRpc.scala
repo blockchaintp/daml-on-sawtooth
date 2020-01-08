@@ -71,7 +71,7 @@ object SawtoothDamlRpc extends App {
   val readService = new SawtoothReadService(validatorAddress, swTxnTracer, true)
 
   // Use the default key for this RPC to verify JWTs for now.
-  val authService = new DamlAuthServices(keyManager.getPublicKeyInHex())
+  val authService = if (config.auth == "off") AuthServiceWildcard else new DamlAuthServices(keyManager.getPublicKeyInHex())
 
   config.archiveFiles.foreach { file =>
     for {
