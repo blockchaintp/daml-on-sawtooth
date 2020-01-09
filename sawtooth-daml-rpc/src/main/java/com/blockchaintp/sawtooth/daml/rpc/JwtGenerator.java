@@ -29,8 +29,6 @@ import java.util.Scanner;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 
-import akka.protobuf.ByteString;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -75,17 +73,19 @@ public final class JwtGenerator {
     Algorithm ecdsa512Algorithm = Algorithm.ECDSA256(null, this.privateKey);
 
     JSONArray jsonaActAs = (JSONArray) this.jsonObject.get("actAs");
+    Object[] objArrayActAs = jsonaActAs.toArray();
     String[] actAs = new String[jsonaActAs.size()];
     int index = 0;
-    for (Object value : actAs) {
+    for (Object value : objArrayActAs) {
         actAs[index] = (String) value;
         index++;
     }
 
     JSONArray jsonReadAs = (JSONArray) this.jsonObject.get("readAs");
+    Object[] objArrayReadAs = jsonReadAs.toArray();
     String[] readAs = new String[jsonReadAs.size()];
     index = 0;
-    for (Object value : readAs) {
+    for (Object value : objArrayReadAs) {
         readAs[index] = (String) value;
         index++;
     }
@@ -93,12 +93,14 @@ public final class JwtGenerator {
     String ledgerId = (String) this.jsonObject.get("ledgerId");
     String participantId = (String) this.jsonObject.get("participantId");
     String applicationId = (String) this.jsonObject.get("applicationId");
+    Boolean admin = (Boolean) this.jsonObject.get("admin");
     Long exp = (Long) this.jsonObject.get("exp");
 
     String token = JWT.create()
         .withClaim("ledgerId", ledgerId)
         .withClaim("participantId", participantId)
         .withClaim("applicationId", applicationId)
+        .withClaim("admin", admin)
         .withClaim("exp", exp)
         .withArrayClaim("actAs", actAs)
         .withArrayClaim("readAs", readAs)
