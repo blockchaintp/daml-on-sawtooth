@@ -36,6 +36,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import sawtooth.sdk.signing.Secp256k1PrivateKey;
+
 /**
  * JwtGenerator generates Jwt token for authorisation.
  */
@@ -114,7 +116,9 @@ public final class JwtGenerator {
         // Read private key file and it's content
         final Scanner scanner = new Scanner(privKeyFile);
         final String privKeyString = scanner.nextLine();
-        ByteString privKeyBs = ByteString.copyFromUtf8(privKeyString);
+        Secp256k1PrivateKey prvKey = Secp256k1PrivateKey.fromHex(privKeyString);
+        byte[] prvKeyBytes = prvKey.getBytes();
+
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
         AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
@@ -122,7 +126,7 @@ public final class JwtGenerator {
 
         ECParameterSpec params = parameters.getParameterSpec(ECParameterSpec.class);
 
-        ECPrivateKeySpec privKeySpec = new ECPrivateKeySpec(new BigInteger(1, privKeyBs.toByteArray()), params);
+        ECPrivateKeySpec privKeySpec = new ECPrivateKeySpec(new BigInteger(1, prvKeyBytes), params);
         // Obtain key factory
         final KeyFactory keyFactory = KeyFactory.getInstance("EC");
 
