@@ -70,7 +70,7 @@ public final class JwtGenerator {
   }
 
   private String generateToken() {
-    Algorithm ecdsa512Algorithm = Algorithm.ECDSA256(null, this.privateKey);
+    Algorithm ecdsaAlgorithm = Algorithm.ECDSA256(null, this.privateKey);
 
     JSONArray jsonaActAs = (JSONArray) this.jsonObject.get("actAs");
     Object[] objArrayActAs = jsonaActAs.toArray();
@@ -104,7 +104,7 @@ public final class JwtGenerator {
         .withClaim("exp", exp)
         .withArrayClaim("actAs", actAs)
         .withArrayClaim("readAs", readAs)
-        .sign(ecdsa512Algorithm);
+        .sign(ecdsaAlgorithm);
 
     return token;
   }

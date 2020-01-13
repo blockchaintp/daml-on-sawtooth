@@ -47,7 +47,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.spongycastle.util.Arrays;
 
-import akka.protobuf.ByteString;
 import io.grpc.Metadata;
 import scala.collection.immutable.List;
 import scala.collection.immutable.List$;
@@ -61,7 +60,7 @@ import sawtooth.sdk.signing.Secp256k1PublicKey;
  */
 public final class DamlAuthServices implements AuthService {
 
-  private Algorithm ecdsa512Algorithm = null;
+  private Algorithm ecdsaAlgorithm = null;
 
   /**
    * @param pubKeyInHex  public key in hexadecimal format
@@ -82,7 +81,7 @@ public final class DamlAuthServices implements AuthService {
 
       final KeyFactory kf = KeyFactory.getInstance("EC");
       final ECPublicKey ecPublicKey = (ECPublicKey) kf.generatePublic(ecPublicKeySpec);
-      this.ecdsa512Algorithm = Algorithm.ECDSA512(ecPublicKey, null);
+      this.ecdsaAlgorithm = Algorithm.ECDSA256(ecPublicKey, null);
     } catch (NoSuchAlgorithmException | InvalidParameterSpecException | InvalidKeySpecException e) {
       System.out.println("exception thrown");
     }
@@ -114,7 +113,7 @@ public final class DamlAuthServices implements AuthService {
       throw new Exception();
     }
 
-    final JWTVerifier verifier = JWT.require(this.ecdsa512Algorithm).build();
+    final JWTVerifier verifier = JWT.require(this.ecdsaAlgorithm).build();
     final DecodedJWT decodedJWT = verifier.verify(tokenString);
     final AuthServiceJWTPayload jwtPayload = parsePayload(decodedJWT);
     return payloadToDAClaims(jwtPayload);
