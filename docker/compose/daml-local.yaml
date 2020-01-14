@@ -116,6 +116,7 @@ services:
         --connect tcp://validator:4004 \
         --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
         --participant-id test-participant \
+        --auth \"off\" \
         `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     volumes:
       - ../test-dars:/opt/sawtooth-daml-rpc/dar/
