@@ -24,7 +24,8 @@ import com.digitalasset.api.util.TimeProvider
 import com.digitalasset.platform.common.logging.NamedLoggerFactory
 import com.digitalasset.daml.lf.archive.DarReader
 import com.digitalasset.daml_lf_dev.DamlLf.Archive
-import com.digitalasset.ledger.api.auth.AuthServiceWildcard
+import com.digitalasset.ledger.api.auth.{AuthServiceWildcard, AuthServiceJWT}
+import com.digitalasset.jwt.{JwtVerifier, HMAC256Verifier}
 
 import com.digitalasset.platform.apiserver.{ApiServerConfig, StandaloneApiServer}
 import com.digitalasset.platform.indexer.{IndexerConfig, StandaloneIndexerServer}
@@ -71,7 +72,18 @@ object SawtoothDamlRpc extends App {
   val readService = new SawtoothReadService(validatorAddress, swTxnTracer, true)
 
   // Use the default key for this RPC to verify JWTs for now.
-  val authService = if (config.auth == "off") AuthServiceWildcard else new DamlAuthServices(keyManager.getPublicKeyInHex())
+  def hmac256(input:String) : AuthServiceJWT = {
+    val secret = input.substring(8,input.length())
+    val verifier:JwtVerifier = HMAC256Verifier(secret).getOrElse(throw new RuntimeException("Unable to instantiate JWT Verifier"))
+    return new AuthServiceJWT(verifier)
+  }
+
+  val authService = config.auth match {
+    case "wildcard" => AuthServiceWildcard
+    case "sawtooth" => new DamlAuthServices(keyManager.getPublicKeyInHex())
+    case  s if s.matches("""hmac256=([a-zA-Z0-9])+""") => hmac256(s)
+    case _ => AuthServiceWildcard
+  }
 
   config.archiveFiles.foreach { file =>
     for {
