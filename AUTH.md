@@ -45,6 +45,8 @@ We recommend you use this purely for development mode.
 
 ## Sawtooth key based
 
+**IMPORTANT:** This is still under development please avoid using this for now.
+
 With the authentication service in place, you will need to get appropriate (also known as `sawtooth`-based) token inject it into your your client such as `daml navigator`.
 
 When you run `daml-on-sawtooth`, run the following command to extract a token:
