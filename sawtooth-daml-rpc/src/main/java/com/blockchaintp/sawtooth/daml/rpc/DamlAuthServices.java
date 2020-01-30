@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.logging.Logger;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -59,6 +60,8 @@ import sawtooth.sdk.signing.Secp256k1PublicKey;
  */
 public final class DamlAuthServices implements AuthService {
 
+  private static final Logger LOGGER = Logger.getLogger(SawtoothReadService.class.getName());
+
   private Algorithm ecdsaAlgorithm = null;
 
   /**
@@ -82,7 +85,8 @@ public final class DamlAuthServices implements AuthService {
       final ECPublicKey ecPublicKey = (ECPublicKey) kf.generatePublic(ecPublicKeySpec);
       this.ecdsaAlgorithm = Algorithm.ECDSA256(ecPublicKey, null);
     } catch (NoSuchAlgorithmException | InvalidParameterSpecException | InvalidKeySpecException e) {
-      System.out.println("exception thrown");
+      LOGGER.info("Unable to obtain public key data type");
+      throw new RuntimeException("Unable to construct DamlAuthServices", e);
     }
 
   }
