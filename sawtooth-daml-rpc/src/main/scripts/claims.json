@@ -1,0 +1,9 @@
+{
+    "ledgerId": "default-ledgerid",
+    "participantId": null,
+    "applicationId": null,
+    "exp": 1895148173,
+    "admin": true,
+    "actAs": ["Alice","Bob"],
+    "readAs": ["Alice","Bob"]
+}
