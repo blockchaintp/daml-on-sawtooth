@@ -38,7 +38,7 @@ Please refer to [BUILD.md](./BUILD.md) for further instructions.
 
 NOTE: By default, it will start `daml-on-sawtooth` with `AuthService` switched off.
 
-### 4. Interacting with daml-on-sawtooth using daml assists
+### 4. Interacting with daml-on-sawtooth using daml assistant
 
 * Open a terminal (one where you are not hosting a running daml-on-sawtooth see STEP 3).
 
