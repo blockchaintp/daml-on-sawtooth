@@ -20,7 +20,7 @@ Please follow these steps to get a running daml-on-sawtooth
 * Docker version 19.03.2
 * OpenJDK version 12.0.1
 * NodeJS version 10.16.2
-* daml SDK
+* [daml sdk](https://docs.daml.com/getting-started/installation.html)
 
 ### 2. Build an executable daml-on-sawtooth
 
@@ -38,13 +38,23 @@ Please refer to [BUILD.md](./BUILD.md) for further instructions.
 
 NOTE: By default, it will start `daml-on-sawtooth` with `AuthService` switched off.
 
-### 4. Interacting with daml-on-sawtooth using daml navigator
+### 4. Interacting with daml-on-sawtooth using daml assists
 
-4.1 Open a terminal (one where you are not hosting a running daml-on-sawtooth see STEP 3).
+* Open a terminal (one where you are not hosting a running daml-on-sawtooth see STEP 3).
 
-4.2 Install [daml sdk](https://docs.daml.com/getting-started/installation.html)
+* Create a [sample daml project](https://docs.daml.com/getting-started/quickstart.html), if you do not already have one.
 
-4.3 Run the command `daml ledger navigator --host localhost --port 9000` or `daml ledger navigator --host <url of your daml-on-sawtooth deployment> --port 9000`. When you run this command successfully, you will see the following message
+* Start `daml-on-sawtooth` (see STEP 3).
+
+* Allocate a party by running the cli `daml ledger allocate-parties PARTY --host localhost --port 9000`
+
+* Upload dar file `daml ledger upload-dar --host localhost --port 9000 <location of darfile>`
+
+### 5. Interacting with daml-on-sawtooth using daml navigator
+
+* Open a terminal (one where you are not hosting a running daml-on-sawtooth see STEP 3).
+
+* Run the command `daml ledger navigator --host localhost --port 9000` or `daml ledger navigator --host <url of your daml-on-sawtooth deployment> --port 9000`. When you run this command successfully, you will see the following message
 
 ```text
 Opening navigator at localhost:9000
@@ -59,9 +69,9 @@ Frontend running at http://localhost:4000.
 
 **Note:** Port 9000 is the port where daml-on-sawtooth is opened for communications with the outside world. If you have a custom daml application, you can connect to it via this port.
 
-4.4 Open the browser `http://localhost:4000` (see above) and you will be presented with daml navigator interface. **NOTE:** Port 4000 is the default entry point for daml navigator.
+* Open the browser `http://localhost:4000` (see above) and you will be presented with daml navigator interface. **NOTE:** Port 4000 is the default entry point for daml navigator.
 
-### 5. Inspecting daml-on-sawtooth transactions
+### 6. Inspecting daml-on-sawtooth transactions
 
 This project provides you with a browser based interface to inspect inspect transactions on `daml-on-sawtooth`.  
 

@@ -39,7 +39,7 @@ If `--auth` is not set or set to empty string, `daml-on-sawtooth` will start in 
 
 This is based on shared secret string with maximum of size 256-bit(32-byte). 
 
-You enter a secret value that you will be sharing between your daml client (i.e. daml navigator) and `daml-on-sawtooth`.
+You enter a secret value that you will be sharing between your daml client (i.e. daml navigator) and `daml-on-sawtooth`. If you were to use the daml cli tool, include the argument in the cli `daml allocate-parties PARTY --host <url to sawtooth> --paort 9000 --access-token-file <path-to-token-file>`
 
 We recommend you use this purely for development mode.
 
