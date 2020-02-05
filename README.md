@@ -42,13 +42,13 @@ NOTE: By default, it will start `daml-on-sawtooth` with `AuthService` switched o
 
 * Open a terminal (one where you are not hosting a running daml-on-sawtooth see STEP 3).
 
-* Create a [sample daml project](https://docs.daml.com/getting-started/quickstart.html), if you do not already have one.
+* If you do not already have one, create a [sample daml project](https://docs.daml.com/getting-started/quickstart.html).
 
 * Start `daml-on-sawtooth` (see STEP 3).
 
 * Allocate a party by running the cli `daml ledger allocate-parties PARTY --host localhost --port 9000`
 
-* Upload dar file `daml ledger upload-dar --host localhost --port 9000 <location of darfile>`
+* Upload dar file by running the cli `daml ledger upload-dar --host localhost --port 9000 <location of darfile>`
 
 ### 5. Interacting with daml-on-sawtooth using daml navigator
 
