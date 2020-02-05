@@ -37,11 +37,35 @@ If `--auth` is not set or set to empty string, `daml-on-sawtooth` will start in 
 
 ## HMAC256 secrets based
 
-This is based on shared secret string with maximum of size 256-bit(32-byte). 
+This is based on shared secret string with maximum of size 256-bit(32-byte). You will need to create a token based on shared secret. We recommend you use this approach for development or non-critical use case.
 
-You enter a secret value that you will be sharing between your daml client (i.e. daml navigator) and `daml-on-sawtooth`. If you were to use the daml cli tool, include the argument in the cli `daml allocate-parties PARTY --host <url to sawtooth> --paort 9000 --access-token-file <path-to-token-file>`
+* Option 1: Use this web tool [jwt.io](https://jwt.io/). In the webtool, select the algorithm HS256. In the payload section, enter the following values:
 
-We recommend you use this purely for development mode.
+```
+{
+    "ledgerId": "default-ledgerid",
+    "participantId": "<Appropriate ID>",
+    "applicationId": "<Appropriate ID>",
+    "exp": 1895148173,
+    "admin": true,
+    "actAs": ["Alice","Bob"],
+    "readAs": ["Alice","Bob"]
+}
+```
+
+Click on the Share JWT button and copy the token value:
+```
+https://jwt.io/#debugger-io?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZWRnZXJJZCI6ImRlZmF1bHQtbGVkZ2VyaWQiLCJwYXJ0aWNpcGFudElkIjpudWxsLCJhcHBsaWNhdGlvbklkIjpudWxsLCJleHAiOjE4OTUxNDgxNzMsImFkbWluIjp0cnVlLCJhY3RBcyI6WyJBbGljZSIsIkJvYiJdLCJyZWFkQXMiOlsiQWxpY2UiLCJCb2IiXX0.5zJh9G9uithw96gB5VF-E6QpPCB7G9O-zeC7W4f0caI
+```
+
+* Option 2: Use any tool of you choice to create token but do NOT encode the secret in base64 encoding.
+
+Having collected the token value, encode it into a text file (e.g. `token.txt`) with the value in this format (`Bearer *`). His an example based on Option 1 show above:
+```
+Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZWRnZXJJZCI6ImRlZmF1bHQtbGVkZ2VyaWQiLCJwYXJ0aWNpcGFudElkIjpudWxsLCJhcHBsaWNhdGlvbklkIjpudWxsLCJleHAiOjE4OTUxNDgxNzMsImFkbWluIjp0cnVlLCJhY3RBcyI6WyJBbGljZSIsIkJvYiJdLCJyZWFkQXMiOlsiQWxpY2UiLCJCb2IiXX0
+```
+
+You enter a secret value that you will be sharing between your daml client (i.e. daml navigator) and `daml-on-sawtooth`. If you were to use the daml cli tool, include the argument in the cli `daml allocate-parties PARTY --host <url to sawtooth> --port 9000 --access-token-file <path-to-token-file>`.
 
 ## Sawtooth key based
 
