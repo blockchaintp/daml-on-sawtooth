@@ -100,15 +100,15 @@ router:
 
 You will now need to start your browser with this url `http://localhost:{port-of-your-choice}`.
 
-## Authentication service
+## Authentication service
 
 `daml-on-sawtooth` offers a number of option to activate authentication service.
 
-Please refer to [AUTH.md](./AUTH.md) for futher instruction
+Please refer to [AUTH.md](./AUTH.md) for more instructions.
 
 ## License
 
-daml-on-sawtooth is open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+`daml-on-sawtooth` is open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Copyright
 

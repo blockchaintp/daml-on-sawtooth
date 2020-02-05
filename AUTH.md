@@ -60,7 +60,7 @@ https://jwt.io/#debugger-io?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZWRnZ
 
 * Option 2: Use any tool of you choice to create token but do NOT encode the secret in base64 encoding.
 
-Having collected the token value, encode it into a text file (e.g. `token.txt`) with the value in this format (`Bearer *`). His an example based on Option 1 show above:
+Having collected the token value, encode it into a text file (e.g. `token.txt`) with the value in this format (`Bearer *`). This is an example based on Option 1 show above:
 ```
 Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsZWRnZXJJZCI6ImRlZmF1bHQtbGVkZ2VyaWQiLCJwYXJ0aWNpcGFudElkIjpudWxsLCJhcHBsaWNhdGlvbklkIjpudWxsLCJleHAiOjE4OTUxNDgxNzMsImFkbWluIjp0cnVlLCJhY3RBcyI6WyJBbGljZSIsIkJvYiJdLCJyZWFkQXMiOlsiQWxpY2UiLCJCb2IiXX0
 ```
