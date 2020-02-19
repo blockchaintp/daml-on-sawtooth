@@ -59,6 +59,8 @@ services:
 
   postgres:
     image: postgres
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:1.1
