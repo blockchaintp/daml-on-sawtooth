@@ -44,6 +44,8 @@ services:
   postgres:
     image: postgres
     container_name: postgres
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
 
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:1.1
