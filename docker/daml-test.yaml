@@ -102,6 +102,7 @@ services:
       - "9000:9000"
       - "5051:5051"
     entrypoint: "bash -c \"\
+      sleep 30 && \
       /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
         --connect tcp://validator:4004 \
         --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
@@ -110,7 +111,7 @@ services:
     volumes:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
-      - ../test-dars:/opt/sawtooth-daml-rpc/dar/
+      - ./test-dars:/opt/sawtooth-daml-rpc/dar/
     depends_on:
       - validator
       - postgres
@@ -131,7 +132,7 @@ services:
     #          support (setting time)
     # TransactionScaleIT - scaling test that currently times out at 30s interval, disabling for the interim
     entrypoint: "bash -xc \"\
-      sleep 60 && \
+      sleep 90 && \
       java -jar ledger-api-test-tool.jar \
         --timeout-scale-factor 4 \
         --all-tests \
