@@ -406,10 +406,4 @@
     </plugins>
   </build>
 
-  <repositories>
-    <repository>
-      <id>da-repository</id>
-      <url>https://digitalassetsdk.bintray.com/DigitalAssetSDK</url>
-    </repository>
-  </repositories>
 </project>
