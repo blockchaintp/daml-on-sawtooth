@@ -41,7 +41,7 @@ ENV PATH=/opt/daml-sdk/bin:$PATH
 
 RUN mkdir -p /opt/ledger-api-test-tool && \
   cd  /opt/ledger-api-test-tool && \
-  wget -nv https://digitalassetsdk.bintray.com/DigitalAssetSDK/com/daml/ledger/testtool/ledger-api-test-tool/${DAML_REPO_VERSION}/ledger-api-test-tool-${DAML_REPO_VERSION}.jar && \
+  wget -nv https://repo.maven.apache.org/maven2/com/daml/ledger/testtool/ledger-api-test-tool/${DAML_REPO_VERSION}/ledger-api-test-tool-${DAML_REPO_VERSION}.jar && \
   mv ledger-api-test-tool-${DAML_REPO_VERSION}.jar ledger-api-test-tool.jar
 
 WORKDIR /opt/ledger-api-test-tool
