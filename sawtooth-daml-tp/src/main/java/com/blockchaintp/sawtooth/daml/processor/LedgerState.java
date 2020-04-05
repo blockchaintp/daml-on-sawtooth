@@ -20,8 +20,6 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
-import com.daml.ledger.participant.state.v1.TimeModel;
 import com.google.protobuf.Timestamp;
 
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -44,44 +42,6 @@ public interface LedgerState {
    *                                     error.
    */
   DamlStateValue getDamlState(DamlStateKey key) throws InternalError, InvalidTransactionException;
-
-  /**
-   * Fetch the party identified by the string partyId. If it does not exist return
-   * null. Empty addresses are consided unset.
-   *
-   * @param partyId the id of the party
-   * @return the SawtoothDamlParty of the partyId, or null if it does not exist
-   * @throws InvalidTransactionException when there is an error relating to the
-   *                                     client input
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error.
-   */
-  SawtoothDamlParty getParty(String partyId) throws InternalError, InvalidTransactionException;
-
-  /**
-   * Set or update the data at the party identified by partyId.
-   *
-   * @param partyEntry the party in question.
-   * @return the current SawtoothDamlParty entry
-   * @throws InvalidTransactionException when there is an error relating to the
-   *                                     client input
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error.
-   */
-  SawtoothDamlParty setParty(SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException;
-
-  /**
-   * Add the party id specified if it does not exist otherwise throw
-   * InvalidTransactionException. Empty addresses are considered unset.
-   *
-   * @param partyEntry the data content of the party
-   * @throws InvalidTransactionException when there is an error relating to the
-   *                                     client input, or the party already
-   *                                     exists.
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error.
-   */
-  void addParty(SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException;
 
   /**
    * Fetch a collection of DamlStateValues from the ledger state.
@@ -108,43 +68,6 @@ public interface LedgerState {
    */
   Map<DamlStateKey, DamlStateValue> getDamlStates(DamlStateKey... keys)
       throws InternalError, InvalidTransactionException;
-
-  /**
-   * Fetch a collection of log entries from the ledger state.
-   *
-   * @param keys a collection DamlLogEntryIds identifying the objects
-   * @return a map of package DamlLogEntryId to DamlLogEntrys
-   * @throws InvalidTransactionException when there is an error relating to the
-   *                                     client input
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error.
-   */
-  Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(Collection<DamlLogEntryId> keys)
-      throws InternalError, InvalidTransactionException;
-
-  /**
-   * Fetch a collection of log entries from the ledger state.
-   *
-   * @param keys DamlLogEntryIds identifying the objects
-   * @return a map of package DamlLogEntryId to DamlLogEntrys
-   * @throws InvalidTransactionException when there is an error relating to the
-   *                                     client input
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error.
-   */
-  Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(DamlLogEntryId... keys)
-      throws InternalError, InvalidTransactionException;
-
-  /**
-   * Get the log entry for a given log entry id.
-   *
-   * @param entryId identifies the log entry
-   * @return the log entry
-   * @throws InternalError               system error
-   * @throws InvalidTransactionException an attempt to read a contract which is
-   *                                     not allowed.
-   */
-  DamlLogEntry getDamlLogEntry(DamlLogEntryId entryId) throws InternalError, InvalidTransactionException;
 
   /**
    * @param key The key identifying this DamlStateValue
@@ -182,18 +105,6 @@ public interface LedgerState {
       throws InternalError, InvalidTransactionException;
 
   /**
-   * Record an event containing the provided log info.
-   *
-   * @param entryId the id of this log entry
-   * @param entry   the entry itself
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error
-   * @throws InvalidTransactionException when the data itself is invalid
-   */
-  void sendLogEvent(DamlLogEntryId entryId, DamlLogEntry entry)
-      throws InternalError, InvalidTransactionException;
-
-  /**
    * Fetch the current global record time.
    *
    * @return a Timestamp
@@ -201,43 +112,4 @@ public interface LedgerState {
    */
   Timestamp getRecordTime() throws InternalError;
 
-  /**
-   * Update the log event index to equal the provided list.
-   *
-   * @param addresses the list of addresses which are to be set
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error
-   * @throws InvalidTransactionException when the data itself is invalid
-   */
-  void updateLogEntryIndex(List<String> addresses) throws InternalError, InvalidTransactionException;
-
-  /**
-   * Return the current log event index.
-   *
-   * @return the current log event index
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error
-   * @throws InvalidTransactionException when the data itself is invalid
-   */
-  List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException;
-
-  /**
-   * Retrieve the current TimeModel or null if it has not been set.
-   *
-   * @return current TimeModel or null if it has not been set
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error
-   * @throws InvalidTransactionException when the data itself is invalid
-   */
-  TimeModel getTimeModel() throws InternalError, InvalidTransactionException;
-
-  /**
-   * Set the TimeModel to be used after this transaction is complete.
-   *
-   * @param tm the new time model
-   * @throws InternalError               when there is an unexpected back end
-   *                                     error
-   * @throws InvalidTransactionException when the data itself is invalid
-   */
-  void setTimeModel(TimeModel tm) throws InternalError, InvalidTransactionException;
 }
