@@ -15,7 +15,6 @@ import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLO
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,14 +28,9 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
-import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
-import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
-import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.sawtooth.daml.util.EventConstants;
 import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
-import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -57,14 +51,6 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  * @author scealiontach
  */
 public final class DamlLedgerState implements LedgerState {
-
-  private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
-
-  private static final String MAX_TTL_KEY = TIMEMODEL_CONFIG + ".maxTtl";
-
-  private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
-
-  private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
 
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
@@ -133,36 +119,6 @@ public final class DamlLedgerState implements LedgerState {
   }
 
   @Override
-  public Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(final Collection<DamlLogEntryId> keys)
-      throws InternalError, InvalidTransactionException {
-    return getDamlLogEntries(keys.toArray(new DamlLogEntryId[] {}));
-  }
-
-  @Override
-  public Map<DamlLogEntryId, DamlLogEntry> getDamlLogEntries(final DamlLogEntryId... keys)
-      throws InternalError, InvalidTransactionException {
-    Map<DamlLogEntryId, DamlLogEntry> retMap = new HashMap<>();
-    for (DamlLogEntryId k : keys) {
-      DamlLogEntry e = getDamlLogEntry(k);
-      if (e != null) {
-        retMap.put(k, e);
-      }
-    }
-    return retMap;
-  }
-
-  @Override
-  public DamlLogEntry getDamlLogEntry(final DamlLogEntryId entryId) throws InternalError, InvalidTransactionException {
-    String addr = Namespace.makeAddressForType(entryId);
-    ByteString bs = getStateOrNull(addr);
-    if (bs == null) {
-      return null;
-    }
-    DamlLogEntry e = KeyValueCommitting.unpackDamlLogEntry(uncompressByteString(bs));
-    return e;
-  }
-
-  @Override
   public void setDamlStates(final Collection<Entry<DamlStateKey, DamlStateValue>> entries)
       throws InternalError, InvalidTransactionException {
     Map<String, ByteString> setMap = new HashMap<>();
@@ -214,39 +170,7 @@ public final class DamlLedgerState implements LedgerState {
     return new ArrayList<>();
   }
 
-  @Override
-  public void updateLogEntryIndex(final List<String> addresses) throws InternalError, InvalidTransactionException {
-    DamlLogEntryIndex newIndex = DamlLogEntryIndex.newBuilder().clearAddresses().addAllAddresses(addresses).build();
-    Map<String, ByteString> indexSetMap = new HashMap<>();
-    indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, compressByteString(newIndex.toByteString()));
-    LOGGER.fine("Setting new log entry list");
-    state.setState(indexSetMap.entrySet());
-  }
-
-  @Override
-  public List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException {
-    LOGGER.fine(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
-    Map<String, ByteString> stateMap = state.getState(List.of(Namespace.DAML_LOG_ENTRY_LIST));
-    if (stateMap.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
-      ByteString compressed = stateMap.get(Namespace.DAML_LOG_ENTRY_LIST);
-      LOGGER.fine(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
-          compressed.size()));
-      ByteString data = uncompressByteString(compressed);
-      LOGGER.fine(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
-          data.size(), compressed.size()));
-      try {
-        DamlLogEntryIndex dlei = DamlLogEntryIndex.parseFrom(data);
-        return dlei.getAddressesList();
-      } catch (InvalidProtocolBufferException exc) {
-        throw new InternalError(exc.getMessage());
-      }
-    } else {
-      return new ArrayList<String>();
-    }
-  }
-
-  @Override
-  public void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry)
+  private void sendLogEvent(final DamlLogEntryId entryId, final DamlLogEntry entry)
       throws InternalError, InvalidTransactionException {
     Map<String, String> attrMap = new HashMap<>();
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.getEntryId().toStringUtf8());
@@ -344,118 +268,6 @@ public final class DamlLedgerState implements LedgerState {
     } catch (IOException exc) {
       LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw new InternalError(exc.getMessage());
-    }
-  }
-
-  @Override
-  public TimeModel getTimeModel() throws InternalError, InvalidTransactionException {
-    ConfigurationMap configMap;
-    ByteString bs;
-    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
-    bs = configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY);
-    try {
-      configMap = ConfigurationMap.parseFrom(bs);
-      Duration maxTtl = null;
-      Duration maxClockSkew = null;
-      Duration minTxLatency = null;
-
-      for (ConfigurationEntry ce : configMap.getEntriesList()) {
-        if (ce.getKey().equals(MIN_TRANSACTION_LATENCY_KEY)) {
-          minTxLatency = Duration.parse(ce.getValue().toStringUtf8());
-        }
-        if (ce.getKey().equals(MAX_CLOCK_SKEW_KEY)) {
-          maxClockSkew = Duration.parse(ce.getValue().toStringUtf8());
-        }
-        if (ce.getKey().equals(MAX_TTL_KEY)) {
-          maxTtl = Duration.parse(ce.getValue().toStringUtf8());
-        }
-      }
-      if (null == maxTtl || null == maxClockSkew || null == minTxLatency) {
-        return null;
-      } else {
-        return new TimeModel(minTxLatency, maxClockSkew, maxTtl);
-      }
-    } catch (InvalidProtocolBufferException exc) {
-      InternalError internalError = new InternalError(exc.getMessage());
-      internalError.initCause(exc);
-      throw internalError;
-    }
-  }
-
-  @Override
-  public void setTimeModel(final TimeModel tm) throws InternalError, InvalidTransactionException {
-    Map<String, ByteString> configEntry = state.getState(List.of(Namespace.DAML_CONFIG_TIME_MODEL));
-    List<ConfigurationEntry> newCEList = new ArrayList<>();
-    try {
-      ConfigurationMap configMap = ConfigurationMap
-          .parseFrom(configEntry.getOrDefault(Namespace.DAML_CONFIG_TIME_MODEL, ByteString.EMPTY));
-      for (ConfigurationEntry ce : configMap.getEntriesList()) {
-        if (!ce.getKey().startsWith(TIMEMODEL_CONFIG)) {
-          newCEList.add(ce);
-        }
-      }
-      ByteString minTxLatency = ByteString.copyFromUtf8(tm.minTransactionLatency().toString());
-      ConfigurationEntry minTxLatencyCE = ConfigurationEntry.newBuilder().setKey(MIN_TRANSACTION_LATENCY_KEY)
-          .setValue(minTxLatency).build();
-      newCEList.add(minTxLatencyCE);
-
-      ByteString maxClockSkew = ByteString.copyFromUtf8(tm.maxClockSkew().toString());
-      ConfigurationEntry maxClockSkewCE = ConfigurationEntry.newBuilder().setKey(MAX_CLOCK_SKEW_KEY)
-          .setValue(maxClockSkew).build();
-      newCEList.add(maxClockSkewCE);
-
-      ByteString maxTtl = ByteString.copyFromUtf8(tm.maxTtl().toString());
-      ConfigurationEntry maxTtlCE = ConfigurationEntry.newBuilder().setKey(MAX_TTL_KEY).setValue(maxTtl).build();
-      newCEList.add(maxTtlCE);
-
-      ConfigurationMap newMap = ConfigurationMap.newBuilder().addAllEntries(newCEList).build();
-
-      configEntry.put(Namespace.DAML_CONFIG_TIME_MODEL, newMap.toByteString());
-      state.setState(configEntry.entrySet());
-    } catch (InvalidProtocolBufferException exc) {
-      InternalError internalError = new InternalError(exc.getMessage());
-      internalError.initCause(exc);
-      throw internalError;
-    }
-  }
-
-  @Override
-  public SawtoothDamlParty getParty(final String partyId) throws InternalError, InvalidTransactionException {
-    String address = Namespace.makeDamlPartyAddress(partyId);
-    Map<String, ByteString> smap = state.getState(List.of(address));
-    if (smap.containsKey(address)) {
-      ByteString bs = smap.get(address);
-      if (null == bs || bs.isEmpty()) {
-        return null;
-      } else {
-        try {
-          return SawtoothDamlParty.parseFrom(bs);
-        } catch (InvalidProtocolBufferException e) {
-          throw new InternalError(e.getMessage());
-        }
-      }
-    } else {
-      return null;
-    }
-  }
-
-  @Override
-  public SawtoothDamlParty setParty(final SawtoothDamlParty partyEntry)
-      throws InternalError, InvalidTransactionException {
-    ByteString bs = partyEntry.toByteString();
-    String address = Namespace.makeAddressForType(partyEntry);
-    state.setState(List.of(Map.entry(address, bs)));
-    return partyEntry;
-  }
-
-  @Override
-  public void addParty(final SawtoothDamlParty partyEntry) throws InternalError, InvalidTransactionException {
-    SawtoothDamlParty previousParty = getParty(partyEntry.getHint());
-    if (null == previousParty) {
-      setParty(partyEntry);
-    } else {
-      throw new InvalidTransactionException(
-          String.format("DAML Party identified by %s already exists", partyEntry.getHint()));
     }
   }
 
