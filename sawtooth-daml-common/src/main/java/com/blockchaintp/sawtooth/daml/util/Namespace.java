@@ -14,7 +14,6 @@ package com.blockchaintp.sawtooth.daml.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -181,37 +180,6 @@ public final class Namespace {
    */
   public static String makeAddressForType(final DamlLogEntryId key) {
     return makeDamlLogEntryAddress(key);
-  }
-
-  /**
-   * A utility method to make addresses for party entries, complementing the other
-   * methods with similar signature.
-   *
-   * @param party the party entry in question.
-   * @return a sawtooth context address
-   */
-  public static String makeAddressForType(final SawtoothDamlParty party) {
-    return makeDamlPartyAddress(party);
-  }
-
-  /**
-   * Construct a context address for the SawtoothDamlParty.
-   *
-   * @param party the SawtoothDamlParty
-   * @return the byte string address
-   */
-  public static String makeDamlPartyAddress(final SawtoothDamlParty party) {
-    return makeAddress(DAML_PARTY_NS, party.getHint());
-  }
-
-  /**
-   * Construct a context address for the SawtoothDamlParty.
-   *
-   * @param partyId the party identifier
-   * @return the byte string address
-   */
-  public static String makeDamlPartyAddress(final String partyId) {
-    return makeAddress(DAML_PARTY_NS, partyId);
   }
 
   private Namespace() {
