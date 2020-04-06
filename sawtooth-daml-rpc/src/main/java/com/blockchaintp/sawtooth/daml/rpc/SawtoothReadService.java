@@ -57,6 +57,14 @@ public class SawtoothReadService implements ReadService {
 
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
+  private static final long DEFAULT_MIN_TX_LATENCY = 1;
+
+  private static final long DEFAULT_AVG_TX_LATENCY = 0;
+
+  private static final long DEFAULT_MIN_SKEW = 30;
+
+  private static final long DEFAULT_MAX_SKEW = 30;
+
   private final String url;
   private final ExecutorService executorService;
   private final SawtoothTransactionsTracer trace;
@@ -95,48 +103,19 @@ public class SawtoothReadService implements ReadService {
     this.startAtTheBeginning = indexReset;
   }
 
-  private TimeModel parseTimeModel(final ByteString data) throws InvalidProtocolBufferException {
-    ConfigurationMap cm = ConfigurationMap.parseFrom(data);
-    Duration maxClockSkew = Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW);
-    Duration maxTtl = Duration.ofSeconds(DEFAULT_MAX_TTL);
-    Duration minTransactionLatency = Duration.ofSeconds(1);
-    for (ConfigurationEntry e : cm.getEntriesList()) {
-      String key = e.getKey();
-      String valString = e.getValue().toStringUtf8();
-      if (key.equals(MAX_CLOCK_SKEW_KEY)) {
-        maxClockSkew = Duration.parse(valString);
-      }
-      if (key.equals(MIN_TRANSACTION_LATENCY_KEY)) {
-        minTransactionLatency = Duration.parse(valString);
-      }
-      if (key.equals(MAX_TTL_KEY)) {
-        maxTtl = Duration.parse(valString);
-      }
-    }
-    return new TimeModel(minTransactionLatency, maxClockSkew, maxTtl);
+  private TimeModel getDefaultTimeModel() {
+    return TimeModel.apply(Duration.ofSeconds(DEFAULT_MIN_TX_LATENCY), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
+        Duration.ofSeconds(DEFAULT_MAX_TTL), Duration.ofSeconds(DEFAULT_AVG_TX_LATENCY),
+        Duration.ofSeconds(DEFAULT_MIN_SKEW), Duration.ofSeconds(DEFAULT_MAX_SKEW)).get();
   }
 
   @Override
   public final Source<LedgerInitialConditions, NotUsed> getLedgerInitialConditions() {
-    ByteString data = this.handler.getState(Namespace.DAML_CONFIG_TIME_MODEL);
-
-    TimeModel tm;
-    if (data == null) {
-      LOGGER.info("No time model set on chain using defaults");
-      tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
-          Duration.ofSeconds(DEFAULT_MAX_TTL));
-    } else {
-      try {
-        tm = parseTimeModel(data);
-      } catch (InvalidProtocolBufferException exc) {
-        LOGGER.severe(String.format("Unparseable TimeModel data %s, using defaults", data));
-        tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
-      }
-    }
+    TimeModel tm = getDefaultTimeModel();
     LOGGER.info(String.format("TimeModel set to %s", tm));
 
     String ledgerId = "default-ledgerid";
-    data = this.handler.getState(Namespace.DAML_CONFIG_LEDGER_ID);
+    ByteString data = this.handler.getState(Namespace.DAML_CONFIG_LEDGER_ID);
     if (data != null) {
       ledgerId = data.toStringUtf8();
     }
