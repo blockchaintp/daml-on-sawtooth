@@ -29,7 +29,7 @@ object SawtoothDamlRpcConfig {
     new SawtoothDamlRpcConfig(
       0,
       "tcp://localhost:4004",
-      "off",
+      "wildcard",
       List.empty,
       DefaultMaxInboundMessageSize,
       "",
