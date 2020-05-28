@@ -53,7 +53,7 @@ public class SawtoothReadService implements ReadService {
 
   private static final int DEFAULT_MAX_TTL = 80; //4x the TimeKeeper period
 
-  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; //2x the TimeKeeper period
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 20; //1x the TimeKeeper period
 
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
