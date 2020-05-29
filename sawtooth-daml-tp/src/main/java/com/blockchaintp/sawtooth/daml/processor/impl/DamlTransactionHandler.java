@@ -58,7 +58,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   private static final int DEFAULT_MAX_TTL = 80; // 4x the TimeKeeper period
 
-  private static final int DEFAULT_MAX_CLOCK_SKEW = 20; // 1x the TimeKeeper period
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 29; //1.5x - 1
 
   private static final Logger LOGGER = Logger.getLogger(DamlTransactionHandler.class.getName());
 
