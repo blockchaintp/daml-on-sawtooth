@@ -79,7 +79,7 @@ To inspect transactions, open your browser with this url `http://localhost`.
 
 **NOTE:**
 
-`daml-on-sawtooth` transaction inspector uses port 80 by default. If you have mission critical local app using port 80, edit this file `./docker/compose/daml-local.yaml` modify the "port" key values in this section:
+`daml-on-sawtooth` transaction inspector uses port 80 by default. If you have a local app using port 80, edit this file `./docker/compose/daml-local.yaml`; modify the `port` key values in this section:
 
 ```yaml  
 router:
