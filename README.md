@@ -1,4 +1,6 @@
 # daml-on-sawtooth
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fblockchaintp%2Fdaml-on-sawtooth.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fblockchaintp%2Fdaml-on-sawtooth?ref=badge_shield)
+
 
 `daml-on-sawtooth` is an integration of the [DAML](https://daml.com/) smart contract runtime engine, created and open sourced by [Digital Asset](https://digitalasset.com/), with Hyperledger Sawtooth blockchain as the backing DLT.
 
@@ -109,6 +111,9 @@ Please refer to [AUTH.md](./AUTH.md) for more instructions.
 ## License
 
 `daml-on-sawtooth` is open source under [Apache Software License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fblockchaintp%2Fdaml-on-sawtooth.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fblockchaintp%2Fdaml-on-sawtooth?ref=badge_large)
 
 ## Copyright
 
