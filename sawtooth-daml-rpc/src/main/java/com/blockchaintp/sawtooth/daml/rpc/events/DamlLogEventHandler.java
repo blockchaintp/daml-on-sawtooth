@@ -21,15 +21,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
-
-import org.reactivestreams.Publisher;
-import org.zeromq.ZFrame;
-import org.zeromq.ZLoop;
-import org.zeromq.ZMQ.PollItem;
-import org.zeromq.ZMsg;
 
 import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
@@ -44,6 +37,14 @@ import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.zeromq.ZFrame;
+import org.zeromq.ZLoop;
+import org.zeromq.ZMQ.PollItem;
+import org.zeromq.ZMsg;
 
 import io.reactivex.processors.UnicastProcessor;
 import sawtooth.sdk.messaging.Future;
@@ -71,7 +72,7 @@ import scala.Tuple2;
 public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private static final int DEFAULT_TIMEOUT = 10;
-  private static final Logger LOGGER = Logger.getLogger(DamlLogEventHandler.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlLogEventHandler.class);
   private static final String[] SUBSCRIBE_SUBJECTS = new String[] {EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
       EventConstants.DAML_LOG_EVENT_SUBJECT,
       com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
@@ -134,7 +135,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     Future resp = this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
 
     String retBlockId = null;
-    LOGGER.fine(String.format("Waiting for ClientBlockGetResponse for block_num: %s", blockNum));
+    LOGGER.debug(String.format("Waiting for ClientBlockGetResponse for block_num: %s", blockNum));
     try {
       ByteString result = null;
       while (result == null) {
@@ -142,27 +143,26 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           result = resp.getResult(DEFAULT_TIMEOUT);
           ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
           switch (response.getStatus()) {
-          case OK:
-            LOGGER.fine("ClientBlockGetResponse received...");
-            retBlockId = response.getBlock().getHeaderSignature();
-            break;
-          case NO_RESOURCE:
-            LOGGER.info(String.format("NO_RESOURCE received from ClientBlockGetResponse: %s", response.toString()));
-            return null;
-          case INTERNAL_ERROR:
-          case UNRECOGNIZED:
-          case INVALID_ID:
-          case STATUS_UNSET:
-          default:
-            LOGGER.severe(
-                String.format("Invalid response received from ClientBlockGetByNumRequest: %s", response.getStatus()));
+            case OK:
+              LOGGER.debug("ClientBlockGetResponse received...");
+              retBlockId = response.getBlock().getHeaderSignature();
+              break;
+            case NO_RESOURCE:
+              LOGGER.info(String.format("NO_RESOURCE received from ClientBlockGetResponse: %s", response.toString()));
+              return null;
+            case INTERNAL_ERROR:
+            case UNRECOGNIZED:
+            case INVALID_ID:
+            case STATUS_UNSET:
+            default:
+              LOGGER.warn("Invalid response received from ClientBlockGetByNumRequest: {}}", response.getStatus());
           }
         } catch (TimeoutException exc) {
-          LOGGER.warning("Still waiting for ClientBlockGetResponse...");
+          LOGGER.warn("Still waiting for ClientBlockGetResponse...");
         }
       }
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
-      LOGGER.warning(exc.getMessage());
+      LOGGER.warn(exc.getMessage());
     }
     return retBlockId;
   }
@@ -188,7 +188,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       Map<String, String> attrMap = eventAttributeMap(evt);
       if (evt.getEventType().equals(EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT)) {
         blockNum = Long.parseLong(attrMap.get(EventConstants.SAWTOOTH_BLOCK_NUM_EVENT_ATTRIBUTE));
-        LOGGER.fine(String.format("Received block-commit block_num=%s", blockNum));
+        LOGGER.debug(String.format("Received block-commit block_num=%s", blockNum));
       }
     }
     long updateCounter = 1;
@@ -209,7 +209,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
             Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
             tuplesToReturn.add(updateTuple);
             lastOffsetThisBlock = offset;
-            LOGGER.fine(String.format("Sending update at offset=%s", offset));
+            LOGGER.debug(String.format("Sending update at offset=%s", offset));
           } else {
             LOGGER.info(
                 String.format("Skip sending offset=%s which is less than lastOffset=%s", offset, this.lastOffset));
@@ -263,7 +263,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   @Override
   public final int handle(final ZLoop loop, final PollItem item, final Object arg) {
-    LOGGER.fine("Handling message...");
+    LOGGER.debug("Handling message...");
 
     ZMsg msg = ZMsg.recvMsg(item.getSocket());
     Iterator<ZFrame> multiPartMessage = msg.iterator();
@@ -274,7 +274,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         Message message = Message.parseFrom(frame.getData());
         processMessage(message);
       } catch (IOException exc) {
-        LOGGER.warning(exc.getMessage());
+        LOGGER.warn(exc.getMessage());
       }
     }
     return 0;
@@ -290,7 +290,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         }
       }
     } else {
-      LOGGER.warning(String.format("Unexpected message type: %s", message.getMessageType()));
+      LOGGER.warn("Unexpected message type: {}", message.getMessageType());
     }
   }
 
@@ -301,14 +301,14 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       try {
         receivedMsg = this.stream.receive(DEFAULT_TIMEOUT);
       } catch (TimeoutException exc) {
-        LOGGER.fine("Timeout waiting for message");
+        LOGGER.debug("Timeout waiting for message");
         receivedMsg = null;
       }
       if (receivedMsg != null) {
         try {
           processMessage(receivedMsg);
         } catch (IOException exc) {
-          LOGGER.warning(String.format("Error unmarshalling message of type: %s", receivedMsg.getMessageType()));
+          LOGGER.warn("Error unmarshalling message of type: {}", receivedMsg.getMessageType());
         }
       }
     }
@@ -328,7 +328,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
    */
   public final void sendSubscribe(final Offset beginAfter) {
     if (this.subscribed) {
-      LOGGER.warning("Attempted to subscribe twice");
+      LOGGER.warn("Attempted to subscribe twice");
       return;
     }
 
@@ -345,7 +345,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         .addAllLastKnownBlockIds(lastBlockIds).build();
 
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
-    LOGGER.fine("Waiting for subscription response...");
+    LOGGER.debug("Waiting for subscription response...");
     try {
       ByteString result = null;
       while (result == null) {
@@ -353,24 +353,24 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           result = resp.getResult(DEFAULT_TIMEOUT);
           ClientEventsSubscribeResponse subscribeResponse = ClientEventsSubscribeResponse.parseFrom(result);
           switch (subscribeResponse.getStatus()) {
-          case UNKNOWN_BLOCK:
-            throw new RuntimeException(String.format("Unknown blockids in subscription: %s", lastBlockIds));
-          case INVALID_FILTER:
-            LOGGER.warning("InvalidFilters response received");
-          case STATUS_UNSET:
-          case OK:
-            this.subscribed = true;
-            LOGGER.info("Subscription response received...");
-            return;
-          default:
+            case UNKNOWN_BLOCK:
+              throw new RuntimeException(String.format("Unknown blockids in subscription: %s", lastBlockIds));
+            case INVALID_FILTER:
+              LOGGER.warn("InvalidFilters response received");
+            case STATUS_UNSET:
+            case OK:
+              this.subscribed = true;
+              LOGGER.info("Subscription response received...");
+              return;
+            default:
           }
         } catch (TimeoutException exc) {
-          LOGGER.warning("Still waiting for subscription response...");
+          LOGGER.warn("Still waiting for subscription response...");
         }
       }
 
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
-      LOGGER.warning(exc.getMessage());
+      LOGGER.warn(exc.getMessage());
     }
   }
 
@@ -382,9 +382,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     Future resp = this.stream.send(MessageType.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST, ceuReq.toByteString());
     try {
       resp.getResult();
-      LOGGER.fine("Unsubscribed...");
+      LOGGER.debug("Unsubscribed...");
     } catch (InterruptedException | ValidatorConnectionError exc) {
-      LOGGER.warning(exc.getMessage());
+      LOGGER.warn(exc.getMessage());
     }
   }
 
@@ -415,15 +415,15 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
         long uncompressStop = System.currentTimeMillis();
         long uncompressTime = uncompressStop - uncompressStart;
-        LOGGER.fine(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+        LOGGER.debug(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
             inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
-        LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
+        LOGGER.error("Error uncompressing stream, throwing InternalError! {}", exc.getMessage());
         throw new IOException(exc.getMessage());
       }
     } catch (IOException exc) {
-      LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw exc;
     }
   }
@@ -438,7 +438,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     ClientStateGetRequest req = ClientStateGetRequest.newBuilder().setAddress(address).build();
     Future resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
 
-    LOGGER.fine(String.format("Waiting for ClientStateGetResponse for address %s", address));
+    LOGGER.debug(String.format("Waiting for ClientStateGetResponse for address %s", address));
     try {
       ByteString result = null;
       while (result == null) {
@@ -446,31 +446,31 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
           result = resp.getResult(DEFAULT_TIMEOUT);
           ClientStateGetResponse response = ClientStateGetResponse.parseFrom(result);
           switch (response.getStatus()) {
-          case OK:
-            ByteString bs = response.getValue();
-            LOGGER.fine(String.format("ClientStateGetResponse received OK for %s=%s", address, bs));
-            return bs;
-          case NO_RESOURCE:
-            LOGGER.info(String.format("Address %s not currently set", address));
-            return null;
-          case INVALID_ADDRESS:
-          case NOT_READY:
-          case NO_ROOT:
-          case INTERNAL_ERROR:
-          case UNRECOGNIZED:
-          case STATUS_UNSET:
-          case INVALID_ROOT:
-          default:
-            LOGGER.severe(String.format("Invalid response received from ClientStateGetRequest address=%s response=%s",
-                address, response.getStatus()));
-            return null;
+            case OK:
+              ByteString bs = response.getValue();
+              LOGGER.debug(String.format("ClientStateGetResponse received OK for %s=%s", address, bs));
+              return bs;
+            case NO_RESOURCE:
+              LOGGER.info(String.format("Address %s not currently set", address));
+              return null;
+            case INVALID_ADDRESS:
+            case NOT_READY:
+            case NO_ROOT:
+            case INTERNAL_ERROR:
+            case UNRECOGNIZED:
+            case STATUS_UNSET:
+            case INVALID_ROOT:
+            default:
+              LOGGER.warn("Invalid response received from ClientStateGetRequest address={} response={}", address,
+                  response.getStatus());
+              return null;
           }
         } catch (TimeoutException exc) {
-          LOGGER.warning(String.format("Still waiting for ClientStateGetResponse address=%s", address));
+          LOGGER.warn("Still waiting for ClientStateGetResponse address={}", address);
         }
       }
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
-      LOGGER.warning(exc.getMessage());
+      LOGGER.warn(exc.getMessage());
     }
     return null;
   }

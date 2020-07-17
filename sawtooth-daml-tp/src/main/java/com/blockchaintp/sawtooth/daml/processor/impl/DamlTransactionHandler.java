@@ -17,8 +17,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
@@ -60,7 +60,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   private static final int DEFAULT_MAX_CLOCK_SKEW = 40; // 2x the TimeKeeper period
 
-  private static final Logger LOGGER = Logger.getLogger(DamlTransactionHandler.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionHandler.class);
 
   private final DamlCommitter committer;
   private final String familyName;
@@ -156,7 +156,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Map<DamlStateKey, Option<DamlStateValue>> buildStateMap(final LedgerState ledgerState,
       final TransactionHeader txHeader, final DamlSubmission submission)
       throws InvalidTransactionException, InternalError {
-    LOGGER.fine(String.format("Fetching DamlState for this transaction"));
+    LOGGER.debug(String.format("Fetching DamlState for this transaction"));
     Map<DamlStateKey, String> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
 
     List<String> inputList = txHeader.getInputsList();
@@ -171,19 +171,19 @@ public final class DamlTransactionHandler implements TransactionHandler {
     Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
     for (DamlStateKey k : inputDamlStateKeys.keySet()) {
       if (inputStates.containsKey(k)) {
-        LOGGER.fine(
+        LOGGER.debug(
             String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(), Namespace.makeAddressForType(k)));
         Option<DamlStateValue> option = Option.apply(inputStates.get(k));
         if (inputStates.get(k).toByteString().size() == 0) {
-          LOGGER.fine(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
+          LOGGER.debug(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
               Namespace.makeAddressForType(k)));
         } else {
-          LOGGER.fine(String.format("Fetched %s(%s), address=%s, size=%s", k, k.getKeyCase().toString(),
+          LOGGER.debug(String.format("Fetched %s(%s), address=%s, size=%s", k, k.getKeyCase().toString(),
               Namespace.makeAddressForType(k), inputStates.get(k).toByteString().size()));
         }
         inputStatesWithOption.put(k, option);
       } else {
-        LOGGER.fine(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
+        LOGGER.debug(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
             Namespace.makeAddressForType(k)));
         inputStatesWithOption.put(k, Option.empty());
       }
@@ -194,14 +194,14 @@ public final class DamlTransactionHandler implements TransactionHandler {
   private Configuration getDefaultConfiguration() throws InternalError, InvalidTransactionException {
     TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
         Duration.ofSeconds(DEFAULT_MAX_TTL));
-    LOGGER.fine(String.format("Default TimeModel set to %s", tm));
+    LOGGER.debug(String.format("Default TimeModel set to %s", tm));
     Configuration blankConfiguration = new Configuration(0, tm);
     return blankConfiguration;
   }
 
   @Override
   public Collection<String> getNameSpaces() {
-    return Arrays.asList(new String[] {this.namespace });
+    return Arrays.asList(new String[] {this.namespace});
   }
 
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
@@ -215,9 +215,9 @@ public final class DamlTransactionHandler implements TransactionHandler {
     return this.version;
   }
 
-  private void recordState(final LedgerState ledgerState, final DamlSubmission submission,
-      final String participantId, final Map<DamlStateKey, Option<DamlStateValue>> stateMap,
-      final DamlLogEntryId entryId)throws InternalError, InvalidTransactionException {
+  private void recordState(final LedgerState ledgerState, final DamlSubmission submission, final String participantId,
+      final Map<DamlStateKey, Option<DamlStateValue>> stateMap, final DamlLogEntryId entryId)
+      throws InternalError, InvalidTransactionException {
 
     long processStart = System.currentTimeMillis();
     String ledgerEffectiveTime = null;
@@ -230,15 +230,14 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
     LOGGER.info(String.format("Processing submission.  recordTime=%s, ledgerEffectiveTime=%s, maxRecordTime=%s",
         getRecordTime(ledgerState), ledgerEffectiveTime, maxRecordTime));
-    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer
-        .processSubmission(getDefaultConfiguration(), entryId, getRecordTime(ledgerState), submission, participantId,
-        stateMap);
+    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
+        getDefaultConfiguration(), entryId, getRecordTime(ledgerState), submission, participantId, stateMap);
     long recordStart = System.currentTimeMillis();
     Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
     ledgerState.setDamlStates(newState.entrySet());
 
     DamlLogEntry newLogEntry = processSubmission._1;
-    LOGGER.fine(String.format("Recording log at %s, address=%s", entryId, Namespace.makeAddressForType(entryId),
+    LOGGER.debug(String.format("Recording log at %s, address=%s", entryId, Namespace.makeAddressForType(entryId),
         newLogEntry.toByteString().size()));
     ledgerState.addDamlLogEntry(entryId, newLogEntry);
     long recordFinish = System.currentTimeMillis();

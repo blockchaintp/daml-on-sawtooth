@@ -17,8 +17,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.google.protobuf.ByteString;
@@ -44,7 +45,7 @@ public class MTTransactionProcessor implements Runnable {
 
   private static final int LOG_METRICS_INTERVAL = 1000;
 
-  private static final Logger LOGGER = Logger.getLogger(MTTransactionProcessor.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(MTTransactionProcessor.class);
 
   private TransactionHandler handler;
 
@@ -75,7 +76,7 @@ public class MTTransactionProcessor implements Runnable {
     long outStandingTx = 0;
     long enqueueCount = 0;
     long dequeueCount = 0;
-  while (!stopped) {
+    while (!stopped) {
       Message inMessage = this.stream.receiveNoException(1);
       while (inMessage != null) {
         enqueueCount += handleInbound(inMessage);
@@ -99,8 +100,7 @@ public class MTTransactionProcessor implements Runnable {
 
   private int handleOutbound(final Map.Entry<String, TpProcessResponse> outPair) {
     if (outPair != null) {
-      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(),
-          outPair.getValue().toByteString());
+      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(), outPair.getValue().toByteString());
       return 1;
     }
     return 0;
@@ -108,7 +108,7 @@ public class MTTransactionProcessor implements Runnable {
 
   private int handleInbound(final Message inMessage) {
     if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
-      LOGGER.fine("Recieved Ping Message.");
+      LOGGER.debug("Recieved Ping Message.");
       PingResponse pingResponse = PingResponse.newBuilder().build();
       this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
           pingResponse.toByteString());
@@ -132,7 +132,7 @@ public class MTTransactionProcessor implements Runnable {
         fut.getResult();
         registered = true;
       } catch (InterruptedException | ValidatorConnectionError e) {
-        LOGGER.log(Level.WARNING, "Failed to register with validator, retrying...", e);
+        LOGGER.warn("Failed to register with validator, retrying...", e);
       }
     }
   }
@@ -164,29 +164,29 @@ public class MTTransactionProcessor implements Runnable {
           handler.apply(transactionRequest, state);
           builder.setStatus(TpProcessResponse.Status.OK);
         } catch (InvalidTransactionException ite) {
-          LOGGER.log(Level.WARNING, "Invalid Transaction: " + ite.toString(), ite);
+          LOGGER.warn("Invalid Transaction: " + ite.toString(), ite);
           builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
           builder.setMessage(ite.getMessage());
           if (ite.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
           }
         } catch (InternalError ie) {
-          LOGGER.log(Level.WARNING, "State Exception!: " + ie.toString(), ie);
+          LOGGER.warn("State Exception!: " + ie.toString(), ie);
           builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
           builder.setMessage(ie.getMessage());
           if (ie.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
           }
         } catch (Throwable t) {
-          LOGGER.log(Level.WARNING, "Unknown Exception!: " + t.toString(), t);
+          LOGGER.warn("Unknown Exception!: " + t.toString(), t);
           builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
           builder.setMessage(t.getMessage());
         }
         responses.put(Map.entry(message.getCorrelationId(), builder.build()));
       } catch (InvalidProtocolBufferException e) {
-        LOGGER.log(Level.WARNING, "InvalidProtocolBufferException!: " + e.toString(), e);
+        LOGGER.warn("InvalidProtocolBufferException!: " + e.toString(), e);
       } catch (InterruptedException e) {
-        LOGGER.log(Level.WARNING, "Interrupted while queueing a response!: " + e.toString(), e);
+        LOGGER.warn("Interrupted while queueing a response!: " + e.toString(), e);
       }
     }
 

@@ -11,8 +11,10 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.processor;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.daml.processor.impl.DamlCommitterImpl;
 import com.blockchaintp.sawtooth.daml.processor.impl.DamlTransactionHandler;
@@ -22,30 +24,69 @@ import sawtooth.sdk.processor.TransactionHandler;
 
 /**
  * A basic Main class for DamlTransactionProcessor.
+ *
  * @author scealiontach
  */
 public final class DamlTransactionProcessorMain {
 
-  private static final Logger LOGGER = Logger.getLogger(DamlTransactionProcessorMain.class.getName());
+  private static final int DEBUG_VS = 2;
+  private static final int INFO_VS = 1;
+  private static final int TRACE_VS = 3;
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionProcessorMain.class);
 
   /**
    * A basic main method for this transaction processor.
+   *
    * @param args at this time only one argument the address of the validator
    *             component endpoint, e.g. tcp://localhost:4004
    */
   public static void main(final String[] args) {
-    Logger.getGlobal().setLevel(Level.ALL);
-    Engine engine = new Engine();
-    DamlCommitter committer = new DamlCommitterImpl(engine);
-    TransactionHandler handler = new DamlTransactionHandler(committer);
-    MTTransactionProcessor transactionProcessor = new MTTransactionProcessor(handler, args[0]);
-    LOGGER.info(String.format("Added handler %s", DamlTransactionHandler.class.getName()));
-    Thread thread = new Thread(transactionProcessor);
+    final Engine engine = new Engine();
+    String connectStr = null;
+    for (final String s : args) {
+      if (s.startsWith("-v")) {
+        setLoggingLevel(s);
+      } else {
+        connectStr = s;
+      }
+    }
+    final DamlCommitter committer = new DamlCommitterImpl(engine);
+    final TransactionHandler handler = new DamlTransactionHandler(committer);
+    final MTTransactionProcessor transactionProcessor = new MTTransactionProcessor(handler, connectStr);
+    LOGGER.info("Added handler {}", DamlTransactionHandler.class.getName());
+    final Thread thread = new Thread(transactionProcessor);
     thread.start();
     try {
       thread.join();
-    } catch (InterruptedException exc) {
-      LOGGER.warning("TransactionProcessor was interrupted");
+    } catch (final InterruptedException exc) {
+      LOGGER.warn("TransactionProcessor was interrupted");
+    }
+  }
+
+  private static void setLoggingLevel(final String lvl) {
+    int vcount = 0;
+    for (int i = 0; i < lvl.length(); i++) {
+      if (lvl.charAt(i) == 'v') {
+        vcount++;
+      }
+    }
+    if (vcount > TRACE_VS) {
+      vcount = TRACE_VS;
+    }
+    switch (vcount) {
+      case INFO_VS:
+        Configurator.setRootLevel(Level.INFO);
+        break;
+      case DEBUG_VS:
+        Configurator.setRootLevel(Level.DEBUG);
+        break;
+      case TRACE_VS:
+        Configurator.setRootLevel(Level.TRACE);
+        break;
+      case 0:
+      default:
+        Configurator.setRootLevel(Level.WARN);
+        break;
     }
   }
 

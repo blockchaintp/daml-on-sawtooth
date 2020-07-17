@@ -17,9 +17,11 @@ import static sawtooth.sdk.processor.Utils.hash512;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.util.Collection;
-import java.util.logging.Logger;
 
 import com.google.protobuf.ByteString;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
@@ -41,7 +43,7 @@ public final class SawtoothClientUtils {
   private static SecureRandom secureRandom;
   private static int randomBytesGenerated;
 
-  private static final Logger LOGGER = Logger.getLogger(SawtoothClientUtils.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothClientUtils.class);
 
   private static final int MAX_BYTES_PER_SEED = 10 * 1024 * 1024;
 
@@ -67,6 +69,7 @@ public final class SawtoothClientUtils {
 
   /**
    * Make a sawtooth transaction based on the provided parameters.
+   *
    * @param keyManager              a keymanager to provide the necessary identity
    *                                info
    * @param familyName              the family name
@@ -98,18 +101,19 @@ public final class SawtoothClientUtils {
 
   /**
    * Generate a random nonce.
+   *
    * @return the nonce
    */
   public static String generateNonce() {
     final int seedByteCount = 20;
     synchronized (SawtoothClientUtils.class) {
       if (null == secureRandom) {
-        LOGGER.fine("Generating nonce - acquiring SecureRandom");
+        LOGGER.debug("Generating nonce - acquiring SecureRandom");
         secureRandom = new SecureRandom();
         randomBytesGenerated = -1;
       }
       if (randomBytesGenerated == -1) {
-        LOGGER.fine("Generating nonce - regenerating seed");
+        LOGGER.debug("Generating nonce - regenerating seed");
         secureRandom.setSeed(secureRandom.generateSeed(seedByteCount));
         randomBytesGenerated = seedByteCount;
       } else {
@@ -121,15 +125,16 @@ public final class SawtoothClientUtils {
     }
 
     byte[] nonceBytes = new byte[seedByteCount];
-    LOGGER.fine("Generating nonce - generating nonce");
+    LOGGER.debug("Generating nonce - generating nonce");
     secureRandom.nextBytes(nonceBytes);
-    LOGGER.fine("Generating nonce - nonce generated");
+    LOGGER.debug("Generating nonce - nonce generated");
     return HEX.encode(nonceBytes);
   }
 
   /**
    * For a given string return its sha512, transform the encoding problems into
    * RuntimeErrors.
+   *
    * @param arg a string
    * @return the hash512 of the string
    */
@@ -144,6 +149,7 @@ public final class SawtoothClientUtils {
 
   /**
    * For a given ByteString return its sha512.
+   *
    * @param arg a ByteString
    * @return the hash512 of the ByteString
    */
@@ -153,6 +159,7 @@ public final class SawtoothClientUtils {
 
   /**
    * For a given array of bytes return its sha512.
+   *
    * @param arg the bytes
    * @return the hash512 of the byte array
    */

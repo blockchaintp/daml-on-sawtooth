@@ -23,7 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -68,7 +69,7 @@ public final class DamlLedgerState implements LedgerState {
 
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
-  private static final Logger LOGGER = Logger.getLogger(DamlLedgerState.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlLedgerState.class);
 
   /**
    * The state which this class wraps and delegates to.
@@ -126,7 +127,7 @@ public final class DamlLedgerState implements LedgerState {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.fine(String.format("Skipping key %s since value is null", k));
+        LOGGER.debug("Skipping key {} since value is null", k);
       }
     }
     return retMap;
@@ -171,7 +172,7 @@ public final class DamlLedgerState implements LedgerState {
       DamlStateValue val = e.getValue();
       ByteString packDamlStateValue;
       if (key.getKeyCase().equals(DamlStateKey.KeyCase.COMMAND_DEDUP)) {
-        LOGGER.fine("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
+        LOGGER.debug("Swapping DamlStateKey for DamlStateValue on COMMAND_DEDUP");
         packDamlStateValue = KeyValueCommitting.packDamlStateKey(key);
       } else {
         packDamlStateValue = KeyValueCommitting.packDamlStateValue(val);
@@ -219,20 +220,20 @@ public final class DamlLedgerState implements LedgerState {
     DamlLogEntryIndex newIndex = DamlLogEntryIndex.newBuilder().clearAddresses().addAllAddresses(addresses).build();
     Map<String, ByteString> indexSetMap = new HashMap<>();
     indexSetMap.put(Namespace.DAML_LOG_ENTRY_LIST, compressByteString(newIndex.toByteString()));
-    LOGGER.fine("Setting new log entry list");
+    LOGGER.debug("Setting new log entry list");
     state.setState(indexSetMap.entrySet());
   }
 
   @Override
   public List<String> getLogEntryIndex() throws InternalError, InvalidTransactionException {
-    LOGGER.fine(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
+    LOGGER.debug(String.format("Get LogEntryIndex address=%s", Namespace.DAML_LOG_ENTRY_LIST));
     Map<String, ByteString> stateMap = state.getState(List.of(Namespace.DAML_LOG_ENTRY_LIST));
     if (stateMap.containsKey(Namespace.DAML_LOG_ENTRY_LIST)) {
       ByteString compressed = stateMap.get(Namespace.DAML_LOG_ENTRY_LIST);
-      LOGGER.fine(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
+      LOGGER.debug(String.format("Get LogEntryIndex address=%s,compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
           compressed.size()));
       ByteString data = uncompressByteString(compressed);
-      LOGGER.fine(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
+      LOGGER.debug(String.format("Get LogEntryIndex address=%s,size=%s, compressed=%s", Namespace.DAML_LOG_ENTRY_LIST,
           data.size(), compressed.size()));
       try {
         DamlLogEntryIndex dlei = DamlLogEntryIndex.parseFrom(data);
@@ -261,18 +262,18 @@ public final class DamlLedgerState implements LedgerState {
   @Override
   public Timestamp getRecordTime() throws InternalError {
     try {
-      LOGGER.fine(String.format("Fetching global time %s", TIMEKEEPER_GLOBAL_RECORD));
+      LOGGER.debug(String.format("Fetching global time %s", TIMEKEEPER_GLOBAL_RECORD));
       Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
       if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
         TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
-        LOGGER.fine(String.format("Record Time = %s", tkgr.getLastCalculatedTime()));
+        LOGGER.debug(String.format("Record Time = %s", tkgr.getLastCalculatedTime()));
         return tkgr.getLastCalculatedTime();
       } else {
-        LOGGER.warning("No global time has been set,assuming beginning of epoch");
+        LOGGER.warn("No global time has been set,assuming beginning of epoch");
         return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
       }
     } catch (InvalidTransactionException exc) {
-      LOGGER.warning(String.format("Error fetching global time, assuming beginning of epoch %s", exc.getMessage()));
+      LOGGER.warn(String.format("Error fetching global time, assuming beginning of epoch %s", exc.getMessage()));
       return Timestamp.newBuilder().setSeconds(0).setNanos(0).build();
     } catch (InternalError | InvalidProtocolBufferException exc) {
       InternalError err = new InternalError(exc.getMessage());
@@ -304,11 +305,11 @@ public final class DamlLedgerState implements LedgerState {
       ByteString bs = ByteString.copyFrom(baos.toByteArray());
       long compressStop = System.currentTimeMillis();
       long compressTime = compressStop - compressStart;
-      LOGGER.fine(String.format("Compressed ByteString time=%s, original_size=%s, new_size=%s", compressTime,
+      LOGGER.debug(String.format("Compressed ByteString time=%s, original_size=%s, new_size=%s", compressTime,
           inputBytes.length, baos.size()));
       return bs;
     } catch (IOException exc) {
-      LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      LOGGER.warn("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw new InternalError(exc.getMessage());
     }
   }
@@ -334,15 +335,15 @@ public final class DamlLedgerState implements LedgerState {
         ByteString bs = ByteString.copyFrom(baos.toByteArray());
         long uncompressStop = System.currentTimeMillis();
         long uncompressTime = uncompressStop - uncompressStart;
-        LOGGER.fine(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
+        LOGGER.debug(String.format("Uncompressed ByteString time=%s, original_size=%s, new_size=%s", uncompressTime,
             inputBytes.length, baos.size()));
         return bs;
       } catch (DataFormatException exc) {
-        LOGGER.severe(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
+        LOGGER.error(String.format("Error uncompressing stream, throwing InternalError! %s", exc.getMessage()));
         throw new InternalError(exc.getMessage());
       }
     } catch (IOException exc) {
-      LOGGER.severe("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw new InternalError(exc.getMessage());
     }
   }

@@ -27,7 +27,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
@@ -83,7 +85,7 @@ import scala.collection.JavaConverters;
  */
 public final class SawtoothWriteService implements WriteService {
 
-  private static final Logger LOGGER = Logger.getLogger(SawtoothWriteService.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothWriteService.class);
 
   private static final int DEFAULT_WAIT_TIME = 300;
 
@@ -119,7 +121,7 @@ public final class SawtoothWriteService implements WriteService {
    * @param participant    a string identifying this participant
    */
   private SawtoothWriteService(final Stream implementation, final KeyManager kmgr,
-                               final SawtoothTransactionsTracer txnTracer, final String participant) {
+      final SawtoothTransactionsTracer txnTracer, final String participant) {
     this.stream = implementation;
     this.keyManager = kmgr;
     this.sawtoothTransactionsTracer = txnTracer;
@@ -183,16 +185,16 @@ public final class SawtoothWriteService implements WriteService {
       ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
       Status status = getResponse.getStatus();
       switch (status) {
-      case OK:
-        LOGGER.info("ClientBatchSubmit response is OK");
-        break;
-      case QUEUE_FULL:
-        LOGGER.info("ClientBatchSubmit response is QUEUE_FULL");
-        break;
-      default:
-        LOGGER.info(String.format("ClientBatchSubmit response is %s", status.toString()));
-        throw new SawtoothWriteServiceException(
-            String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
+        case OK:
+          LOGGER.info("ClientBatchSubmit response is OK");
+          break;
+        case QUEUE_FULL:
+          LOGGER.info("ClientBatchSubmit response is QUEUE_FULL");
+          break;
+        default:
+          LOGGER.info(String.format("ClientBatchSubmit response is %s", status.toString()));
+          throw new SawtoothWriteServiceException(
+              String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
       return Map.entry(batchid, status);
     } catch (InterruptedException e) {
@@ -237,7 +239,7 @@ public final class SawtoothWriteService implements WriteService {
       try {
         return submissionToResponse(batch.getHeaderSignature(), streamToValidator);
       } catch (SawtoothWriteServiceException exc) {
-        LOGGER.severe(exc.getMessage());
+        LOGGER.warn(exc.getMessage());
         return Map.entry(batch.getHeaderSignature(), ClientBatchSubmitResponse.Status.INTERNAL_ERROR);
       }
     }, watchThreadPool);
@@ -246,12 +248,12 @@ public final class SawtoothWriteService implements WriteService {
   private SubmissionResult batchTerminalToSubmissionResult(
       final Map.Entry<String, ClientBatchStatus.Status> submission) {
     switch (submission.getValue()) {
-    case COMMITTED:
-      return SubmissionResult.Acknowledged$.MODULE$;
-    case INVALID:
-      return new SubmissionResult.InternalError("Invalid transaction was submitted");
-    default:
-      return SubmissionResult.Overloaded$.MODULE$;
+      case COMMITTED:
+        return SubmissionResult.Acknowledged$.MODULE$;
+      case INVALID:
+        return new SubmissionResult.InternalError("Invalid transaction was submitted");
+      default:
+        return SubmissionResult.Overloaded$.MODULE$;
     }
   }
 
@@ -274,19 +276,19 @@ public final class SawtoothWriteService implements WriteService {
         }
         this.lock.lock();
         switch (consolidatedStatus) {
-        case COMMITTED:
-          this.outstandingBatches--;
-          this.condition.signalAll();
-          lock.unlock();
-          return Map.entry(batchid, ClientBatchStatus.Status.COMMITTED);
-        case INVALID:
-          this.outstandingBatches--;
-          this.condition.signalAll();
-          lock.unlock();
-          return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
-        case UNKNOWN:
-        case PENDING:
-        default:
+          case COMMITTED:
+            this.outstandingBatches--;
+            this.condition.signalAll();
+            lock.unlock();
+            return Map.entry(batchid, ClientBatchStatus.Status.COMMITTED);
+          case INVALID:
+            this.outstandingBatches--;
+            this.condition.signalAll();
+            lock.unlock();
+            return Map.entry(batchid, ClientBatchStatus.Status.INVALID);
+          case UNKNOWN:
+          case PENDING:
+          default:
         }
       } catch (InvalidProtocolBufferException | InterruptedException | ValidatorConnectionError e) {
         this.outstandingBatches--;
@@ -309,19 +311,19 @@ public final class SawtoothWriteService implements WriteService {
 
   private Batch operationToBatch(final SawtoothDamlOperation operation, final Collection<String> inputAddresses,
       final Collection<String> outputAddresses) {
-    Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager,
-            Namespace.DAML_FAMILY_NAME, Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses,
-            Collections.emptyList(), operation.toByteString());
+    Transaction sawtoothTxn = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager, Namespace.DAML_FAMILY_NAME,
+        Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, Collections.emptyList(),
+        operation.toByteString());
     Batch sawtoothBatch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager,
-            Collections.singletonList(sawtoothTxn));
-    LOGGER.fine(
+        Collections.singletonList(sawtoothTxn));
+    LOGGER.debug(
         String.format("Batch %s has tx %s", sawtoothBatch.getHeaderSignature(), sawtoothTxn.getHeaderSignature()));
     return sawtoothBatch;
   }
 
   @Override
-  public CompletionStage<SubmissionResult> allocateParty(final Option<String> hint,
-                                                         final Option<String> displayName, final String submissionId) {
+  public CompletionStage<SubmissionResult> allocateParty(final Option<String> hint, final Option<String> displayName,
+      final String submissionId) {
 
     String finalHint;
     if (hint.isEmpty()) {
@@ -330,16 +332,16 @@ public final class SawtoothWriteService implements WriteService {
       finalHint = hint.get();
     }
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
-            .build();
+        .build();
 
     DamlSubmission submission = KeyValueSubmission.partyToSubmission(submissionId, Option.apply(finalHint), displayName,
-            getParticipantId());
+        getParticipantId());
 
     return getSubmissionResultCompletionStage(damlLogEntryId, submission);
   }
 
   private CompletionStage<SubmissionResult> getSubmissionResultCompletionStage(final DamlLogEntryId damlLogEntryId,
-                                                                               final DamlSubmission submission) {
+      final DamlSubmission submission) {
     Collection<String> outputAddresses = makeOutputAddresses(submission, damlLogEntryId);
     Collection<String> inputAddresses = makeInputAddresses(submission);
 
@@ -347,23 +349,22 @@ public final class SawtoothWriteService implements WriteService {
     Batch batch = operationToBatch(operation, inputAddresses, outputAddresses);
 
     Future fut = sendToValidator(batch);
-    return waitForSubmitResponse(batch, fut)
-            .thenApplyAsync(this::checkBatchWaitForTerminal, watchThreadPool)
-            .thenApply(this::batchTerminalToSubmissionResult);
+    return waitForSubmitResponse(batch, fut).thenApplyAsync(this::checkBatchWaitForTerminal, watchThreadPool)
+        .thenApply(this::batchTerminalToSubmissionResult);
   }
 
   @Override
   public CompletionStage<SubmissionResult> submitConfiguration(final Timestamp maxRecordTime, final String submissionId,
       final Configuration config) {
-    DamlSubmission submission =
-            KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId, this.participantId, config);
+    DamlSubmission submission = KeyValueSubmission.configurationToSubmission(maxRecordTime, submissionId,
+        this.participantId, config);
     return getSubmissionResultCompletionStage(submissionId, submission);
   }
 
   private CompletionStage<SubmissionResult> getSubmissionResultCompletionStage(final String submissionId,
-                                                                               final DamlSubmission submission) {
+      final DamlSubmission submission) {
     DamlLogEntryId damlLogEntryId = DamlLogEntryId.newBuilder().setEntryId(ByteString.copyFromUtf8(submissionId))
-            .build();
+        .build();
 
     return getSubmissionResultCompletionStage(damlLogEntryId, submission);
   }
