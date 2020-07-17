@@ -47,15 +47,12 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.Arrays;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
 
 import io.grpc.Metadata;
+import sawtooth.sdk.signing.Secp256k1PublicKey;
 import scala.collection.immutable.List;
 import scala.collection.immutable.List$;
 import scala.collection.mutable.ListBuffer;
-
-import sawtooth.sdk.signing.Secp256k1PublicKey;
 
 /**
  * Responsible for decoding JWTToken sent from GRPC.

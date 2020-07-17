@@ -201,7 +201,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
 
   @Override
   public Collection<String> getNameSpaces() {
-    return Arrays.asList(new String[] { this.namespace });
+    return Arrays.asList(new String[] {this.namespace});
   }
 
   private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {

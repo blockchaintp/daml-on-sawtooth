@@ -156,7 +156,7 @@ public class SawtoothReadService implements ReadService {
     } else {
       if (this.startAtTheBeginning) {
         LOGGER.info("Starting at the beginning of the chain (offset=1-0) as requested");
-        final Offset offset = new Offset(new long[] { 1, 0 });
+        final Offset offset = new Offset(new long[] {1, 0});
         this.handler.sendSubscribe(offset);
       } else {
         LOGGER.info(String.format("Starting event handling at wherever is current"));

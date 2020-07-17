@@ -21,16 +21,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
-
-import org.reactivestreams.Publisher;
-import org.zeromq.ZFrame;
-import org.zeromq.ZLoop;
-import org.zeromq.ZMQ.PollItem;
-import org.zeromq.ZMsg;
 
 import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
@@ -45,6 +37,14 @@ import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.zeromq.ZFrame;
+import org.zeromq.ZLoop;
+import org.zeromq.ZMQ.PollItem;
+import org.zeromq.ZMsg;
 
 import io.reactivex.processors.UnicastProcessor;
 import sawtooth.sdk.messaging.Future;
@@ -73,9 +73,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private static final int DEFAULT_TIMEOUT = 10;
   private static final Logger LOGGER = LoggerFactory.getLogger(DamlLogEventHandler.class);
-  private static final String[] SUBSCRIBE_SUBJECTS = new String[] { EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
+  private static final String[] SUBSCRIBE_SUBJECTS = new String[] {EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
       EventConstants.DAML_LOG_EVENT_SUBJECT,
-      com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT };
+      com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private Collection<EventSubscription> subscriptions;
@@ -122,7 +122,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.stream = argStream;
     // TODO add a cancel call back
     this.processors = Collections.synchronizedList(new ArrayList<>());
-    this.lastOffset = Offset.apply(new long[] { 0 });
+    this.lastOffset = Offset.apply(new long[] {0});
   }
 
   private String getBlockIdByOffset(final Offset offset) {
@@ -203,7 +203,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
         ByteString evtData = uncompressByteString(evt.getData());
         DamlLogEntry logEntry = KeyValueCommitting.unpackDamlLogEntry(evtData);
         for (Update logEntryToUpdate : this.transformer.logEntryUpdate(id, logEntry)) {
-          Offset offset = new Offset(new long[] { blockNum, offsetCounter, updateCounter });
+          Offset offset = new Offset(new long[] {blockNum, offsetCounter, updateCounter});
           updateCounter++;
           if (offset.compareTo(this.lastOffset) > 0) {
             Tuple2<Offset, Update> updateTuple = Tuple2.apply(offset, logEntryToUpdate);
@@ -227,7 +227,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
               .get(com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE);
           long microseconds = Long.valueOf(microsStr);
           Heartbeat heartbeat = new Heartbeat(new Timestamp(microseconds));
-          Offset hbOffset = new Offset(new long[] { blockNum, 0 });
+          Offset hbOffset = new Offset(new long[] {blockNum, 0});
           if (hbOffset.compareTo(this.lastOffset) > 0) {
             Tuple2<Offset, Update> updateTuple = Tuple2.apply(hbOffset, heartbeat);
             // Only send the most recent heartbeat

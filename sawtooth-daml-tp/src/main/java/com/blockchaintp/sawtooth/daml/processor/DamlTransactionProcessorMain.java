@@ -29,6 +29,9 @@ import sawtooth.sdk.processor.TransactionHandler;
  */
 public final class DamlTransactionProcessorMain {
 
+  private static final int DEBUG_VS = 2;
+  private static final int INFO_VS = 1;
+  private static final int TRACE_VS = 3;
   private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionProcessorMain.class);
 
   /**
@@ -67,17 +70,17 @@ public final class DamlTransactionProcessorMain {
         vcount++;
       }
     }
-    if (vcount > 3) {
-      vcount = 3;
+    if (vcount > TRACE_VS) {
+      vcount = TRACE_VS;
     }
     switch (vcount) {
-      case 1:
+      case INFO_VS:
         Configurator.setRootLevel(Level.INFO);
         break;
-      case 2:
+      case DEBUG_VS:
         Configurator.setRootLevel(Level.DEBUG);
         break;
-      case 3:
+      case TRACE_VS:
         Configurator.setRootLevel(Level.TRACE);
         break;
       case 0:
