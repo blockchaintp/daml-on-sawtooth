@@ -19,6 +19,7 @@
 
 # Exclude vscode setting
 **/.vscode
+**/.bloop
 
 # Exclude direnv envrc
 .envrc
