@@ -9,8 +9,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.timekeeper.util;
-import static org.junit.Assert.*;
+package com.blockchaintp.sawtooth.daml;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 

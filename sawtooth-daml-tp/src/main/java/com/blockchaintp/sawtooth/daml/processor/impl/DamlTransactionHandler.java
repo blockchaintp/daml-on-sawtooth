@@ -19,12 +19,13 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.blockchaintp.sawtooth.daml.KeyValueUtils;
+import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
-import com.blockchaintp.sawtooth.daml.util.KeyValueUtils;
-import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;

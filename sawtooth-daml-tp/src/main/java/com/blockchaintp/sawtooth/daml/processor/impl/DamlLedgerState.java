@@ -29,13 +29,13 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
+import com.blockchaintp.sawtooth.daml.EventConstants;
+import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
-import com.blockchaintp.sawtooth.daml.util.EventConstants;
-import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;

@@ -15,10 +15,10 @@ import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.rpc.events.DamlLogEventHandler;
-import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.v1.Configuration;
 import com.daml.ledger.participant.state.v1.LedgerInitialConditions;
