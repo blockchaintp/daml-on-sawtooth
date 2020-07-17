@@ -178,7 +178,7 @@ public class DamlTransactionHandlerTest {
     DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     TransactionHeader txHeader = TransactionHeader.newBuilder().setFamilyName(Namespace.DAML_FAMILY_NAME)
         .setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).addInputs(Namespace.DAML_LOG_ENTRY_LIST)
-        .addInputs(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD).build();
+        .addInputs(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD).build();
     Archive archive = Archive.getDefaultInstance();
     DamlStateKey archiveKey = DamlStateKey.newBuilder().setPackageId(RandomString.make(RANDOM_STRING_LENGTH)).build();
     DamlSubmission submission = DamlSubmission.newBuilder()

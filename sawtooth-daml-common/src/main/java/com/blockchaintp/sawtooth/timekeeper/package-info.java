@@ -9,23 +9,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.timekeeper.util;
 
 /**
- * Constants relating to Event subscription and attributes.
+ * Contains common library utility methods and classes for sawtooth-timekeeper.
  */
-public final class EventConstants {
-  /**
-   * Events of type timeKeeper will have this attribute set.
-   */
-  public static final String TIMEKEEPER_MICROS_ATTRIBUTE = "micros";
-
-  /**
-   * Event type for DamlLogEntry events.
-   */
-  public static final String TIMEKEEPER_EVENT_SUBJECT = Namespace.TIMEKEEPER_FAMILY_NAME + "/timeKeeper";
-
-  private EventConstants() {
-
-  }
-}
+package com.blockchaintp.sawtooth.timekeeper;

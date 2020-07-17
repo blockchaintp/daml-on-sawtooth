@@ -164,7 +164,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     if (!inputList.containsAll(inputDamlStateKeys.values())) {
       throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
     }
-    if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
+    if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
       throw new InvalidTransactionException(String.format("TIMEKEEPER_GLOBAL_RECORD not declared as input"));
     }
     Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());

@@ -11,7 +11,7 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.processor.impl;
 
-import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

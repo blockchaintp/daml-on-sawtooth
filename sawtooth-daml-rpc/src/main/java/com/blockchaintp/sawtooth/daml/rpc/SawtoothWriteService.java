@@ -11,7 +11,7 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.rpc;
 
-import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 
 import java.util.Collection;
 import java.util.Collections;
