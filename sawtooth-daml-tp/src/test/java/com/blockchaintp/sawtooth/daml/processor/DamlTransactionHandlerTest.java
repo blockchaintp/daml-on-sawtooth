@@ -9,7 +9,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml.processor;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -25,13 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.javatuples.Pair;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
-import com.blockchaintp.sawtooth.daml.util.Namespace;
+import com.blockchaintp.sawtooth.daml.Namespace;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -39,6 +33,11 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.digitalasset.daml_lf_dev.DamlLf.Archive;
 import com.google.protobuf.ByteString;
+
+import org.javatuples.Pair;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.processor.Context;
@@ -178,7 +177,7 @@ public class DamlTransactionHandlerTest {
     DamlTransactionHandler handler = new DamlTransactionHandler(committer);
     TransactionHeader txHeader = TransactionHeader.newBuilder().setFamilyName(Namespace.DAML_FAMILY_NAME)
         .setFamilyVersion(Namespace.DAML_FAMILY_VERSION_1_0).addInputs(Namespace.DAML_LOG_ENTRY_LIST)
-        .addInputs(com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD).build();
+        .addInputs(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD).build();
     Archive archive = Archive.getDefaultInstance();
     DamlStateKey archiveKey = DamlStateKey.newBuilder().setPackageId(RandomString.make(RANDOM_STRING_LENGTH)).build();
     DamlSubmission submission = DamlSubmission.newBuilder()

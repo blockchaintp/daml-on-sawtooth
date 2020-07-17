@@ -9,9 +9,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml.processor;
 
-import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;

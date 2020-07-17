@@ -12,7 +12,7 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 
-package com.blockchaintp.sawtooth.daml.messaging;
+package com.blockchaintp.sawtooth.messaging;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 

@@ -9,7 +9,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
+
 /**
- * An implementation of the sawtooth DAML processor.
+ * Contains common library utility methods and classes for sawtooth-daml.
  */
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml;

@@ -11,6 +11,6 @@
 ------------------------------------------------------------------------------*/
 
 /**
- * Contains common library utility methods and classes for sawtooth-timekeeper.
+ * Zmq Stream implementations.
  */
-package com.blockchaintp.sawtooth.timekeeper.util;
+package com.blockchaintp.sawtooth.messaging;

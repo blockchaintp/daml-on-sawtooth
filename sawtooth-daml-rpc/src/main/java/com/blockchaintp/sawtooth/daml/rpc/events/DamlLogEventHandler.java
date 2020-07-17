@@ -24,9 +24,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
+import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
-import com.blockchaintp.sawtooth.daml.util.EventConstants;
+import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
@@ -75,7 +75,7 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(DamlLogEventHandler.class);
   private static final String[] SUBSCRIBE_SUBJECTS = new String[] {EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
       EventConstants.DAML_LOG_EVENT_SUBJECT,
-      com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
+      com.blockchaintp.sawtooth.timekeeper.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private Collection<EventSubscription> subscriptions;
@@ -222,9 +222,9 @@ public class DamlLogEventHandler implements Runnable, ZLoop.IZLoopHandler {
       for (Event evt : evtList.getEventsList()) {
         Map<String, String> attrMap = eventAttributeMap(evt);
         if (evt.getEventType()
-            .equals(com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_EVENT_SUBJECT)) {
+            .equals(com.blockchaintp.sawtooth.timekeeper.EventConstants.TIMEKEEPER_EVENT_SUBJECT)) {
           String microsStr = attrMap
-              .get(com.blockchaintp.sawtooth.timekeeper.util.EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE);
+              .get(com.blockchaintp.sawtooth.timekeeper.EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE);
           long microseconds = Long.valueOf(microsStr);
           Heartbeat heartbeat = new Heartbeat(new Timestamp(microseconds));
           Offset hbOffset = new Offset(new long[] {blockNum, 0});

@@ -22,13 +22,13 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.blockchaintp.sawtooth.timekeeper.EventConstants;
+import com.blockchaintp.sawtooth.timekeeper.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperParticipant;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
-import com.blockchaintp.sawtooth.timekeeper.util.EventConstants;
-import com.blockchaintp.sawtooth.timekeeper.util.Namespace;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;

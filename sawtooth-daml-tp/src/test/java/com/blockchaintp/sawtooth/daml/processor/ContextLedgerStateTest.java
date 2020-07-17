@@ -9,7 +9,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml.processor;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -26,28 +26,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.javatuples.Pair;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlTransactionRejectionEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
+import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlTransactionRejectionEntry;
 import com.google.protobuf.ByteString;
+
+import org.javatuples.Pair;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 
-public class DamlLedgerStateTest {
+public class ContextLedgerStateTest {
 
   private static final int RANDOM_STRING_LENGTH = 10;
 
@@ -98,7 +97,7 @@ public class DamlLedgerStateTest {
   public void testGetSetDamlState() {
     Pair<Context, Map<String, ByteString>> mockPair = getMockState();
     Context mockState = mockPair.getValue0();
-    LedgerState ledgerState = new DamlLedgerState(mockState);
+    LedgerState ledgerState = new ContextLedgerState(mockState);
     String appId = RandomString.make(RANDOM_STRING_LENGTH);
     String submitter = RandomString.make(RANDOM_STRING_LENGTH);
     String commandId = RandomString.make(RANDOM_STRING_LENGTH);
@@ -142,7 +141,7 @@ public class DamlLedgerStateTest {
   public void testGetSetDamlLogEntries() {
     Pair<Context, Map<String, ByteString>> mockPair = getMockState();
     Context mockState = mockPair.getValue0();
-    LedgerState ledgerState = new DamlLedgerState(mockState);
+    LedgerState ledgerState = new ContextLedgerState(mockState);
     DamlLogEntryId firstKey = DamlLogEntryId.newBuilder()
         .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
     DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder()

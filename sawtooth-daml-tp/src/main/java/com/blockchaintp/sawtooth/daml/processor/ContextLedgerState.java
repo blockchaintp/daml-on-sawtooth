@@ -9,9 +9,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml.processor;
 
-import static com.blockchaintp.sawtooth.timekeeper.util.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,30 +23,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-import com.blockchaintp.sawtooth.daml.processor.LedgerState;
+import com.blockchaintp.sawtooth.daml.EventConstants;
+import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlLogEntryIndex;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
-import com.blockchaintp.sawtooth.daml.util.EventConstants;
-import com.blockchaintp.sawtooth.daml.util.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
-import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
+import com.daml.ledger.participant.state.v1.TimeModel;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -57,7 +57,7 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
  *
  * @author scealiontach
  */
-public final class DamlLedgerState implements LedgerState {
+public final class ContextLedgerState implements LedgerState {
 
   private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
 
@@ -69,7 +69,7 @@ public final class DamlLedgerState implements LedgerState {
 
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DamlLedgerState.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ContextLedgerState.class);
 
   /**
    * The state which this class wraps and delegates to.
@@ -79,7 +79,7 @@ public final class DamlLedgerState implements LedgerState {
   /**
    * @param aState the State class which this object wraps.
    */
-  public DamlLedgerState(final Context aState) {
+  public ContextLedgerState(final Context aState) {
     this.state = aState;
   }
 
