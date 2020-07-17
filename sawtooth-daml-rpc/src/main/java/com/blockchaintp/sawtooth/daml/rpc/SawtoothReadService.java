@@ -14,7 +14,6 @@ package com.blockchaintp.sawtooth.daml.rpc;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
 
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationEntry;
 import com.blockchaintp.sawtooth.daml.protobuf.ConfigurationMap;
@@ -32,6 +31,9 @@ import com.digitalasset.ledger.api.health.Healthy$;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
 import io.reactivex.Flowable;
@@ -43,7 +45,7 @@ import scala.Tuple2;
  */
 public class SawtoothReadService implements ReadService {
 
-  private static final Logger LOGGER = Logger.getLogger(SawtoothReadService.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothReadService.class);
 
   private static final String TIMEMODEL_CONFIG = "com.blockchaintp.sawtooth.daml.timemodel";
 
@@ -51,9 +53,9 @@ public class SawtoothReadService implements ReadService {
   private static final String MAX_CLOCK_SKEW_KEY = TIMEMODEL_CONFIG + ".maxClockSkew";
   private static final String MIN_TRANSACTION_LATENCY_KEY = TIMEMODEL_CONFIG + ".minTransactionLatency";
 
-  private static final int DEFAULT_MAX_TTL = 80; //4x the TimeKeeper period
+  private static final int DEFAULT_MAX_TTL = 80; // 4x the TimeKeeper period
 
-  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; //2x the TimeKeeper period
+  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; // 2x the TimeKeeper period
 
   private static final Timestamp BEGINNING_OF_EPOCH = new Timestamp(0);
 
@@ -62,7 +64,7 @@ public class SawtoothReadService implements ReadService {
   private final SawtoothTransactionsTracer trace;
   private boolean startAtTheBeginning = false;
 
-  private DamlLogEventHandler handler;
+  private final DamlLogEventHandler handler;
 
   /**
    * Build a ReadService based on a zmq address URL.
@@ -96,13 +98,13 @@ public class SawtoothReadService implements ReadService {
   }
 
   private TimeModel parseTimeModel(final ByteString data) throws InvalidProtocolBufferException {
-    ConfigurationMap cm = ConfigurationMap.parseFrom(data);
+    final ConfigurationMap cm = ConfigurationMap.parseFrom(data);
     Duration maxClockSkew = Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW);
     Duration maxTtl = Duration.ofSeconds(DEFAULT_MAX_TTL);
     Duration minTransactionLatency = Duration.ofSeconds(1);
-    for (ConfigurationEntry e : cm.getEntriesList()) {
-      String key = e.getKey();
-      String valString = e.getValue().toStringUtf8();
+    for (final ConfigurationEntry e : cm.getEntriesList()) {
+      final String key = e.getKey();
+      final String valString = e.getValue().toStringUtf8();
       if (key.equals(MAX_CLOCK_SKEW_KEY)) {
         maxClockSkew = Duration.parse(valString);
       }
@@ -128,8 +130,8 @@ public class SawtoothReadService implements ReadService {
     } else {
       try {
         tm = parseTimeModel(data);
-      } catch (InvalidProtocolBufferException exc) {
-        LOGGER.severe(String.format("Unparseable TimeModel data %s, using defaults", data));
+      } catch (final InvalidProtocolBufferException exc) {
+        LOGGER.warn("Unparseable TimeModel data {}, using defaults", data);
         tm = new TimeModel(Duration.ofSeconds(1), Duration.ofMinutes(2), Duration.ofMinutes(2));
       }
     }
@@ -140,8 +142,8 @@ public class SawtoothReadService implements ReadService {
     if (data != null) {
       ledgerId = data.toStringUtf8();
     }
-    Configuration blankConfiguration = new Configuration(0, tm);
-    Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
+    final Configuration blankConfiguration = new Configuration(0, tm);
+    final Flowable<LedgerInitialConditions> f = Flowable.fromArray(new LedgerInitialConditions[] {
         new LedgerInitialConditions(ledgerId, blankConfiguration, BEGINNING_OF_EPOCH) });
     return Source.fromPublisher(f);
   }
@@ -154,7 +156,7 @@ public class SawtoothReadService implements ReadService {
     } else {
       if (this.startAtTheBeginning) {
         LOGGER.info("Starting at the beginning of the chain (offset=1-0) as requested");
-        Offset offset = new Offset(new long[] {1, 0 });
+        final Offset offset = new Offset(new long[] { 1, 0 });
         this.handler.sendSubscribe(offset);
       } else {
         LOGGER.info(String.format("Starting event handling at wherever is current"));

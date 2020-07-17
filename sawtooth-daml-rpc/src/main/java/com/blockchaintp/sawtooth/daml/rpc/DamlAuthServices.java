@@ -28,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.logging.Logger;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -45,7 +44,11 @@ import com.digitalasset.ledger.api.auth.Claims;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongycastle.util.Arrays;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import io.grpc.Metadata;
 import scala.collection.immutable.List;
@@ -60,12 +63,12 @@ import sawtooth.sdk.signing.Secp256k1PublicKey;
  */
 public final class DamlAuthServices implements AuthService {
 
-  private static final Logger LOGGER = Logger.getLogger(SawtoothReadService.class.getName());
+  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothReadService.class);
 
   private Algorithm ecdsaAlgorithm = null;
 
   /**
-   * @param pubKeyInHex  public key in hexadecimal format
+   * @param pubKeyInHex public key in hexadecimal format
    */
   public DamlAuthServices(final String pubKeyInHex) {
     final Secp256k1PublicKey pubKey = Secp256k1PublicKey.fromHex(pubKeyInHex);
