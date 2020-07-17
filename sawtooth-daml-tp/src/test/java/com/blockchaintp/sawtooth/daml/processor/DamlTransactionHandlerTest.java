@@ -9,7 +9,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml.processor;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +32,7 @@ import org.mockito.stubbing.Answer;
 
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
+import com.blockchaintp.sawtooth.daml.processor.DamlTransactionHandler;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;

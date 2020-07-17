@@ -9,7 +9,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor.impl;
+package com.blockchaintp.sawtooth.daml.processor;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -22,8 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.daml.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.Namespace;
-import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
-import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
 import com.daml.ledger.participant.state.v1.TimeModel;
@@ -87,7 +85,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
       throws InvalidTransactionException, InternalError {
     LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
     basicRequestChecks(tpProcessRequest);
-    LedgerState ledgerState = new DamlLedgerState(state);
+    LedgerState ledgerState = new ContextLedgerState(state);
     TransactionHeader txHeader = tpProcessRequest.getHeader();
     try {
       SawtoothDamlOperation operation = SawtoothDamlOperation.parseFrom(tpProcessRequest.getPayload());

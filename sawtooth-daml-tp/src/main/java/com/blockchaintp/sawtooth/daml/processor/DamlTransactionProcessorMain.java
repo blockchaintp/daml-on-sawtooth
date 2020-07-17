@@ -16,8 +16,6 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blockchaintp.sawtooth.daml.processor.impl.DamlCommitterImpl;
-import com.blockchaintp.sawtooth.daml.processor.impl.DamlTransactionHandler;
 import com.digitalasset.daml.lf.engine.Engine;
 
 import sawtooth.sdk.processor.TransactionHandler;
