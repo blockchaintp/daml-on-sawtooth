@@ -79,7 +79,7 @@ public final class TimeKeeperRunnable implements Runnable {
     Batch batch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(updateTransaction));
 
     try {
-      LOGGER.info("Sending a participant time update {} time={}", this.keyManager.getPublicKeyInHex(),
+      LOGGER.debug("Sending a participant time update {} time={}", this.keyManager.getPublicKeyInHex(),
           new Date(Timestamps.toMillis(ts)));
       sendBatch(batch);
     } catch (TimeKeeperException exc) {

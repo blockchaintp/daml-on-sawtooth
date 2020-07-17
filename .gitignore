@@ -13,6 +13,7 @@
 **/.externalToolBuilders
 **/.metals
 **/.scalafmt.conf
+**/.factorypath
 
 # Exclude macOS system
 .DS_Store

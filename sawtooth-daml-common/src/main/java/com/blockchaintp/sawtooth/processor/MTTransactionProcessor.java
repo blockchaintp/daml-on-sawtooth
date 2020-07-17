@@ -9,7 +9,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
-package com.blockchaintp.sawtooth.daml.processor;
+package com.blockchaintp.sawtooth.processor;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -91,8 +91,8 @@ public class MTTransactionProcessor implements Runnable {
       }
       outStandingTx = enqueueCount - dequeueCount;
       if (enqueueCount % LOG_METRICS_INTERVAL == 0) {
-        LOGGER.info(String.format("Enqueued %s transactions, Dequeued %s responses, outStanding tx=%s", enqueueCount,
-            dequeueCount, outStandingTx));
+        LOGGER.trace("Enqueued {} transactions, Dequeued {} responses, outStanding tx={}", enqueueCount,
+            dequeueCount, outStandingTx);
       }
     }
 

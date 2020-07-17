@@ -17,46 +17,17 @@ version: "2.1"
 
 services:
 
-  router:
-    image: binocarlos/noxy
-    ports:
-      - 80:80
-    depends_on:
-      - daml-rpc
-      - tracer-ui
-    environment:
-      - NOXY_DEFAULT_HOST=tracer-ui
-      - NOXY_DEFAULT_PORT=8080
-      - NOXY_DEFAULT_WS=1
-      - NOXY_API_FRONT=/transactions
-      - NOXY_API_HOST=sawtooth-daml-rpc
-      - NOXY_API_PORT=5051
-
-  tracer-ui:
-    image: tracer-ui:${ISOLATION_ID}
-    container_name: tracer-ui
-    expose:
-      - 8080
-    entrypoint: bash -c 'yarn run develop'
-    environment:
-      - NODE_ENV=development
-
-  postgres:
-    image: postgres
-    container_name: postgres
-    environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust
-
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:1.1
-    container_name: sawtooth-settings-tp-default
     depends_on:
       - validator
     entrypoint: settings-tp -v --connect tcp://validator:4004
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   validator:
     image: hyperledger/sawtooth-validator:1.1
-    container_name: sawtooth-validator-default
     expose:
       - 4004
       - 8800
@@ -68,27 +39,40 @@ services:
     entrypoint: "bash -c \"\
         sawadm keygen && \
         sawtooth keygen && \
-        sawset genesis && \
-        sawadm genesis config-genesis.batch && \
+        sawset genesis -k /etc/sawtooth/keys/validator.priv \
+          -o config-genesis.batch && \
+        sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+          sawtooth.consensus.min_wait_time=0 \
+          sawtooth.consensus.max_wait_time=0 \
+          -o consensus-settings.batch && \
+        sawadm genesis config-genesis.batch consensus-settings.batch && \
         sawtooth-validator -v \
+          --scheduler parallel \
           --endpoint tcp://validator:8800 \
           --bind component:tcp://eth0:4004 \
           --bind consensus:tcp://eth0:5050 \
           --bind network:tcp://eth0:8800 \
         \""
     volumes:
-      - ../keys:/etc/sawtooth/keys
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
 
   devmode-engine:
     image: hyperledger/sawtooth-devmode-engine-rust:1.1
-    container_name: sawtooth-devmode-engine-rust-default
     depends_on:
       - validator
     entrypoint: devmode-engine-rust -C tcp://validator:5050
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   rest-api:
     image: hyperledger/sawtooth-rest-api:1.1
-    container_name: sawtooth-rest-api-default
     expose:
       - 8008
     ports:
@@ -96,17 +80,21 @@ services:
     depends_on:
       - validator
     entrypoint: sawtooth-rest-api  --connect tcp://validator:4004 --bind rest-api:8008
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
-    container_name: sawtooth-daml-tp
     command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
     depends_on:
       - validator
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
 
   daml-rpc:
     image: sawtooth-daml-rpc:${ISOLATION_ID}
-    container_name: sawtooth-daml-rpc
     expose:
       - 9000
       - 5051
@@ -114,23 +102,25 @@ services:
       - "9000:9000"
       - "5051:5051"
     entrypoint: "bash -c \"\
-      /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
+      sleep 30 && \
+      /opt/sawtooth-daml-rpc/entrypoint.sh \
+        --participant port=9000,address=0.0.0.0,participant-id=rpc-0,server-jdbc-url=jdbc:postgresql://postgres/postgres?user=postgres \
+        --ledger-id test \
         --connect tcp://validator:4004 \
-        --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
-        --participant-id test-participant \
-        --auth \"wildcard\" \
         `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom
       - ../test-dars:/opt/sawtooth-daml-rpc/dar/
-      - ../keys:/opt/sawtooth-daml-rpc/keys
     depends_on:
       - validator
       - postgres
 
-
   timekeeper:
     image: timekeeper:${ISOLATION_ID}
-    container_name: timekeeper
     command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
     depends_on:
       - validator
+    volumes:
+      - /dev/urandom:/dev/random
+      - /dev/urandom:/dev/urandom

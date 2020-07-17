@@ -11,25 +11,23 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml.rpc.events;
 
-import java.util.List;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
-import com.daml.ledger.participant.state.v1.Update;
+import com.blockchaintp.sawtooth.daml.rpc.ZmqEventHandler;
 
-/**
- * An interface to introduce a layer of indirection between the processing and
- * the implementation.
- * @author scealiontach
- */
-public interface LogEntryTransformer {
+import org.junit.Test;
+import org.reactivestreams.Publisher;
 
-  /**
-   * Transform a log entry and its id into a single Update.
-   * @param entryId  the id of the log entry
-   * @param logEntry the entry itself
-   * @return an Update suitable for publishing to Daml
-   */
-  List<Update> logEntryUpdate(DamlLogEntryId entryId, DamlLogEntry logEntry);
+import sawtooth.sdk.messaging.Stream;
+
+public class ZmqEventHandlerTest {
+
+  @Test
+  public void testGetPublisher() {
+    Stream stream = mock(Stream.class);
+    ZmqEventHandler dleh = new ZmqEventHandler(stream);
+    assertTrue(dleh.makePublisher() instanceof Publisher);
+  }
 
 }

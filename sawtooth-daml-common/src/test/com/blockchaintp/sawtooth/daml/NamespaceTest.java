@@ -10,18 +10,19 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml;
+
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import com.blockchaintp.sawtooth.timekeeper.util.Namespace;
+import com.blockchaintp.sawtooth.timekeeper.Namespace;
 
 public class NamespaceTest {
 
   @Test
   public void testMakeAddress() {
-    String testString=Namespace.makeAddress(Namespace.getNameSpace(), "somerandomString");
-    assertTrue(testString.length()==70);
+    String testString = Namespace.makeAddress(Namespace.getNameSpace(), "somerandomString");
+    assertTrue(testString.length() == 70);
   }
 
 }

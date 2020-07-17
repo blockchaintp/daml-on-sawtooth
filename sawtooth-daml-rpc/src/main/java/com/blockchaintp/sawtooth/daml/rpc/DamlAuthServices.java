@@ -1,14 +1,12 @@
-/* Copyright 2019 Blockchain Technology Partners
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-------------------------------------------------------------------------------*/
+/*
+ * Copyright 2019 Blockchain Technology Partners Licensed under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
 package com.blockchaintp.sawtooth.daml.rpc;
 
 import java.math.BigInteger;
@@ -33,14 +31,14 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.digitalasset.daml.lf.data.Ref;
-import com.digitalasset.ledger.api.auth.AuthService;
-import com.digitalasset.ledger.api.auth.AuthServiceJWTPayload;
-import com.digitalasset.ledger.api.auth.Claim;
-import com.digitalasset.ledger.api.auth.ClaimActAsParty$;
-import com.digitalasset.ledger.api.auth.ClaimAdmin$;
-import com.digitalasset.ledger.api.auth.ClaimPublic$;
-import com.digitalasset.ledger.api.auth.Claims;
+import com.daml.ledger.api.auth.AuthService;
+import com.daml.ledger.api.auth.AuthServiceJWTPayload;
+import com.daml.ledger.api.auth.Claim;
+import com.daml.ledger.api.auth.ClaimActAsParty$;
+import com.daml.ledger.api.auth.ClaimAdmin$;
+import com.daml.ledger.api.auth.ClaimPublic$;
+import com.daml.ledger.api.auth.Claims;
+import com.daml.lf.data.Ref;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -49,7 +47,9 @@ import org.slf4j.LoggerFactory;
 import org.spongycastle.util.Arrays;
 
 import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import sawtooth.sdk.signing.Secp256k1PublicKey;
+import scala.Option;
 import scala.collection.immutable.List;
 import scala.collection.immutable.List$;
 import scala.collection.mutable.ListBuffer;
@@ -60,7 +60,7 @@ import scala.collection.mutable.ListBuffer;
  */
 public final class DamlAuthServices implements AuthService {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothReadService.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlAuthServices.class.getName());
 
   private Algorithm ecdsaAlgorithm = null;
 
@@ -103,12 +103,14 @@ public final class DamlAuthServices implements AuthService {
     }
   }
 
-  private com.digitalasset.ledger.api.auth.Claims decodeAndParse(final io.grpc.Metadata headers) throws Exception {
+  private com.daml.ledger.api.auth.Claims decodeAndParse(final io.grpc.Metadata headers)
+      throws Exception {
 
     final String regex = "Bearer (.*)";
     final Pattern pattern = Pattern.compile(regex);
 
-    final Metadata.Key<String> authorizationKey = Metadata.Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER);
+    final Metadata.Key<String> authorizationKey =
+        Metadata.Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER);
     final String authKeyString = headers.get(authorizationKey);
     final Matcher matcher = pattern.matcher(authKeyString);
     final String tokenString = matcher.group(1);
@@ -127,11 +129,15 @@ public final class DamlAuthServices implements AuthService {
     final byte[] payloadInByteArray = Base64.getDecoder().decode(payloadBase64String);
     final JSONObject payloadInJsonObject = new JSONObject(new String(payloadInByteArray));
 
-    final scala.Option<String> ledgerID = scala.Option.apply(payloadInJsonObject.optString("ledgerId"));
-    final scala.Option<String> participantID = scala.Option.apply(payloadInJsonObject.optString("participantId"));
-    final scala.Option<String> applicationID = scala.Option.apply(payloadInJsonObject.optString("applicationId"));
+    final scala.Option<String> ledgerID =
+        scala.Option.apply(payloadInJsonObject.optString("ledgerId"));
+    final scala.Option<String> participantID =
+        scala.Option.apply(payloadInJsonObject.optString("participantId"));
+    final scala.Option<String> applicationID =
+        scala.Option.apply(payloadInJsonObject.optString("applicationId"));
 
-    final scala.Option<Instant> exp = scala.Option.apply(Instant.ofEpochMilli(payloadInJsonObject.optInt("exp")));
+    final scala.Option<Instant> exp =
+        scala.Option.apply(Instant.ofEpochMilli(payloadInJsonObject.optInt("exp")));
     final Boolean admin = payloadInJsonObject.optBoolean("admin");
 
     final JSONArray actASInJSONArray = payloadInJsonObject.optJSONArray("actAs");
@@ -150,8 +156,8 @@ public final class DamlAuthServices implements AuthService {
       }
     }
 
-    final AuthServiceJWTPayload authServiceJWTPayload = new AuthServiceJWTPayload(ledgerID, participantID,
-        applicationID, exp, admin, actAS, readAS);
+    final AuthServiceJWTPayload authServiceJWTPayload = new AuthServiceJWTPayload(ledgerID,
+        participantID, applicationID, exp, admin, actAS, readAS);
 
     return authServiceJWTPayload;
   }
@@ -166,10 +172,26 @@ public final class DamlAuthServices implements AuthService {
       claimsList.$plus$eq(ClaimAdmin$.MODULE$);
     }
 
-    payload.actAs().foreach(name -> ClaimActAsParty$.MODULE$.apply(Ref.Party().assertFromString(name)));
+    payload.actAs()
+        .foreach(name -> ClaimActAsParty$.MODULE$.apply(Ref.Party().assertFromString(name)));
 
-    final Claims claims = new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), payload.exp());
+    final Claims claims =
+        new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), Option.empty(), payload.exp());
     return claims;
 
+  }
+
+
+
+  @Override
+  public Key<String> AUTHORIZATION_KEY() {
+    return Metadata.Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER);
+  }
+
+  @Override
+  public void com$daml$ledger$api$auth$AuthService$_setter_$AUTHORIZATION_KEY_$eq(
+      final Key<String> x) {
+    // Nasty Scala artifact. believe this is an autogenerated setter for a val in a trait
+    // But the naming indicates that it is meant to be some sort of constant.
   }
 }

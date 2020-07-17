@@ -1,41 +1,44 @@
-/* Copyright 2019 Blockchain Technology Partners
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-------------------------------------------------------------------------------*/
+/*
+ *  Copyright 2020 Blockchain Technology Partners
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.blockchaintp.sawtooth.daml.processor;
 
-import java.time.Duration;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 
-import com.blockchaintp.sawtooth.daml.KeyValueUtils;
+import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
-import com.daml.ledger.participant.state.kvutils.Conversions;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
+import com.codahale.metrics.SharedMetricRegistries;
+import com.daml.caching.Cache;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
-import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
-import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
-import com.daml.ledger.participant.state.v1.Configuration;
-import com.daml.ledger.participant.state.v1.TimeModel;
-import com.digitalasset.daml.lf.data.Time.Timestamp;
+import com.daml.ledger.validator.SubmissionValidator;
+import com.daml.ledger.validator.ValidationFailed;
+import com.daml.lf.data.Time.Timestamp;
+import com.daml.lf.engine.Engine;
+import com.daml.metrics.Metrics;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.Timestamps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,8 +49,10 @@ import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import sawtooth.sdk.protobuf.TpProcessRequest;
 import sawtooth.sdk.protobuf.TransactionHeader;
-import scala.Option;
-import scala.Tuple2;
+import scala.compat.java8.FutureConverters;
+import scala.concurrent.ExecutionContext;
+import scala.concurrent.Future;
+import scala.util.Either;
 
 /**
  * A TransactionHandler implementation which handles DAML.
@@ -56,90 +61,115 @@ import scala.Tuple2;
  */
 public final class DamlTransactionHandler implements TransactionHandler {
 
-  private static final int DEFAULT_MAX_TTL = 80; // 4x the TimeKeeper period
+  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionHandler.class.getName());
 
-  private static final int DEFAULT_MAX_CLOCK_SKEW = 40; // 2x the TimeKeeper period
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionHandler.class);
-
-  private final DamlCommitter committer;
   private final String familyName;
   private final String namespace;
 
   private final String version;
 
+  private final Engine engine;
+
+  private final Metrics metrics;
+
   /**
    * Constructs a TransactionHandler for DAML Transactions.
    *
-   * @param damlCommitter the DamlCommitter which will be used to process
-   *                      submissions
    */
-  public DamlTransactionHandler(final DamlCommitter damlCommitter) {
-    this.committer = damlCommitter;
+  public DamlTransactionHandler() {
     this.namespace = Namespace.getNameSpace();
     this.version = Namespace.DAML_FAMILY_VERSION_1_0;
     this.familyName = Namespace.DAML_FAMILY_NAME;
+
+    this.engine = DamlEngineSingleton.getInstance();
+    String hostname;
+    try {
+      hostname = InetAddress.getLocalHost().getHostName();
+    } catch (final UnknownHostException e) {
+      throw new RuntimeException(e);
+    }
+    this.metrics = new Metrics(SharedMetricRegistries.getOrCreate(hostname));
   }
 
   @Override
   public void apply(final TpProcessRequest tpProcessRequest, final Context state)
       throws InvalidTransactionException, InternalError {
-    LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
+    LOGGER.debug("Processing transaction {}", tpProcessRequest.getSignature());
     basicRequestChecks(tpProcessRequest);
-    LedgerState ledgerState = new ContextLedgerState(state);
-    TransactionHeader txHeader = tpProcessRequest.getHeader();
+    final LedgerState<String> ledgerState = new ContextLedgerState(state);
+
     try {
-      SawtoothDamlOperation operation = SawtoothDamlOperation.parseFrom(tpProcessRequest.getPayload());
-      if (operation.hasTransaction()) {
-        SawtoothDamlTransaction tx = operation.getTransaction();
-        String participantId = operation.getSubmittingParticipant();
-        DamlLogEntryId entryId = KeyValueCommitting.unpackDamlLogEntryId(tx.getLogEntryId());
-        DamlSubmission submission = KeyValueSubmission.unpackDamlSubmission(tx.getSubmission());
-        processTransaction(ledgerState, txHeader, submission, participantId, entryId);
+      final DamlOperationBatch batch = DamlOperationBatch.parseFrom(tpProcessRequest.getPayload());
+      for (final DamlOperation operation : batch.getOperationsList()) {
+        final String participantId = operation.getSubmittingParticipant();
+        if (operation.hasTransaction()) {
+          final DamlTransaction tx = operation.getTransaction();
+          handleTransaction(ledgerState, tx, participantId, operation.getCorrelationId());
+        } else {
+          LOGGER.debug("DamlOperation contains no supported operation, ignoring ...");
+        }
       }
-    } catch (InvalidProtocolBufferException e) {
-      InvalidTransactionException ite = new InvalidTransactionException(
-          String.format("Payload is unparseable, and not a valid DamlSubmission", e.getMessage().getBytes()));
-      ite.initCause(e);
-      throw ite;
+    } catch (final InvalidProtocolBufferException ipbe) {
+      LOGGER.error("Failed to parse DamlSubmission protocol buffer:");
+      throw new RuntimeException(
+          String.format("Payload is unparseable and not a valid DamlSubmission %s",
+              ipbe.getMessage().getBytes(Charset.defaultCharset())),
+          ipbe);
     }
   }
 
-  private void processTransaction(final LedgerState ledgerState, final TransactionHeader txHeader,
-      final DamlSubmission submission, final String participantId, final DamlLogEntryId entryId)
-      throws InternalError, InvalidTransactionException {
-    long fetchStateStart = System.currentTimeMillis();
-    Map<DamlStateKey, Option<DamlStateValue>> stateMap = buildStateMap(ledgerState, txHeader, submission);
-
-    long recordStateStart = System.currentTimeMillis();
-    recordState(ledgerState, submission, participantId, stateMap, entryId);
-
-    long processFinished = System.currentTimeMillis();
-    long recordStateTime = processFinished - recordStateStart;
-    long fetchStateTime = recordStateStart - fetchStateStart;
-    LOGGER.info(String.format("Finished processing transaction %s times=[fetch=%s,record=%s]",
-        txHeader.getPayloadSha512(), fetchStateTime, recordStateTime));
+  private String handleTransaction(final LedgerState<String> ledgerState, final DamlTransaction tx,
+      final String participantId, final String correlationId) throws InvalidTransactionException,
+      InternalError {
+    DamlLogEntryId logEntryId;
+    try {
+      logEntryId = DamlLogEntryId.parseFrom(tx.getLogEntryId());
+    } catch (final InvalidProtocolBufferException e1) {
+      LOGGER.warn("InvalidProtocolBufferException when parsing log entry id");
+      throw new InvalidTransactionException(e1.getMessage());
+    }
+    final ExecutionContext ec = ExecutionContext.fromExecutor(ExecutionContext.global());
+    final SubmissionValidator<String> validator = SubmissionValidator.create(ledgerState, () -> {
+      return logEntryId;
+    }, false, Cache.none(), this.engine, this.metrics, ec);
+    final Timestamp recordTime = ledgerState.getRecordTime();
+    final Future<Either<ValidationFailed, String>> validateAndCommit =
+        validator.validateAndCommit(tx.getSubmission(), correlationId, recordTime, participantId);
+    final CompletionStage<Either<ValidationFailed, String>> validateAndCommitCS =
+        FutureConverters.toJava(validateAndCommit);
+    try {
+      final Either<ValidationFailed, String> either =
+          validateAndCommitCS.toCompletableFuture().get();
+      if (either.isLeft()) {
+        final ValidationFailed validationFailed = either.left().get();
+        throw new InvalidTransactionException(validationFailed.toString());
+      } else {
+        final String logId = either.right().get();
+        LOGGER.info("Processed transaction into log event {}", logId);
+        return logId;
+      }
+    } catch (InterruptedException | ExecutionException e) {
+      throw new InternalError(e.getMessage());
+    }
   }
 
   /**
    * Fundamental checks of the transaction.
    *
    * @param tpProcessRequest the process request
-   * @throws InvalidTransactionException if the transaction fails because of a
-   *                                     business rule validation error
-   * @throws InternalError               if the transaction fails because of a
-   *                                     system error
+   * @throws InvalidTransactionException if the transaction fails because of a business rule
+   *                                     validation error
+   * @throws InternalError               if the transaction fails because of a system error
    */
   private void basicRequestChecks(final TpProcessRequest tpProcessRequest)
       throws InvalidTransactionException, InternalError {
-    LOGGER.info(String.format("Processing transaction %s", tpProcessRequest.getSignature()));
 
-    TransactionHeader header = tpProcessRequest.getHeader();
+    final TransactionHeader header = tpProcessRequest.getHeader();
     if (header == null) {
       throw new InvalidTransactionException("Header expected");
     }
 
-    ByteString payload = tpProcessRequest.getPayload();
+    final ByteString payload = tpProcessRequest.getPayload();
     if (payload.size() == 0) {
       throw new InvalidTransactionException("Empty payload");
     }
@@ -153,99 +183,14 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
   }
 
-  private Map<DamlStateKey, Option<DamlStateValue>> buildStateMap(final LedgerState ledgerState,
-      final TransactionHeader txHeader, final DamlSubmission submission)
-      throws InvalidTransactionException, InternalError {
-    LOGGER.debug(String.format("Fetching DamlState for this transaction"));
-    Map<DamlStateKey, String> inputDamlStateKeys = KeyValueUtils.submissionToDamlStateAddress(submission);
-
-    List<String> inputList = txHeader.getInputsList();
-    if (!inputList.containsAll(inputDamlStateKeys.values())) {
-      throw new InvalidTransactionException(String.format("Not all input DamlStateKeys were declared as inputs"));
-    }
-    if (!inputList.contains(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
-      throw new InvalidTransactionException(String.format("TIMEKEEPER_GLOBAL_RECORD not declared as input"));
-    }
-    Map<DamlStateKey, DamlStateValue> inputStates = ledgerState.getDamlStates(inputDamlStateKeys.keySet());
-
-    Map<DamlStateKey, Option<DamlStateValue>> inputStatesWithOption = new HashMap<>();
-    for (DamlStateKey k : inputDamlStateKeys.keySet()) {
-      if (inputStates.containsKey(k)) {
-        LOGGER.debug(
-            String.format("Fetched %s(%s), address=%s", k, k.getKeyCase().toString(), Namespace.makeAddressForType(k)));
-        Option<DamlStateValue> option = Option.apply(inputStates.get(k));
-        if (inputStates.get(k).toByteString().size() == 0) {
-          LOGGER.debug(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
-              Namespace.makeAddressForType(k)));
-        } else {
-          LOGGER.debug(String.format("Fetched %s(%s), address=%s, size=%s", k, k.getKeyCase().toString(),
-              Namespace.makeAddressForType(k), inputStates.get(k).toByteString().size()));
-        }
-        inputStatesWithOption.put(k, option);
-      } else {
-        LOGGER.debug(String.format("Fetched %s(%s), address=%s, size=empty", k, k.getKeyCase().toString(),
-            Namespace.makeAddressForType(k)));
-        inputStatesWithOption.put(k, Option.empty());
-      }
-    }
-    return inputStatesWithOption;
-  }
-
-  private Configuration getDefaultConfiguration() throws InternalError, InvalidTransactionException {
-    TimeModel tm = new TimeModel(Duration.ofSeconds(1), Duration.ofSeconds(DEFAULT_MAX_CLOCK_SKEW),
-        Duration.ofSeconds(DEFAULT_MAX_TTL));
-    LOGGER.debug(String.format("Default TimeModel set to %s", tm));
-    Configuration blankConfiguration = new Configuration(0, tm);
-    return blankConfiguration;
-  }
-
   @Override
   public Collection<String> getNameSpaces() {
     return Arrays.asList(new String[] {this.namespace});
   }
 
-  private Timestamp getRecordTime(final LedgerState ledgerState) throws InternalError {
-    com.google.protobuf.Timestamp recordTime = ledgerState.getRecordTime();
-    long micros = Timestamps.toMicros(recordTime);
-    return new Timestamp(micros);
-  }
-
   @Override
   public String getVersion() {
     return this.version;
-  }
-
-  private void recordState(final LedgerState ledgerState, final DamlSubmission submission, final String participantId,
-      final Map<DamlStateKey, Option<DamlStateValue>> stateMap, final DamlLogEntryId entryId)
-      throws InternalError, InvalidTransactionException {
-
-    long processStart = System.currentTimeMillis();
-    String ledgerEffectiveTime = null;
-    String maxRecordTime = null;
-    if (submission.hasTransactionEntry()) {
-      ledgerEffectiveTime = Conversions.parseTimestamp(submission.getTransactionEntry().getLedgerEffectiveTime())
-          .toString();
-      maxRecordTime = Conversions
-          .parseTimestamp(submission.getTransactionEntry().getSubmitterInfo().getMaximumRecordTime()).toString();
-    }
-    LOGGER.info(String.format("Processing submission.  recordTime=%s, ledgerEffectiveTime=%s, maxRecordTime=%s",
-        getRecordTime(ledgerState), ledgerEffectiveTime, maxRecordTime));
-    Tuple2<DamlLogEntry, Map<DamlStateKey, DamlStateValue>> processSubmission = this.committer.processSubmission(
-        getDefaultConfiguration(), entryId, getRecordTime(ledgerState), submission, participantId, stateMap);
-    long recordStart = System.currentTimeMillis();
-    Map<DamlStateKey, DamlStateValue> newState = processSubmission._2;
-    ledgerState.setDamlStates(newState.entrySet());
-
-    DamlLogEntry newLogEntry = processSubmission._1;
-    LOGGER.debug(String.format("Recording log at %s, address=%s", entryId, Namespace.makeAddressForType(entryId),
-        newLogEntry.toByteString().size()));
-    ledgerState.addDamlLogEntry(entryId, newLogEntry);
-    long recordFinish = System.currentTimeMillis();
-    long processTime = recordStart - processStart;
-    long setStateTime = recordFinish - recordStart;
-    long totalTime = recordFinish - processStart;
-    LOGGER.info(String.format("Record state timings [ total=%s, process=%s, setState=%s ]", totalTime, processTime,
-        setStateTime));
   }
 
   @Override

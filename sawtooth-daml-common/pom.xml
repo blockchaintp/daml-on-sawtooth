@@ -21,7 +21,7 @@
   <parent>
     <groupId>daml-on-sawtooth</groupId>
     <artifactId>daml-on-sawtooth</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>sawtooth-daml-common</artifactId>
   <name>sawtooth-daml-common</name>
@@ -32,7 +32,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-      </plugin>    
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -57,6 +57,14 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j18-impl</artifactId>
+    </dependency>
 
     <!-- Unit testing -->
     <dependency>
@@ -70,7 +78,7 @@
 
     <!-- DAML -->
     <dependency>
-      <groupId>com.daml.ledger</groupId>
+      <groupId>com.daml</groupId>
       <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
     </dependency>
 

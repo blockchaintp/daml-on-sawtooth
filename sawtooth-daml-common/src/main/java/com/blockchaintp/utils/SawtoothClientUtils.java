@@ -14,25 +14,38 @@ package com.blockchaintp.utils;
 import static org.bitcoinj.core.Utils.HEX;
 import static sawtooth.sdk.processor.Utils.hash512;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.util.Collection;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
 
+import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
+import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
+import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
+import sawtooth.sdk.messaging.Future;
 
 /**
  * Utility methods and constants useful for interacting with Sawtooth as a
  * client.
  */
 public final class SawtoothClientUtils {
+
+  private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private SawtoothClientUtils() {
   }
@@ -165,5 +178,103 @@ public final class SawtoothClientUtils {
    */
   public static String getHash(final byte[] arg) {
     return hash512(arg);
+  }
+
+  public static ByteString wrap(final ByteString value) throws InternalError {
+    return VersionedEnvelope.newBuilder().setData(compressByteString(value)).build().toByteString();
+  }
+
+  public static ByteString unwrap(final ByteString wrappedVal) throws InternalError {
+    VersionedEnvelope envelope;
+    try {
+      envelope = VersionedEnvelope.parseFrom(wrappedVal);
+      switch (envelope.getVersion()) {
+        case "":
+        case "1":
+          return uncompressByteString(envelope.getData());
+        default:
+          LOGGER.error("Envelope specified an unknown version: " + envelope.getVersion());
+          throw new InternalError(
+              "Envelope specified an unknown version: " + envelope.getVersion());
+      }
+    } catch (final InvalidProtocolBufferException e) {
+      LOGGER.error("Error deserializing value " + e.getMessage());
+      throw new InternalError(e.getMessage());
+    }
+  }
+
+  private static ByteString compressByteString(final ByteString input) throws InternalError {
+    final long compressStart = System.currentTimeMillis();
+    if (input.size() == 0) {
+      return ByteString.EMPTY;
+    }
+    final Deflater deflater = new Deflater();
+    deflater.setLevel(Deflater.BEST_SPEED);
+    final byte[] inputBytes = input.toByteArray();
+
+    deflater.setInput(inputBytes);
+    deflater.finish();
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length);) {
+      final byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
+      while (!deflater.finished()) {
+        final int bCount = deflater.deflate(buffer);
+        baos.write(buffer, 0, bCount);
+      }
+      deflater.end();
+
+      final ByteString bs = ByteString.copyFrom(baos.toByteArray());
+      final long compressStop = System.currentTimeMillis();
+      final long compressTime = compressStop - compressStart;
+      LOGGER.debug("Compressed ByteString time={}, original_size={}, new_size={}",
+          compressTime, inputBytes.length, baos.size());
+      return bs;
+    } catch (final IOException exc) {
+      LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      throw new InternalError(exc.getMessage());
+    }
+  }
+
+  private static ByteString uncompressByteString(final ByteString compressedInput)
+      throws InternalError {
+    final long uncompressStart = System.currentTimeMillis();
+    if (compressedInput.size() == 0) {
+      return ByteString.EMPTY;
+    }
+    final Inflater inflater = new Inflater();
+    final byte[] inputBytes = compressedInput.toByteArray();
+    inflater.setInput(inputBytes);
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length)) {
+      final byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
+      try {
+        while (!inflater.finished()) {
+          final int bCount = inflater.inflate(buffer);
+          baos.write(buffer, 0, bCount);
+        }
+        inflater.end();
+
+        final ByteString bs = ByteString.copyFrom(baos.toByteArray());
+        final long uncompressStop = System.currentTimeMillis();
+        final long uncompressTime = uncompressStop - uncompressStart;
+        LOGGER.debug("Uncompressed ByteString time={}, original_size={}, new_size={}",
+            uncompressTime, inputBytes.length, baos.size());
+        return bs;
+      } catch (final DataFormatException exc) {
+        LOGGER.error("Error uncompressing stream, throwing InternalError! {}",
+            exc.getMessage());
+        throw new InternalError(exc.getMessage());
+      }
+    } catch (final IOException exc) {
+      LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      throw new InternalError(exc.getMessage());
+    }
+
+  }
+
+  public static Future submitBatch(final Batch batch, final Stream stream) {
+    final ClientBatchSubmitRequest cbsReq =
+        ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
+    return stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
   }
 }
