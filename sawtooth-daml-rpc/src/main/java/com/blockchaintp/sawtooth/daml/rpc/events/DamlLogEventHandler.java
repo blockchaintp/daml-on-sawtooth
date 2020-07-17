@@ -25,8 +25,8 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import com.blockchaintp.sawtooth.daml.EventConstants;
-import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.daml.rpc.SawtoothTransactionsTracer;
+import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;

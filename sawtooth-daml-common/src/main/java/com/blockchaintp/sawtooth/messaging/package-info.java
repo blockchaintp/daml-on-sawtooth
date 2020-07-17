@@ -13,4 +13,4 @@
 /**
  * Zmq Stream implementations.
  */
-package com.blockchaintp.sawtooth.daml.messaging;
+package com.blockchaintp.sawtooth.messaging;

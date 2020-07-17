@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
+import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.timekeeper.processor.TimeKeeperTransactionHandler;
 import com.blockchaintp.utils.InMemoryKeyManager;
 import com.blockchaintp.utils.KeyManager;
