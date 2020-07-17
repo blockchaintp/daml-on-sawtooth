@@ -18,12 +18,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.blockchaintp.sawtooth.daml.messaging.ZmqStream;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.processor.Context;

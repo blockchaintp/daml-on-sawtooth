@@ -17,14 +17,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.daml.KeyValueUtils;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlTransaction;
-import com.daml.ledger.participant.state.v1.TimeModel;
 import com.daml.ledger.participant.state.kvutils.Conversions;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -34,10 +31,14 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
 import com.daml.ledger.participant.state.v1.Configuration;
+import com.daml.ledger.participant.state.v1.TimeModel;
 import com.digitalasset.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;

@@ -25,14 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.javatuples.Pair;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
 import com.blockchaintp.sawtooth.daml.Namespace;
-import com.blockchaintp.sawtooth.daml.processor.DamlCommitter;
-import com.blockchaintp.sawtooth.daml.processor.DamlTransactionHandler;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlPackageUploadEntry;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -40,6 +33,11 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.digitalasset.daml_lf_dev.DamlLf.Archive;
 import com.google.protobuf.ByteString;
+
+import org.javatuples.Pair;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.processor.Context;
