@@ -137,6 +137,7 @@ services:
     entrypoint: "bash -xc \"\
       sleep 90 && \
       java -jar ledger-api-test-tool.jar \
+      --exclude=CommandDeduplicationIT:CDSimpleDeduplicationCommandClient,CommandDeduplicationIT:CDSimpleDeduplication,PackageServiceIT:PackagesList,TransactionServiceIT:TXFlatSubsetOfTrees,TransactionServiceIT:TXFlatWitnessesSubsetOfTrees
       --timeout-scale-factor 10 \
       --concurrent-test-runs 2 \
       daml-rpc:9000 \""
