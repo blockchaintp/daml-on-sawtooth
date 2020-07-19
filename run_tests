@@ -1,0 +1,22 @@
+#!/bin/bash
+
+RESULTS_FILE=$1
+
+TEST_COUNT=$(grep -c "\- \[[A-Z]" "$RESULTS_FILE")
+
+echo "1..${TEST_COUNT}"
+
+count=0
+grep "\- \[[A-Z]" "$RESULTS_FILE" | sort |
+  while read -r LINE; do
+    LINE=$(echo "$LINE" | sed -r "s/[[:cntrl:]]\[[0-9]{1,3}m//g")
+    test_name=$(echo "$LINE" | sed -r "s/.*\[(.*)\](.*)\.\.\..*/\1 \2/")
+    if (echo "$LINE" | grep -q Success); then
+      status="ok"
+    else
+      status="not ok"
+    fi
+    count=$((count + 1))
+    echo "$status $count $test_name"
+    echo "# $LINE"
+  done

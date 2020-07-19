@@ -83,7 +83,12 @@ pipeline {
 
     stage('Integration Test') {
       steps {
-        sh 'docker-compose -p ${PROJECT_ID} -f docker/daml-test.yaml up --exit-code-from ledger-api-testtool'
+        sh 'docker-compose -p ${PROJECT_ID} -f docker/daml-test.yaml up --exit-code-from ledger-api-testtool || true'
+        sh '''
+          docker logs ${PROJECT_ID}_ledger-api-testtool_1 > results.txt 2>&1
+          ./run_tests ./results.txt > tap.results
+        '''
+        step([$class: "TapPublisher", testResults: "tap.results"])
       }
     }
 

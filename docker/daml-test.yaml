@@ -139,7 +139,6 @@ services:
       java -jar ledger-api-test-tool.jar \
       --timeout-scale-factor 10 \
       --concurrent-test-runs 2 \
-      -v \
       daml-rpc:9000 \""
     depends_on:
       - daml-rpc
