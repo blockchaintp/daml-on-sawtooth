@@ -103,10 +103,13 @@ services:
       - "5051:5051"
     entrypoint: "bash -c \"\
       sleep 30 && \
-      /opt/sawtooth-daml-rpc/entrypoint.sh --port 9000 \
+      /opt/sawtooth-daml-rpc/entrypoint.sh \
+        --participant port=9000,address=0.0.0.0,participant-id=rpc-0,server-jdbc-url=jdbc:postgresql://postgres/postgres?user=postgres \
+        --ledger-id test \
+        --log-level warn \
+        --max-outstanding-batches 2 \
+        --max-ops-per-batch 1000 \
         --connect tcp://validator:4004 \
-        --jdbc-url jdbc:postgresql://postgres/postgres?user=postgres \
-        --participant-id test-participant \
         `ls /opt/sawtooth-daml-rpc/dar/*.dar`\""
     volumes:
       - /dev/urandom:/dev/random
@@ -134,37 +137,10 @@ services:
     entrypoint: "bash -xc \"\
       sleep 90 && \
       java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 4 \
-        --all-tests \
-        --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 1 \
-        --load-scale-factor 0.5 \
-        daml-rpc:9000 \
-        || \
-      java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 4 \
-        --all-tests \
-        --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 1 \
-        --load-scale-factor 0.5 \
-        daml-rpc:9000 \
-        || \
-      java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 4 \
-        --all-tests \
-        --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 1 \
-        --load-scale-factor 0.5 \
-        daml-rpc:9000 \
-        || \
-      java -jar ledger-api-test-tool.jar \
-        --timeout-scale-factor 4 \
-        --all-tests \
-        --exclude TimeIT,TransactionScaleIT \
-        --concurrent-test-runs 1 \
-        --load-scale-factor 0.5 \
-        daml-rpc:9000 \
-        \""
+      --exclude=CommandDeduplicationIT:CDSimpleDeduplicationCommandClient,CommandDeduplicationIT:CDSimpleDeduplication,PackageServiceIT:PackagesList,TransactionServiceIT:TXFlatSubsetOfTrees,TransactionServiceIT:TXFlatWitnessesSubsetOfTrees
+      --timeout-scale-factor 10 \
+      --concurrent-test-runs 2 \
+      daml-rpc:9000 \""
     depends_on:
       - daml-rpc
     volumes:

@@ -1,20 +1,24 @@
-/* Copyright 2019 Blockchain Technology Partners
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-------------------------------------------------------------------------------*/
+/*
+ *  Copyright 2020 Blockchain Technology Partners
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.blockchaintp.sawtooth.daml.processor;
 
-import com.digitalasset.daml.lf.engine.Engine;
+import com.blockchaintp.sawtooth.processor.MTTransactionProcessor;
+import com.blockchaintp.utils.LogUtils;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,64 +31,44 @@ import sawtooth.sdk.processor.TransactionHandler;
  */
 public final class DamlTransactionProcessorMain {
 
-  private static final int DEBUG_VS = 2;
-  private static final int INFO_VS = 1;
-  private static final int TRACE_VS = 3;
-  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionProcessorMain.class);
+  private static final int WARN_LOG = 0;
+  private static final int INFO_LOG = 1;
+  private static final int DEBUG_LOG = 2;
+  private static final int TRACE_LOG = 3;
+
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(DamlTransactionProcessorMain.class.getName());
 
   /**
    * A basic main method for this transaction processor.
    *
-   * @param args at this time only one argument the address of the validator
-   *             component endpoint, e.g. tcp://localhost:4004
+   * @param args at this time only one argument the address of the validator component endpoint,
+   *             e.g. tcp://localhost:4004
    */
   public static void main(final String[] args) {
-    final Engine engine = new Engine();
-    String connectStr = null;
-    for (final String s : args) {
+    int vCount = 0;
+    String connectStr = "tcp://localhost:4004";
+    for (String s : args) {
       if (s.startsWith("-v")) {
-        setLoggingLevel(s);
+        for (int i = 0; i < s.length(); i++) {
+          if (s.charAt(i) == 'v') {
+            vCount++;
+          }
+        }
       } else {
         connectStr = s;
       }
     }
-    final DamlCommitter committer = new DamlCommitterImpl(engine);
-    final TransactionHandler handler = new DamlTransactionHandler(committer);
-    final MTTransactionProcessor transactionProcessor = new MTTransactionProcessor(handler, connectStr);
+    LogUtils.setRootLogLevel(vCount);
+    TransactionHandler handler = new DamlTransactionHandler();
+    MTTransactionProcessor transactionProcessor = new MTTransactionProcessor(handler, connectStr);
     LOGGER.info("Added handler {}", DamlTransactionHandler.class.getName());
-    final Thread thread = new Thread(transactionProcessor);
+    Thread thread = new Thread(transactionProcessor);
     thread.start();
     try {
       thread.join();
-    } catch (final InterruptedException exc) {
+    } catch (InterruptedException exc) {
       LOGGER.warn("TransactionProcessor was interrupted");
-    }
-  }
-
-  private static void setLoggingLevel(final String lvl) {
-    int vcount = 0;
-    for (int i = 0; i < lvl.length(); i++) {
-      if (lvl.charAt(i) == 'v') {
-        vcount++;
-      }
-    }
-    if (vcount > TRACE_VS) {
-      vcount = TRACE_VS;
-    }
-    switch (vcount) {
-      case INFO_VS:
-        Configurator.setRootLevel(Level.INFO);
-        break;
-      case DEBUG_VS:
-        Configurator.setRootLevel(Level.DEBUG);
-        break;
-      case TRACE_VS:
-        Configurator.setRootLevel(Level.TRACE);
-        break;
-      case 0:
-      default:
-        Configurator.setRootLevel(Level.WARN);
-        break;
     }
   }
 

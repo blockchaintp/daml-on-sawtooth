@@ -10,6 +10,6 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 /**
- * Classes covering raw event processing.
+ * Class implementing Sawtooth transaction processor.
  */
-package com.blockchaintp.sawtooth.daml.rpc.events;
+package com.blockchaintp.sawtooth.processor;

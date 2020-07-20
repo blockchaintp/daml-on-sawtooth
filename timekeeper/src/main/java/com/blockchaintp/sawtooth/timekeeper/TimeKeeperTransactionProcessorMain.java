@@ -22,6 +22,7 @@ import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.timekeeper.processor.TimeKeeperTransactionHandler;
 import com.blockchaintp.utils.InMemoryKeyManager;
 import com.blockchaintp.utils.KeyManager;
+import com.blockchaintp.utils.LogUtils;
 
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -41,6 +42,22 @@ public final class TimeKeeperTransactionProcessorMain {
    *             component endpoint, e.g. tcp://localhost:4004
    */
   public static void main(final String[] args) {
+
+    int vCount = 0;
+    String connectStr = "tcp://localhost:4004";
+    for (String s : args) {
+      if (s.startsWith("-v")) {
+        for (int i = 0; i < s.length(); i++) {
+          if (s.charAt(i) == 'v') {
+            vCount++;
+          }
+        }
+      } else {
+        connectStr = s;
+      }
+    }
+    LogUtils.setRootLogLevel(vCount);
+
     ScheduledExecutorService clockExecutor = Executors.newSingleThreadScheduledExecutor();
 
     Stream stream = new ZmqStream(args[0]);
@@ -49,7 +66,7 @@ public final class TimeKeeperTransactionProcessorMain {
     final TimeUnit periodUnit = TimeUnit.SECONDS;
     clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, periodUnit);
 
-    TransactionProcessor transactionProcessor = new TransactionProcessor(args[0]);
+    TransactionProcessor transactionProcessor = new TransactionProcessor(connectStr);
     TransactionHandler handler = new TimeKeeperTransactionHandler();
     transactionProcessor.addHandler(handler);
 

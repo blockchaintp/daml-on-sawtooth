@@ -1,14 +1,19 @@
-/* Copyright 2019 Blockchain Technology Partners
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-------------------------------------------------------------------------------*/
+/*
+ *  Copyright 2020 Blockchain Technology Partners
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.blockchaintp.sawtooth.daml.processor;
 
 import static org.junit.Assert.assertNotNull;
@@ -18,29 +23,24 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import com.daml.ledger.participant.state.kvutils.DamlKvutils;
+import com.blockchaintp.sawtooth.daml.processor.ContextLedgerState;
+import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntry;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlTransactionRejectionEntry;
 import com.google.protobuf.ByteString;
-
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.javatuples.Pair;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
 import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -94,38 +94,41 @@ public class ContextLedgerStateTest {
   }
 
   @Test
-  public void testGetSetDamlState() {
+  public void testGetSetDamlState() throws InvalidProtocolBufferException {
     Pair<Context, Map<String, ByteString>> mockPair = getMockState();
     Context mockState = mockPair.getValue0();
-    LedgerState ledgerState = new ContextLedgerState(mockState);
+    LedgerState<String> ledgerState = new ContextLedgerState(mockState);
     String appId = RandomString.make(RANDOM_STRING_LENGTH);
     String submitter = RandomString.make(RANDOM_STRING_LENGTH);
     String commandId = RandomString.make(RANDOM_STRING_LENGTH);
-    DamlCommandDedupKey firstDedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
-        .setCommandId(commandId).build();
+    DamlCommandDedupKey firstDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
+        .setSubmitter(submitter).setCommandId(commandId).build();
     DamlStateKey firstKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
-    DamlCommandDedupKey emptyDedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
-        .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
+    DamlCommandDedupKey emptyDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
+        .setSubmitter(submitter).setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
     DamlStateKey emptyKey = DamlStateKey.newBuilder().setCommandDedup(emptyDedupKey).build();
     DamlCommandDedupValue firstDedupVal = DamlCommandDedupValue.newBuilder().build();
-    DamlStateValue firstVal = DamlStateValue.newBuilder().setCommandDedup(firstDedupVal).build();
+    ByteString firstVal =
+        DamlStateValue.newBuilder().setCommandDedup(firstDedupVal).build().toByteString();
     try {
-      ledgerState.setDamlState(firstKey, firstVal);
-      DamlStateValue damlCommandDedup = ledgerState.getDamlState(firstKey);
+      ledgerState.setDamlState(firstKey.toByteString(), firstVal);
+      ByteString damlCommandDedup = ledgerState.getDamlState(firstKey.toByteString());
       assertNotNull(damlCommandDedup);
-      assertTrue(String.format("%s != %s", firstVal, damlCommandDedup), firstVal.equals(damlCommandDedup));
+      assertTrue(String.format("%s != %s", firstVal, damlCommandDedup),
+          firstVal.equals(damlCommandDedup));
 
-      DamlCommandDedupKey dneDedupKey = DamlCommandDedupKey.newBuilder().setApplicationId(appId).setSubmitter(submitter)
-          .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
+      DamlCommandDedupKey dneDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
+          .setSubmitter(submitter).setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
       DamlStateKey dneKey = DamlStateKey.newBuilder().setCommandDedup(dneDedupKey).build();
-      DamlStateValue dneCommandDedup = ledgerState.getDamlState(dneKey);
+      ByteString dneCommandDedup = ledgerState.getDamlState(dneKey.toByteString());
       assertNull(dneCommandDedup);
 
       DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
-      Map<DamlStateKey, DamlStateValue> retMap = ledgerState.getDamlStates(Arrays.asList(stateKey));
-      assertTrue(firstVal.equals(retMap.get(stateKey)));
+      Map<ByteString, ByteString> retMap =
+          ledgerState.getDamlStates(Arrays.asList(stateKey.toByteString()));
+      assertTrue(firstVal.equals(retMap.get(stateKey.toByteString())));
       try {
-        ledgerState.getDamlState(emptyKey);
+        ledgerState.getDamlState(emptyKey.toByteString());
       } catch (InvalidTransactionException exc) {
         // Expected
       } catch (InternalError exc) {
@@ -137,37 +140,5 @@ public class ContextLedgerStateTest {
     }
   }
 
-  @Test
-  public void testGetSetDamlLogEntries() {
-    Pair<Context, Map<String, ByteString>> mockPair = getMockState();
-    Context mockState = mockPair.getValue0();
-    LedgerState ledgerState = new ContextLedgerState(mockState);
-    DamlLogEntryId firstKey = DamlLogEntryId.newBuilder()
-        .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
-    DamlLogEntryId emptyKey = DamlLogEntryId.newBuilder()
-        .setEntryId(ByteString.copyFromUtf8(RandomString.make(RANDOM_STRING_LENGTH))).build();
-    DamlLogEntry firstVal = DamlLogEntry.newBuilder()
-        .setTransactionRejectionEntry(DamlTransactionRejectionEntry.newBuilder()
-            .setMaximumRecordTimeExceeded(DamlKvutils.MaximumRecordTimeExceeded.newBuilder().build())
-            .build())
-        .build();
-    try {
-      ledgerState.addDamlLogEntry(firstKey, firstVal);
-      DamlLogEntry testVal = ledgerState.getDamlLogEntry(firstKey);
-      assertTrue(String.format("%s!=%s", firstVal, testVal), firstVal.equals(testVal));
-      // DamlStateKey stateKey = DamlStateKey.newBuilder().set
-      Map<DamlLogEntryId, DamlLogEntry> retMap = ledgerState.getDamlLogEntries(Arrays.asList(firstKey));
-      assertTrue(firstVal.equals(retMap.get(firstKey)));
-      try {
-        ledgerState.getDamlLogEntry(emptyKey);
-      } catch (InvalidTransactionException exc) {
-        // Expected
-      } catch (InternalError exc) {
-        fail(String.format("Should not have issued an {}", exc.getClass().getName()));
-      }
-    } catch (InternalError | InvalidTransactionException exc) {
-      fail("No exceptions should be thrown");
-    }
-  }
 
 }

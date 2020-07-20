@@ -155,7 +155,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       TimeKeeperEvent updateEventData = TimeKeeperEvent.newBuilder().setTimeUpdate(newGlobalTs).build();
       Map<String, String> attrMap = new HashMap<>();
       attrMap.put(EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE, Long.toString(Timestamps.toMicros(newGlobalTs)));
-      LOGGER.info("New global time previous={} now={}",
+      LOGGER.debug("New global time previous={} now={}",
           new Date(Timestamps.toMillis(globalRecord.getLastCalculatedTime())),
           new Date(Timestamps.toMillis(newGlobalTs)));
       state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());

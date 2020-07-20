@@ -1,52 +1,50 @@
-// Copyright 2019 Blockchain Technology Partners
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// -----------------------------------------------------------------------------
-
+/*
+ *  Copyright 2020 Blockchain Technology Partners
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 syntax = "proto3";
 
 option java_multiple_files = true;
 package com.blockchaintp.sawtooth.daml.protobuf;
 import "google/protobuf/timestamp.proto";
 
-message SawtoothDamlOperation {
-  oneof payload {
-    SawtoothDamlTransaction transaction = 1;
-    SawtoothDamlParty allocateParty = 2;
-  };
+message DamlOperationBatch {
+  string version = 1;
+  repeated DamlOperation operations = 2;
+}
+
+message DamlOperation {
+  string version = 1;
+  oneof payload { DamlTransaction transaction = 2; };
   string submittingParticipant = 3;
+  string correlationId = 4;
 }
 
-/**
- * Daml Parties will be stored under the address hash(hint).
- * Duplicate parties will be rejected.
- * Diplay names may be updated.
- */
-message SawtoothDamlParty {
-  string hint = 1;
-  string displayName = 2;
+message DamlTransaction {
+  string version = 1;
+  bytes logEntryId = 2;
+  bytes submission = 3;
 }
 
-message SawtoothDamlTransaction {
-  bytes logEntryId = 1;
-  bytes submission = 2;
+message DamlLogEvent {
+  string version = 1;
+  bytes logEntryId = 2;
+  bytes logEntry = 3;
+  bytes timeUpdate = 4;
 }
 
-message DamlLogEntryIndex { repeated string addresses = 1; }
-
-message ConfigurationMap { repeated ConfigurationEntry entries = 1; }
-
-message ConfigurationEntry {
-  string key = 1;
-  bytes value = 2;
+message VersionedEnvelope {
+  string version = 1;
+  bytes data = 2;
 }

@@ -31,6 +31,9 @@ repos:
     - id: script-must-have-extension
     - id: script-must-not-have-extension
     - id: shfmt
+      args:
+        - -i
+        - "2"
 - repo: https://github.com/Lucas-C/pre-commit-hooks
   rev: v1.1.7
   hooks:

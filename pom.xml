@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- * Copyright 2019 Blockchain Technology Partners
+ * Copyright 2020 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>daml-on-sawtooth</groupId>
   <artifactId>daml-on-sawtooth</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.3.0-SNAPSHOT</version>
   <name>DAML on Sawtooth</name>
   <packaging>pom</packaging>
   <description>Implementation of DAML SDK with a Sawtooth backend</description>
@@ -88,10 +88,9 @@
   </profiles>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <protobuf.version>3.8.0</protobuf.version>
+    <protobuf.version>3.10.0</protobuf.version>
     <sawtooth.sdk.version>v0.1.3</sawtooth.sdk.version>
-    <daml.sdk.version>100.13.41</daml.sdk.version>
-    <daml.bindings.version>2.3.3</daml.bindings.version>
+    <daml.sdk.version>1.3.0</daml.sdk.version>
     <scala.lang.version>2.12</scala.lang.version>
   </properties>
   <dependencyManagement>
@@ -143,27 +142,32 @@
         <version>${protobuf.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.daml.ledger</groupId>
+        <groupId>com.daml</groupId>
         <artifactId>participant-state_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.digitalasset.ledger</groupId>
+        <groupId>com.daml</groupId>
+        <artifactId>participant-state-kvutils-app_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
         <artifactId>ledger-api-auth_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.digitalasset.platform</groupId>
+        <groupId>com.daml</groupId>
         <artifactId>sandbox_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.daml.ledger</groupId>
+        <groupId>com.daml</groupId>
         <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.daml.ledger</groupId>
+        <groupId>com.daml</groupId>
         <artifactId>participant-state-index_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
@@ -171,16 +175,6 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.8.0-beta4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-jdk14</artifactId>
-        <version>1.8.0-beta4</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-log4j12</artifactId>
         <version>1.8.0-beta4</version>
       </dependency>
       <dependency>
@@ -234,7 +228,7 @@
             </execution>
           </executions>
           <configuration>
-            <scalaVersion>2.12.8</scalaVersion>
+            <scalaVersion>2.12.11</scalaVersion>
             <source>${java.source.version}</source>
             <target>${java.target.version}</target>
           </configuration>
@@ -378,6 +372,13 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.1</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.puppycrawl.tools</groupId>
+              <artifactId>checkstyle</artifactId>
+              <version>8.34</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

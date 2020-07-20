@@ -11,13 +11,8 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.blockchaintp.sawtooth.daml.protobuf.SawtoothDamlParty;
 import com.blockchaintp.utils.SawtoothClientUtils;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
+import com.google.protobuf.ByteString;
 
 /**
  * Utility class dealing with the common namespace functions and values with
@@ -52,36 +47,6 @@ public final class Namespace {
   public static final String DAML_STATE_VALUE_NS = getNameSpace() + "00";
 
   /**
-   * Address space for Log Entries.
-   */
-  public static final String DAML_LOG_ENTRY_NS = getNameSpace() + "01";
-
-  /**
-   * Address for a list of addresses for Log Entries.
-   */
-  public static final String DAML_LOG_ENTRY_LIST = makeAddress(DAML_LOG_ENTRY_NS, "daml-log-entry-list");
-
-  /**
-   * Address space for Configuration Entries.
-   */
-  public static final String DAML_CONFIG_ENTRY_NS = getNameSpace() + "02";
-
-  /**
-   * Address space for Party Entries.
-   */
-  public static final String DAML_PARTY_NS = getNameSpace() + "03";
-
-  /**
-   * Address for DAML TimeModel configuration.
-   */
-  public static final String DAML_CONFIG_TIME_MODEL = makeAddress(DAML_CONFIG_ENTRY_NS, "time-model");
-
-  /**
-   * Address for DAML Ledger id.
-   */
-  public static final String DAML_CONFIG_LEDGER_ID = makeAddress(DAML_CONFIG_ENTRY_NS, "ledger-id");
-
-  /**
    * Maximum number of leaf addresses for a DamlStateKey.
    */
   public static final int DAML_STATE_MAX_LEAVES = 10;
@@ -114,104 +79,13 @@ public final class Namespace {
   }
 
   /**
-   * Construct a context address for the ledger sync event with logical id
-   * eventId.
-   *
-   * @param entryId the log entry Id
-   * @return the byte string address
-   */
-  protected static String makeDamlLogEntryAddress(final DamlLogEntryId entryId) {
-    return makeAddress(DAML_LOG_ENTRY_NS, entryId.toByteString().toStringUtf8());
-  }
-
-  /**
    * Construct a context address for the given DamlStateKey.
    *
-   * @param key DamlStateKey to be used for the address
+   * @param key key to be used for the address
    * @return the string address
    */
-  protected static String makeDamlStateAddress(final DamlStateKey key) {
-    return makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8());
-  }
-
-  /**
-   * Construct a multipart context address for the given DamlLogEntryId.
-   *
-   * @param key DamlState Key to be used for the address
-   * @return the list of string address
-   */
-  protected static List<String> makeMultipartDamlLogAddress(final DamlLogEntryId key) {
-    List<String> addrList = new ArrayList<>();
-    for (int i = 0; i < DAML_STATE_MAX_LEAVES; i++) {
-      addrList.add(makeAddress(DAML_LOG_ENTRY_NS, key.toByteString().toStringUtf8(), Integer.toString(i)));
-    }
-    return addrList;
-  }
-
-  /**
-   * Construct a multipart context address for the given DamlStateKey.
-   *
-   * @param key DamlState Key to be used for the address
-   * @return the list of string address
-   */
-  protected static List<String> makeMultipartDamlStateAddress(final DamlStateKey key) {
-    List<String> addrList = new ArrayList<>();
-    for (int i = 0; i < DAML_STATE_MAX_LEAVES; i++) {
-      addrList.add(makeAddress(DAML_STATE_VALUE_NS, key.toByteString().toStringUtf8(), Integer.toString(i)));
-    }
-    return addrList;
-  }
-
-  /**
-   * A utility method to make addresses for most Daml state entry types.
-   *
-   * @param key the key object which will be used to create the address
-   * @return a sawtooth context address
-   */
-  public static String makeAddressForType(final DamlStateKey key) {
-    return makeDamlStateAddress(key);
-  }
-
-  /**
-   * A utility method to make addresses for most DamlLogEntryId key types,
-   * complementing the other methods with similar signature.
-   *
-   * @param key the key object which will be used to create the address
-   * @return a sawtooth context address
-   */
-  public static String makeAddressForType(final DamlLogEntryId key) {
-    return makeDamlLogEntryAddress(key);
-  }
-
-  /**
-   * A utility method to make addresses for party entries, complementing the other
-   * methods with similar signature.
-   *
-   * @param party the party entry in question.
-   * @return a sawtooth context address
-   */
-  public static String makeAddressForType(final SawtoothDamlParty party) {
-    return makeDamlPartyAddress(party);
-  }
-
-  /**
-   * Construct a context address for the SawtoothDamlParty.
-   *
-   * @param party the SawtoothDamlParty
-   * @return the byte string address
-   */
-  public static String makeDamlPartyAddress(final SawtoothDamlParty party) {
-    return makeAddress(DAML_PARTY_NS, party.getHint());
-  }
-
-  /**
-   * Construct a context address for the SawtoothDamlParty.
-   *
-   * @param partyId the party identifier
-   * @return the byte string address
-   */
-  public static String makeDamlPartyAddress(final String partyId) {
-    return makeAddress(DAML_PARTY_NS, partyId);
+  public static String makeDamlStateAddress(final ByteString key) {
+    return makeAddress(DAML_STATE_VALUE_NS, key.toStringUtf8());
   }
 
   private Namespace() {
