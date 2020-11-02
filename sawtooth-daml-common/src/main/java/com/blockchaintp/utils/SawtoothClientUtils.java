@@ -183,7 +183,6 @@ public final class SawtoothClientUtils {
 
   public static ByteString wrap(final ByteString value) throws InternalError {
     ByteString v = VersionedEnvelope.newBuilder().setData(compressByteString(value)).build().toByteString();
-    LOGGER.error("Wrapping bytes size={} new size={}", value.size(), v.size());
     return v;
   }
 
@@ -195,7 +194,6 @@ public final class SawtoothClientUtils {
         case "":
         case "1":
           ByteString v = uncompressByteString(envelope.getData());
-          LOGGER.error("Unwrapping bytes size={} new size={}", wrappedVal.size(), v.size());
           return v;
         default:
           LOGGER.error("Envelope specified an unknown version: " + envelope.getVersion());
