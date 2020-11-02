@@ -99,7 +99,8 @@ public final class SawtoothClientUtils {
   public static Transaction makeSawtoothTransaction(final KeyManager keyManager, final String familyName,
       final String familyVersion, final Collection<String> inputAddresses, final Collection<String> outputAddresses,
       final Collection<String> dependentTransactionIds, final ByteString payload) {
-    String payloadHash = getHash(payload);
+    ByteString wrappedPayload = SawtoothClientUtils.wrap(payload);
+    String payloadHash = getHash(wrappedPayload);
     TransactionHeader.Builder txnHeaderBldr = TransactionHeader.newBuilder().setFamilyName(familyName)
         .setFamilyVersion(familyVersion).clearBatcherPublicKey().setBatcherPublicKey(keyManager.getPublicKeyInHex())
         .setNonce(SawtoothClientUtils.generateNonce()).setPayloadSha512(payloadHash).addAllInputs(inputAddresses)
@@ -109,7 +110,7 @@ public final class SawtoothClientUtils {
 
     String signedHeader = keyManager.sign(txnHeader.toByteArray());
     return Transaction.newBuilder().setHeader(txnHeader.toByteString()).setHeaderSignature(signedHeader)
-        .setPayload(payload).build();
+        .setPayload(wrappedPayload).build();
   }
 
   /**
@@ -181,7 +182,9 @@ public final class SawtoothClientUtils {
   }
 
   public static ByteString wrap(final ByteString value) throws InternalError {
-    return VersionedEnvelope.newBuilder().setData(compressByteString(value)).build().toByteString();
+    ByteString v = VersionedEnvelope.newBuilder().setData(compressByteString(value)).build().toByteString();
+    LOGGER.error("Wrapping bytes size={} new size={}", value.size(), v.size());
+    return v;
   }
 
   public static ByteString unwrap(final ByteString wrappedVal) throws InternalError {
@@ -191,7 +194,9 @@ public final class SawtoothClientUtils {
       switch (envelope.getVersion()) {
         case "":
         case "1":
-          return uncompressByteString(envelope.getData());
+          ByteString v = uncompressByteString(envelope.getData());
+          LOGGER.error("Unwrapping bytes size={} new size={}", wrappedVal.size(), v.size());
+          return v;
         default:
           LOGGER.error("Envelope specified an unknown version: " + envelope.getVersion());
           throw new InternalError(
