@@ -1,35 +1,34 @@
-/* Copyright 2019 Blockchain Technology Partners
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-------------------------------------------------------------------------------*/
+/*
+ * Copyright 2019 Blockchain Technology Partners Licensed under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
 package com.blockchaintp.utils;
 
 import static org.bitcoinj.core.Utils.HEX;
 import static sawtooth.sdk.processor.Utils.hash512;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
-
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
+import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope.Builder;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.spongycastle.util.Arrays;
+import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.protobuf.Batch;
 import sawtooth.sdk.protobuf.BatchHeader;
@@ -37,7 +36,6 @@ import sawtooth.sdk.protobuf.ClientBatchSubmitRequest;
 import sawtooth.sdk.protobuf.Message;
 import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
-import sawtooth.sdk.messaging.Future;
 
 /**
  * Utility methods and constants useful for interacting with Sawtooth as a
@@ -182,8 +180,42 @@ public final class SawtoothClientUtils {
   }
 
   public static ByteString wrap(final ByteString value) throws InternalError {
-    ByteString v = VersionedEnvelope.newBuilder().setData(compressByteString(value)).build().toByteString();
+    ByteString v =
+        VersionedEnvelope.newBuilder().setData(compressByteString(value))
+          .setHasMore(false)
+          .build().toByteString();
     return v;
+  }
+
+  public static List<ByteString> wrapMultipart(final ByteString value, final int maxPartSize)
+      throws InternalError {
+    ByteString compressedData = compressByteString(value);
+    if (compressedData.size() < maxPartSize) {
+      return List.of(wrap(value));
+    }
+
+    List<ByteString> retList = new ArrayList<>();
+    int i = 0;
+    byte[] splitBytes = compressedData.toByteArray();
+    while (i < splitBytes.length) {
+      byte[] part = Arrays.copyOfRange(splitBytes, i, Math.min(i + maxPartSize, splitBytes.length));
+      i = i + maxPartSize;
+      Builder leaf = VersionedEnvelope.newBuilder().setData(ByteString.copyFrom(part));
+      if (i < splitBytes.length) {
+        leaf.setHasMore(true);
+      }
+      retList.add(leaf.build().toByteString());
+    }
+    return retList;
+  }
+
+  public static ByteString unwrapMultipart(final List<VersionedEnvelope> veList) throws InternalError {
+    ByteString data = ByteString.EMPTY;
+    for (VersionedEnvelope e : veList) {
+      data = data.concat(e.getData());
+    }
+    ByteString uData = uncompressByteString(data);
+    return uData;
   }
 
   public static ByteString unwrap(final ByteString wrappedVal) throws InternalError {

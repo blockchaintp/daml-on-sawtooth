@@ -47,4 +47,5 @@ message DamlLogEvent {
 message VersionedEnvelope {
   string version = 1;
   bytes data = 2;
+  bool hasMore = 3;
 }

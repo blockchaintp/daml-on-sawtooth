@@ -17,7 +17,6 @@
 package com.blockchaintp.sawtooth.daml.processor;
 
 import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,9 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.Namespace;
+import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.validator.LedgerStateOperations;
@@ -35,10 +34,8 @@ import com.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -56,6 +53,8 @@ import scala.runtime.BoxedUnit;
  * @author scealiontach
  */
 public final class ContextLedgerState implements LedgerState<String> {
+
+  private static final int DEFAULT_MAX_VAL_SIZE = 1024 * 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContextLedgerState.class.getName());
 
@@ -89,12 +88,33 @@ public final class ContextLedgerState implements LedgerState<String> {
   @Override
   public ByteString getDamlState(final ByteString key)
       throws InternalError, InvalidTransactionException {
-    final String addr = Namespace.makeDamlStateAddress(key);
-    final ByteString bs = getStateOrNull(addr);
+    String addr = Namespace.makeDamlStateAddress(key);
+    ByteString bs = getStateOrNull(addr);
     if (bs == null) {
       return null;
     } else {
-      return SawtoothClientUtils.unwrap(bs);
+      try {
+        List<VersionedEnvelope> veList = new ArrayList<>();
+        VersionedEnvelope envelope = VersionedEnvelope.parseFrom(bs);
+        veList.add(envelope);
+        boolean hasMore = envelope.getHasMore();
+        while (hasMore) {
+          addr = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
+              String.valueOf(veList.size() - 1));
+          bs = getStateOrNull(addr);
+          if (bs == null) {
+            hasMore = false;
+          } else {
+            envelope = VersionedEnvelope.parseFrom(bs);
+            veList.add(envelope);
+            hasMore = envelope.getHasMore();
+          }
+        }
+        return SawtoothClientUtils.unwrapMultipart(veList);
+      } catch (InvalidProtocolBufferException e) {
+        throw new InvalidTransactionException(e.getMessage());
+      }
+
     }
   }
 
@@ -124,11 +144,20 @@ public final class ContextLedgerState implements LedgerState<String> {
       throws InternalError, InvalidTransactionException {
     final Map<String, ByteString> setMap = new HashMap<>();
     for (final Entry<ByteString, ByteString> e : entries) {
-      final ByteString key = e.getKey();
-      final ByteString val = SawtoothClientUtils.wrap(e.getValue());
-      assert (val.size() > 0);
-      final String address = Namespace.makeDamlStateAddress(key);
-      setMap.put(address, val);
+      List<ByteString> parts = SawtoothClientUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
+      int index = 0;
+      for (ByteString p : parts) {
+        final ByteString key = e.getKey();
+        final String address;
+        if (index == 0) {
+          address = Namespace.makeDamlStateAddress(key);
+        } else {
+          address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
+              String.valueOf(index));
+        }
+        setMap.put(address, p);
+        index++;
+      }
     }
     state.setState(setMap.entrySet());
   }
