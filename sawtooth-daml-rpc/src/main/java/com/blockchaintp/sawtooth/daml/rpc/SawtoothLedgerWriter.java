@@ -158,9 +158,11 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     final DamlLogEntryId entryId = this.kvCommitting.unpackDamlLogEntryId(logEntryId);
     final Collection<DamlStateKey> collStateKeys =
         JavaConverters.asJavaCollection(this.kvCommitting.submissionOutputs(submission));
-    return collStateKeys.stream().map(damlStateKey -> {
+    List<String> collect = collStateKeys.stream().map(damlStateKey -> {
       return Namespace.makeDamlStateAddress(this.kvCommitting.packDamlStateKey(damlStateKey));
     }).collect(Collectors.toList());
+    collect.add(Namespace.DAML_STATE_VALUE_NS);
+    return collect;
   }
 
   private ByteString makeDamlLogEntryId() {
