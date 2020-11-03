@@ -22,6 +22,18 @@ public final class EventConstants {
   public static final String DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE = "logEntryId";
 
   /**
+   * Events of type daml/logEvent will have this attribute set. It contains the number of STL events
+   * which make up this daml event.
+   */
+  public static final String DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE = "logEntryPartCount";
+
+  /**
+   * Events of type daml/logEvent will have this attribute set. It contains the part number of this chunk
+   * of the DAML event
+   */
+  public static final String DAML_LOG_ENTRY_ID_PART_ATTRIBUTE = "logEntryPart";
+
+  /**
    * Event type for DamlLogEntry events.
    */
   public static final String DAML_LOG_EVENT_SUBJECT = Namespace.DAML_FAMILY_NAME + "/logEvent";

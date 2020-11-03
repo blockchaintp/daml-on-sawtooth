@@ -95,7 +95,8 @@ public final class DamlTransactionHandler implements TransactionHandler {
   @Override
   public void apply(final TpProcessRequest tpProcessRequest, final Context state)
       throws InvalidTransactionException, InternalError {
-    LOGGER.debug("Processing transaction {}", tpProcessRequest.getSignature());
+    LOGGER.info("Processing transaction {} size={}", tpProcessRequest.getSignature(),
+        tpProcessRequest.toByteString().size());
     basicRequestChecks(tpProcessRequest);
     final LedgerState<String> ledgerState = new ContextLedgerState(state);
 

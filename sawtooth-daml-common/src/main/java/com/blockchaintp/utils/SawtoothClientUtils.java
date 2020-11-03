@@ -261,7 +261,7 @@ public final class SawtoothClientUtils {
       final ByteString bs = ByteString.copyFrom(baos.toByteArray());
       final long compressStop = System.currentTimeMillis();
       final long compressTime = compressStop - compressStart;
-      LOGGER.debug("Compressed ByteString time={}, original_size={}, new_size={}",
+      LOGGER.trace("Compressed ByteString time={}, original_size={}, new_size={}",
           compressTime, inputBytes.length, baos.size());
       return bs;
     } catch (final IOException exc) {
@@ -292,7 +292,7 @@ public final class SawtoothClientUtils {
         final ByteString bs = ByteString.copyFrom(baos.toByteArray());
         final long uncompressStop = System.currentTimeMillis();
         final long uncompressTime = uncompressStop - uncompressStart;
-        LOGGER.debug("Uncompressed ByteString time={}, original_size={}, new_size={}",
+        LOGGER.trace("Uncompressed ByteString time={}, original_size={}, new_size={}",
             uncompressTime, inputBytes.length, baos.size());
         return bs;
       } catch (final DataFormatException exc) {
@@ -304,7 +304,6 @@ public final class SawtoothClientUtils {
       LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw new InternalError(exc.getMessage());
     }
-
   }
 
   public static Future submitBatch(final Batch batch, final Stream stream) {

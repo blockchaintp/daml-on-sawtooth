@@ -54,7 +54,7 @@ import scala.runtime.BoxedUnit;
  */
 public final class ContextLedgerState implements LedgerState<String> {
 
-  private static final int DEFAULT_MAX_VAL_SIZE = 1024 * 1024;
+  private static final int DEFAULT_MAX_VAL_SIZE = 256 * 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContextLedgerState.class.getName());
 
@@ -110,11 +110,15 @@ public final class ContextLedgerState implements LedgerState<String> {
             hasMore = envelope.getHasMore();
           }
         }
-        return SawtoothClientUtils.unwrapMultipart(veList);
+        ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
+        if (veList.size() > 1) {
+          LOGGER.debug("Read address={} parts={} size={}", key.toStringUtf8(), veList.size(),
+              val.size());
+        }
+        return val;
       } catch (InvalidProtocolBufferException e) {
         throw new InvalidTransactionException(e.getMessage());
       }
-
     }
   }
 
@@ -144,10 +148,11 @@ public final class ContextLedgerState implements LedgerState<String> {
       throws InternalError, InvalidTransactionException {
     final Map<String, ByteString> setMap = new HashMap<>();
     for (final Entry<ByteString, ByteString> e : entries) {
+      final ByteString key = e.getKey();
       List<ByteString> parts = SawtoothClientUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
       int index = 0;
+      int size = 0;
       for (ByteString p : parts) {
-        final ByteString key = e.getKey();
         final String address;
         if (index == 0) {
           address = Namespace.makeDamlStateAddress(key);
@@ -157,6 +162,10 @@ public final class ContextLedgerState implements LedgerState<String> {
         }
         setMap.put(address, p);
         index++;
+        size += p.size();
+      }
+      if (index > 1) {
+        LOGGER.debug("Set address={} parts={} size={}", key.toStringUtf8(), index, size);
       }
     }
     state.setState(setMap.entrySet());
@@ -284,12 +293,19 @@ public final class ContextLedgerState implements LedgerState<String> {
   @Override
   public String sendLogEvent(final ByteString entryId, final ByteString entry)
       throws InternalError, InvalidTransactionException {
-    final Map<String, String> attrMap = new HashMap<>();
-    attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.toStringUtf8());
-    final ByteString wrappedData = SawtoothClientUtils.wrap(entry);
-    LOGGER.debug("Sending event for {}, data size={}, wrapped size={}",
-        entryId.toStringUtf8(), entry.size(), wrappedData.size());
-    state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), wrappedData);
+    List<ByteString> multipart = SawtoothClientUtils.wrapMultipart(entry, DEFAULT_MAX_VAL_SIZE);
+    int part = 0;
+    for (ByteString bs : multipart) {
+      final Map<String, String> attrMap = new HashMap<>();
+      attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.toStringUtf8());
+      attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
+          String.valueOf(multipart.size()));
+      attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE, String.valueOf(part));
+      LOGGER.info("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
+          bs.size(), entry.size());
+      state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), bs);
+      part++;
+    }
     return entryId.toStringUtf8();
   }
 

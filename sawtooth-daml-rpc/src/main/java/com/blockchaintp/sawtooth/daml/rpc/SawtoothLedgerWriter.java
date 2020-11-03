@@ -145,6 +145,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       return Namespace.makeDamlStateAddress(this.kvCommitting.packDamlStateKey(damlStateKey));
     }).collect(Collectors.toList());
     addresses.add(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD);
+    addresses.add(Namespace.DAML_STATE_VALUE_NS);
     return addresses;
   }
 
@@ -294,7 +295,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       }
     }
 
-    private void checkResponse(final sawtooth.sdk.messaging.Future f) throws InterruptedException,
+    private boolean checkResponse(final sawtooth.sdk.messaging.Future f) throws InterruptedException,
         ValidatorConnectionError, InvalidProtocolBufferException, SawtoothWriteException {
       final ByteString result = f.getResult();
       final ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
@@ -302,10 +303,10 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       switch (status) {
         case OK:
           LOGGER.debug("ClientBatchSubmit response is OK");
-          break;
+          return true;
         case QUEUE_FULL:
           LOGGER.warn("ClientBatchSubmit response is QUEUE_FULL");
-          break;
+          return false;
         default:
           LOGGER
               .warn("ClientBatchSubmit response is {}", status.toString());
