@@ -26,7 +26,10 @@ message DamlOperationBatch {
 
 message DamlOperation {
   string version = 1;
-  oneof payload { DamlTransaction transaction = 2; };
+  oneof payload {
+    DamlTransaction transaction = 2;
+    DamlTransactionFragment largeTransaction = 5;
+  };
   string submittingParticipant = 3;
   string correlationId = 4;
 }
@@ -35,6 +38,14 @@ message DamlTransaction {
   string version = 1;
   bytes logEntryId = 2;
   bytes submission = 3;
+}
+
+message DamlTransactionFragment {
+  string version = 1;
+  bytes logEntryId = 2;
+  int32 parts = 3;
+  int32 partNumber = 4;
+  bytes submissionFragment = 5;
 }
 
 message DamlLogEvent {

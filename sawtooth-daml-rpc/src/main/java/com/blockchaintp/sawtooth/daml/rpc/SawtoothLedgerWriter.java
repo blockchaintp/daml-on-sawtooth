@@ -19,6 +19,7 @@ import com.blockchaintp.sawtooth.daml.SawtoothDamlUtils;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.daml.rpc.exception.SawtoothWriteException;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.utils.KeyManager;
@@ -36,7 +37,7 @@ import com.daml.metrics.Metrics;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +53,8 @@ import scala.concurrent.Future;
 import scala.util.Either;
 
 public final class SawtoothLedgerWriter implements LedgerWriter {
+
+  private static final int DEFAULT_TX_FRAGMENT_SIZE = 256000;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
 
@@ -75,11 +78,12 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   private final int maxOpsPerBatch;
 
   public SawtoothLedgerWriter(final String pid, final String zmqUrl, final KeyManager keyMgr) {
-    this(pid, new ZmqStream(zmqUrl), keyMgr, DEFAULT_MAX_OPS_PER_BATCH, DEFAULT_MAX_OUTSTANDING_BATCHES);
+    this(pid, new ZmqStream(zmqUrl), keyMgr, DEFAULT_MAX_OPS_PER_BATCH,
+        DEFAULT_MAX_OUTSTANDING_BATCHES);
   }
 
-  public SawtoothLedgerWriter(final String id, final Stream s, final KeyManager k, final int opsPerBatch,
-      final int outStandingBatches) {
+  public SawtoothLedgerWriter(final String id, final Stream s, final KeyManager k,
+      final int opsPerBatch, final int outStandingBatches) {
     this.participantId = id;
     this.stream = s;
     this.keyManager = k;
@@ -115,23 +119,67 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     final ByteString logEntryId = makeDamlLogEntryId();
     final List<String> inputAddresses = extractInputAddresses(envelope);
     final List<String> outputAddresses = extractOutputAddresses(logEntryId, envelope);
-    final DamlTransaction tx =
-        DamlTransaction.newBuilder().setSubmission(envelope).setLogEntryId(logEntryId).build();
-    final DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
-        .setSubmittingParticipant(participantId()).setTransaction(tx).build();
-    final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);
+    if (envelope.size() > DEFAULT_TX_FRAGMENT_SIZE) {
+      final DamlTransaction tx =
+          DamlTransaction.newBuilder().setSubmission(envelope).setLogEntryId(logEntryId).build();
 
-    return Future.apply(() -> {
-      try  {
-        this.submitQueue.put(cp);
-        return SubmissionResult.Acknowledged$.MODULE$;
-      } catch (final InterruptedException e) {
-        LOGGER.error("Interrupted while submitting transaction", e);
-        throw new RuntimeException(e);
+      int start = 0;
+      List<ByteString> fragments = new ArrayList<>();
+      byte[] envelopeBytes = tx.toByteArray();
+      while (start < envelopeBytes.length) {
+        byte[] fragBytes = ArrayUtils.subarray(envelopeBytes, start,
+            Math.min(start + DEFAULT_TX_FRAGMENT_SIZE, envelopeBytes.length));
+        fragments.add(ByteString.copyFrom(fragBytes));
+        start += DEFAULT_TX_FRAGMENT_SIZE;
       }
-    }, ExecutionContext.global());
+      int index = 0;
+      for (ByteString frag : fragments) {
+        DamlTransactionFragment txFrag = DamlTransactionFragment.newBuilder()
+            .setLogEntryId(logEntryId).setParts(fragments.size()).setPartNumber(index)
+            .setSubmissionFragment(frag).build();
+        DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
+            .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();
+        final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);
+        try {
+          this.submitQueue.put(cp);
+          index++;
+        } catch (final InterruptedException e) {
+          LOGGER.error("Interrupted while submitting transaction", e);
+          throw new RuntimeException(e);
+        }
+      }
+      DamlTransactionFragment txFrag =
+          DamlTransactionFragment.newBuilder().setLogEntryId(logEntryId).setParts(fragments.size())
+              .setPartNumber(index).setSubmissionFragment(ByteString.EMPTY).build();
+      DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
+          .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();
+      final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);
+      return Future.apply(() -> {
+        try {
+          this.submitQueue.put(cp);
+          return SubmissionResult.Acknowledged$.MODULE$;
+        } catch (final InterruptedException e) {
+          LOGGER.error("Interrupted while submitting transaction", e);
+          throw new RuntimeException(e);
+        }
+      }, ExecutionContext.global());
+    } else {
+      final DamlTransaction tx =
+          DamlTransaction.newBuilder().setSubmission(envelope).setLogEntryId(logEntryId).build();
+      final DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
+          .setSubmittingParticipant(participantId()).setTransaction(tx).build();
+      final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);
+      return Future.apply(() -> {
+        try {
+          this.submitQueue.put(cp);
+          return SubmissionResult.Acknowledged$.MODULE$;
+        } catch (final InterruptedException e) {
+          LOGGER.error("Interrupted while submitting transaction", e);
+          throw new RuntimeException(e);
+        }
+      }, ExecutionContext.global());
+    }
   }
-
 
   private List<String> extractInputAddresses(final ByteString envelope) {
     final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope);
@@ -182,8 +230,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     private final List<String> outputAddresses;
     private final DamlOperation payload;
 
-    CommitPayload(final List<String> in, final List<String> out,
-        final DamlOperation op) {
+    CommitPayload(final List<String> in, final List<String> out, final DamlOperation op) {
       this.inputAddresses = ImmutableList.copyOf(in);
       this.outputAddresses = ImmutableList.copyOf(out);
       this.payload = op;
@@ -247,7 +294,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         if (cp != null) {
           LOGGER.trace("Operations to send!");
           accumulator.add(cp);
-          submitQueue.drainTo(accumulator,  SawtoothLedgerWriter.this.maxOpsPerBatch - 1);
+          submitQueue.drainTo(accumulator, SawtoothLedgerWriter.this.maxOpsPerBatch - 1);
           LOGGER.trace("Accumulated {} ops", accumulator.size());
         }
 
@@ -295,8 +342,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       }
     }
 
-    private boolean checkResponse(final sawtooth.sdk.messaging.Future f) throws InterruptedException,
-        ValidatorConnectionError, InvalidProtocolBufferException, SawtoothWriteException {
+    private boolean checkResponse(final sawtooth.sdk.messaging.Future f)
+        throws InterruptedException, ValidatorConnectionError, InvalidProtocolBufferException,
+        SawtoothWriteException {
       final ByteString result = f.getResult();
       final ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
       final Status status = getResponse.getStatus();
@@ -308,8 +356,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           LOGGER.warn("ClientBatchSubmit response is QUEUE_FULL");
           return false;
         default:
-          LOGGER
-              .warn("ClientBatchSubmit response is {}", status.toString());
+          LOGGER.warn("ClientBatchSubmit response is {}", status.toString());
           throw new SawtoothWriteException(
               String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }

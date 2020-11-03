@@ -1,17 +1,15 @@
 /*
- *  Copyright 2020 Blockchain Technology Partners
+ * Copyright 2020 Blockchain Technology Partners
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package com.blockchaintp.sawtooth.daml.processor;
@@ -26,6 +24,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.Namespace;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.utils.SawtoothClientUtils;
@@ -36,6 +36,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import net.logstash.logback.encoder.org.apache.commons.lang3.ArrayUtils;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
 import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
@@ -123,6 +124,35 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
+  public DamlTransaction assembleTransactionFragments(final DamlTransactionFragment endTx)
+      throws InternalError, InvalidTransactionException {
+
+    List<String> addrs = new ArrayList<>();
+    for (int i = 0; i < endTx.getPartNumber(); i++) {
+      final String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "fragment",
+          endTx.getLogEntryId().toStringUtf8(), String.valueOf(endTx.getParts()),
+          String.valueOf(i));
+      addrs.add(address);
+    }
+    Map<String, ByteString> fragments = state.getState(addrs);
+    ByteString result = null;
+    byte[] accumulatedBytes = new byte[] {};
+    try {
+      for (String address : addrs) {
+        ByteString fragBytes = fragments.get(address);
+        DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
+        LOGGER.warn("Adding fragment of size={}", frag.toByteArray().length);
+        accumulatedBytes = ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
+      }
+      result = ByteString.copyFrom(accumulatedBytes);
+        DamlTransaction tx = DamlTransaction.parseFrom(result);
+        return tx;
+    } catch (InvalidProtocolBufferException e) {
+      throw new InvalidTransactionException(e.getMessage());
+    }
+  }
+
+  @Override
   public Map<ByteString, ByteString> getDamlStates(final Collection<ByteString> keys)
       throws InternalError, InvalidTransactionException {
     return getDamlStates(keys.toArray(new ByteString[] {}));
@@ -149,7 +179,8 @@ public final class ContextLedgerState implements LedgerState<String> {
     final Map<String, ByteString> setMap = new HashMap<>();
     for (final Entry<ByteString, ByteString> e : entries) {
       final ByteString key = e.getKey();
-      List<ByteString> parts = SawtoothClientUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
+      List<ByteString> parts =
+          SawtoothClientUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
       int index = 0;
       int size = 0;
       for (ByteString p : parts) {
@@ -170,6 +201,19 @@ public final class ContextLedgerState implements LedgerState<String> {
     }
     state.setState(setMap.entrySet());
   }
+
+  @Override
+  public void storeTransactionFragmet(final DamlTransactionFragment tx)
+      throws InternalError, InvalidTransactionException {
+    final String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "fragment",
+        tx.getLogEntryId().toStringUtf8(), String.valueOf(tx.getParts()),
+        String.valueOf(tx.getPartNumber()));
+    final ByteString val = tx.toByteString();
+    final Map<String, ByteString> setMap = new HashMap<>();
+    setMap.put(address, val);
+    state.setState(setMap.entrySet());
+  }
+
 
   @Override
   public void setDamlState(final ByteString key, final ByteString val)

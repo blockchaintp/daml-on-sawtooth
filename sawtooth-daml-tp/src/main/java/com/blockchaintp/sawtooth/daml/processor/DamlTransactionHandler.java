@@ -1,17 +1,15 @@
 /*
- *  Copyright 2020 Blockchain Technology Partners
+ * Copyright 2020 Blockchain Technology Partners
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package com.blockchaintp.sawtooth.daml.processor;
@@ -26,6 +24,7 @@ import java.util.concurrent.ExecutionException;
 
 import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
@@ -62,7 +61,8 @@ import scala.util.Either;
  */
 public final class DamlTransactionHandler implements TransactionHandler {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(DamlTransactionHandler.class.getName());
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(DamlTransactionHandler.class.getName());
 
   private final String familyName;
   private final String namespace;
@@ -108,6 +108,9 @@ public final class DamlTransactionHandler implements TransactionHandler {
         if (operation.hasTransaction()) {
           final DamlTransaction tx = operation.getTransaction();
           handleTransaction(ledgerState, tx, participantId, operation.getCorrelationId());
+        } else if (operation.hasLargeTransaction()) {
+          final DamlTransactionFragment tx = operation.getLargeTransaction();
+          handleLargeTransaction(ledgerState, tx, participantId, operation.getCorrelationId());
         } else {
           LOGGER.debug("DamlOperation contains no supported operation, ignoring ...");
         }
@@ -121,9 +124,25 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
   }
 
+  private void handleLargeTransaction(final LedgerState<String> ledgerState, final DamlTransactionFragment ltx,
+      final String participantId, final String correlationId)
+      throws InvalidTransactionException, InternalError {
+    if (ltx.getPartNumber() != ltx.getParts()) {
+      LOGGER.warn("Storing transaction fragment part {} of {} size={}", ltx.getPartNumber(),
+          ltx.getParts(),
+          ltx.toByteString().size());
+      ledgerState.storeTransactionFragmet(ltx);
+    } else {
+      LOGGER.warn("Assembling and handling transaction with fragment part {} of {} size={}",
+          ltx.getPartNumber(), ltx.getParts(), ltx.toByteString().size());
+      final DamlTransaction tx = ledgerState.assembleTransactionFragments(ltx);
+      handleTransaction(ledgerState, tx, participantId, correlationId);
+    }
+  }
+
   private String handleTransaction(final LedgerState<String> ledgerState, final DamlTransaction tx,
-      final String participantId, final String correlationId) throws InvalidTransactionException,
-      InternalError {
+      final String participantId, final String correlationId)
+      throws InvalidTransactionException, InternalError {
     DamlLogEntryId logEntryId;
     try {
       logEntryId = DamlLogEntryId.parseFrom(tx.getLogEntryId());
@@ -136,10 +155,12 @@ public final class DamlTransactionHandler implements TransactionHandler {
       return logEntryId;
     }, false, Cache.none(), this.engine, this.metrics, ec);
     final Timestamp recordTime = ledgerState.getRecordTime();
+    LOGGER.info("Begin validation");
     final Future<Either<ValidationFailed, String>> validateAndCommit =
         validator.validateAndCommit(tx.getSubmission(), correlationId, recordTime, participantId);
     final CompletionStage<Either<ValidationFailed, String>> validateAndCommitCS =
         FutureConverters.toJava(validateAndCommit);
+    LOGGER.info("End validation");
     try {
       final Either<ValidationFailed, String> either =
           validateAndCommitCS.toCompletableFuture().get();
