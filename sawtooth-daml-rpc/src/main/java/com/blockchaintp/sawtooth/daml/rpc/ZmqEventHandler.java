@@ -18,10 +18,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
-import com.blockchaintp.utils.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
+import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.KVOffset;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;
@@ -237,26 +237,20 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private void handleDamlLogEvent(final Map<String, String> attrMap, final Event e) {
     LOGGER.trace("Handling DAML log event");
     final String entryIdStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE);
+    final ByteString entryIdVal = ByteString.copyFromUtf8(entryIdStr);
 
-    List<ByteString> eventSoFar = damlEventBuffers.getOrDefault(entryIdStr, new ArrayList<>());
-    String countStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE);
-    String partStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE);
-    int part = Integer.valueOf(partStr);
-    eventSoFar.add(e.getData());
-    if (part != eventSoFar.size() - 1) {
-      LOGGER.warn("Expecting part = {} but we are at part {}", part, eventSoFar.size());
-    }
-    int expected = Integer.valueOf(countStr);
-    if (expected == eventSoFar.size()) {
-      final ByteString entryIdVal = ByteString.copyFromUtf8(entryIdStr);
+    if (attrMap.getOrDefault(EventConstants.DAML_LOG_ENTRY_FETCH_ATTRIBUTE, "false")
+        .equals("true")) {
+      String[] addresses = attrMap.get(EventConstants.DAML_LOG_FETCH_IDS_ATTRIBUTE).split(",");
       List<VersionedEnvelope> veList = new ArrayList<>();
       try {
-        for (ByteString bs : eventSoFar) {
-          VersionedEnvelope elem = VersionedEnvelope.parseFrom(bs);
+        for (String addr : addresses) {
+          ByteString chunk = getState(addr);
+          VersionedEnvelope elem = VersionedEnvelope.parseFrom(chunk);
           veList.add(elem);
         }
         ByteString evtData = SawtoothClientUtils.unwrapMultipart(veList);
-        LOGGER.info("Combined {} event fragments into an event of size {}", eventSoFar.size(),
+        LOGGER.info("Combined {} event fragments into an event of size {}", addresses.length,
             evtData.size());
         final long blockNum = getCurrentBlockNum();
         final int subOffset = getCurrentSubOffset();
@@ -267,9 +261,39 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
       } catch (InvalidProtocolBufferException ipbe) {
         LOGGER.warn("Exception parsing event, elemets={}", veList.size());
       }
-      damlEventBuffers.remove(entryIdStr);
     } else {
-      damlEventBuffers.put(entryIdStr, eventSoFar);
+      List<ByteString> eventSoFar = damlEventBuffers.getOrDefault(entryIdStr, new ArrayList<>());
+      String countStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE);
+      String partStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE);
+      int part = Integer.valueOf(partStr);
+      eventSoFar.add(e.getData());
+      if (part != eventSoFar.size() - 1) {
+        LOGGER.warn("Expecting part = {} but we are at part {}", part, eventSoFar.size());
+      }
+      int expected = Integer.valueOf(countStr);
+      if (expected == eventSoFar.size()) {
+        List<VersionedEnvelope> veList = new ArrayList<>();
+        try {
+          for (ByteString bs : eventSoFar) {
+            VersionedEnvelope elem = VersionedEnvelope.parseFrom(bs);
+            veList.add(elem);
+          }
+          ByteString evtData = SawtoothClientUtils.unwrapMultipart(veList);
+          LOGGER.info("Combined {} event fragments into an event of size {}", eventSoFar.size(),
+              evtData.size());
+          final long blockNum = getCurrentBlockNum();
+          final int subOffset = getCurrentSubOffset();
+          final Offset eventOffset = KVOffset.fromLong(blockNum, subOffset, 0);
+          incrementSubOffset();
+          final LedgerRecord lr = LedgerRecord.apply(eventOffset, entryIdVal, evtData);
+          sendToProcessors(lr);
+        } catch (InvalidProtocolBufferException ipbe) {
+          LOGGER.warn("Exception parsing event, elemets={}", veList.size());
+        }
+        damlEventBuffers.remove(entryIdStr);
+      } else {
+        damlEventBuffers.put(entryIdStr, eventSoFar);
+      }
     }
   }
 

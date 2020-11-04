@@ -343,18 +343,52 @@ public final class ContextLedgerState implements LedgerState<String> {
       throws InternalError, InvalidTransactionException {
     List<ByteString> multipart = SawtoothClientUtils.wrapMultipart(entry, DEFAULT_MAX_VAL_SIZE);
     int part = 0;
-    for (ByteString bs : multipart) {
-      final Map<String, String> attrMap = new HashMap<>();
-      attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.toStringUtf8());
-      attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
-          String.valueOf(multipart.size()));
-      attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE, String.valueOf(part));
-      LOGGER.info("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
-          bs.size(), entry.size());
-      state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), bs);
-      part++;
+    if (multipart.size() <= 1) {
+      for (ByteString bs : multipart) {
+        final Map<String, String> attrMap = new HashMap<>();
+        attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.toStringUtf8());
+        attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
+            String.valueOf(multipart.size()));
+        attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE, String.valueOf(part));
+        LOGGER.info("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
+            bs.size(), entry.size());
+        state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), bs);
+        part++;
+      }
+    } else {
+      largeEvent(entryId.toStringUtf8(), multipart);
     }
     return entryId.toStringUtf8();
+  }
+
+  private void largeEvent(final String entryId, final List<ByteString> multipart)
+      throws InternalError, InvalidTransactionException {
+    LOGGER.info("Publishing large event for entry = {}", entryId);
+    final Map<String, String> attrMap = new HashMap<>();
+    attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId);
+    attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
+        String.valueOf(multipart.size()));
+    attrMap.put(EventConstants.DAML_LOG_ENTRY_FETCH_ATTRIBUTE, "true");
+
+    int index = 0;
+    Map<String, ByteString> setMap = new HashMap<>();
+    StringBuilder fetchAddressBldr = new StringBuilder();
+    int totalBytes = 0;
+    for (ByteString bs : multipart) {
+      String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "logentry", entryId,
+          "part", String.valueOf(index));
+      if (index > 0) {
+        fetchAddressBldr.append(",");
+      }
+      fetchAddressBldr.append(address);
+      index++;
+      totalBytes += bs.size();
+      setMap.put(address, bs);
+    }
+    attrMap.put(EventConstants.DAML_LOG_FETCH_IDS_ATTRIBUTE, fetchAddressBldr.toString());
+    state.setState(setMap.entrySet());
+    LOGGER.info("Stored {} entries totalling {} bytes", multipart.size(), totalBytes);
+    state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), ByteString.EMPTY);
   }
 
 }
