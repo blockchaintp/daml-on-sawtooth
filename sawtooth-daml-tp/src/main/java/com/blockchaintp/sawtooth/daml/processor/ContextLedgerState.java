@@ -112,10 +112,8 @@ public final class ContextLedgerState implements LedgerState<String> {
           }
         }
         ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
-        if (veList.size() > 1) {
-          LOGGER.debug("Read address={} parts={} size={}", key.toStringUtf8(), veList.size(),
+        LOGGER.info("Read address={} parts={} size={}", key.toStringUtf8(), veList.size(),
               val.size());
-        }
         return val;
       } catch (InvalidProtocolBufferException e) {
         throw new InvalidTransactionException(e.getMessage());
@@ -195,9 +193,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         index++;
         size += p.size();
       }
-      if (index > 1) {
-        LOGGER.debug("Set address={} parts={} size={}", key.toStringUtf8(), index, size);
-      }
+      LOGGER.info("Set address={} parts={} size={}", key.toStringUtf8(), index, size);
     }
     state.setState(setMap.entrySet());
   }
