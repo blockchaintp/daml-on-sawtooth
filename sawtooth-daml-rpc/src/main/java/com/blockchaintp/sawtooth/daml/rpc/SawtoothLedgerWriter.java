@@ -58,8 +58,8 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
 
-  private static final int DEFAULT_MAX_OPS_PER_BATCH = 10;
-  private static final int DEFAULT_MAX_OUTSTANDING_BATCHES = 2;
+  private static final int DEFAULT_MAX_OPS_PER_BATCH = 2;
+  private static final int DEFAULT_MAX_OUTSTANDING_BATCHES = 1;
   private final String participantId;
   private final Metrics metrics;
   private final KeyValueCommitting kvCommitting;
