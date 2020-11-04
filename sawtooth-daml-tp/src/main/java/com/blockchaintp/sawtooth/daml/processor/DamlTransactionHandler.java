@@ -103,6 +103,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     try {
       ByteString unwrappedPayload = SawtoothClientUtils.unwrap(tpProcessRequest.getPayload());
       final DamlOperationBatch batch = DamlOperationBatch.parseFrom(unwrappedPayload);
+      LOGGER.info("Processing {} operations", batch.getOperationsList().size());
       for (final DamlOperation operation : batch.getOperationsList()) {
         final String participantId = operation.getSubmittingParticipant();
         if (operation.hasTransaction()) {
@@ -115,6 +116,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
           LOGGER.debug("DamlOperation contains no supported operation, ignoring ...");
         }
       }
+      LOGGER.info("Completed {} operations", batch.getOperationsList().size());
     } catch (final InvalidProtocolBufferException ipbe) {
       LOGGER.error("Failed to parse DamlSubmission protocol buffer:");
       throw new RuntimeException(
@@ -130,11 +132,11 @@ public final class DamlTransactionHandler implements TransactionHandler {
     if (ltx.getPartNumber() != ltx.getParts()) {
       LOGGER.warn("Storing transaction fragment part {} of {} size={}", ltx.getPartNumber(),
           ltx.getParts(),
-          ltx.toByteString().size());
+          ltx.getSubmissionFragment().size());
       ledgerState.storeTransactionFragmet(ltx);
     } else {
       LOGGER.warn("Assembling and handling transaction with fragment part {} of {} size={}",
-          ltx.getPartNumber(), ltx.getParts(), ltx.toByteString().size());
+          ltx.getPartNumber(), ltx.getParts(), ltx.getSubmissionFragment().size());
       final DamlTransaction tx = ledgerState.assembleTransactionFragments(ltx);
       handleTransaction(ledgerState, tx, participantId, correlationId);
     }

@@ -58,7 +58,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
 
-  private static final int DEFAULT_MAX_OPS_PER_BATCH = 2;
+  private static final int DEFAULT_MAX_OPS_PER_BATCH = 1000;
   private static final int DEFAULT_MAX_OUTSTANDING_BATCHES = 1;
   private final String participantId;
   private final Metrics metrics;
@@ -137,12 +137,13 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         DamlTransactionFragment txFrag = DamlTransactionFragment.newBuilder()
             .setLogEntryId(logEntryId).setParts(fragments.size()).setPartNumber(index)
             .setSubmissionFragment(frag).build();
+        LOGGER.info("Submitting fragment {} of {} size={}", fragments.size(), index, frag.size());
         DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
             .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();
         final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);
+        index++;
         try {
           this.submitQueue.put(cp);
-          index++;
         } catch (final InterruptedException e) {
           LOGGER.error("Interrupted while submitting transaction", e);
           throw new RuntimeException(e);
@@ -151,6 +152,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       DamlTransactionFragment txFrag =
           DamlTransactionFragment.newBuilder().setLogEntryId(logEntryId).setParts(fragments.size())
               .setPartNumber(index).setSubmissionFragment(ByteString.EMPTY).build();
+      LOGGER.info("Submitting fragment {} of {} size={}", index, fragments.size(), ByteString.EMPTY.size());
       DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
           .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();
       final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);

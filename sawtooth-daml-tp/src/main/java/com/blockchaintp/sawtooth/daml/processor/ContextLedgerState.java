@@ -126,7 +126,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       throws InternalError, InvalidTransactionException {
 
     List<String> addrs = new ArrayList<>();
-    for (int i = 0; i < endTx.getPartNumber(); i++) {
+    for (int i = 0; i < endTx.getParts(); i++) {
       final String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "fragment",
           endTx.getLogEntryId().toStringUtf8(), String.valueOf(endTx.getParts()),
           String.valueOf(i));
@@ -136,11 +136,19 @@ public final class ContextLedgerState implements LedgerState<String> {
     ByteString result = null;
     byte[] accumulatedBytes = new byte[] {};
     try {
+      int index = 0;
       for (String address : addrs) {
         ByteString fragBytes = fragments.get(address);
-        DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
-        LOGGER.warn("Adding fragment of size={}", frag.toByteArray().length);
-        accumulatedBytes = ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
+        if (fragBytes == null) {
+          LOGGER.warn("Adding fragment index={} address={} is null", index, address);
+        } else {
+          LOGGER.warn("Adding fragment index={} address={} has size={}", index, address,
+              fragBytes.size());
+          DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
+          accumulatedBytes =
+              ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
+        }
+        index++;
       }
       result = ByteString.copyFrom(accumulatedBytes);
         DamlTransaction tx = DamlTransaction.parseFrom(result);
