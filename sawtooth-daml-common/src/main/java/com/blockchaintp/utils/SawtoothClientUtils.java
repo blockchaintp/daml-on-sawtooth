@@ -22,12 +22,11 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
-import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope.Builder;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongycastle.util.Arrays;
+import net.logstash.logback.encoder.org.apache.commons.lang3.ArrayUtils;
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
 import sawtooth.sdk.protobuf.Batch;
@@ -198,11 +197,14 @@ public final class SawtoothClientUtils {
     int i = 0;
     byte[] splitBytes = compressedData.toByteArray();
     while (i < splitBytes.length) {
-      byte[] part = Arrays.copyOfRange(splitBytes, i, Math.min(i + maxPartSize, splitBytes.length));
+      byte[] part =
+          ArrayUtils.subarray(splitBytes, i, Math.min(i + maxPartSize, splitBytes.length));
+      VersionedEnvelope.Builder leaf = VersionedEnvelope.newBuilder().setData(ByteString.copyFrom(part));
       i = i + maxPartSize;
-      Builder leaf = VersionedEnvelope.newBuilder().setData(ByteString.copyFrom(part));
       if (i < splitBytes.length) {
         leaf.setHasMore(true);
+      } else {
+        leaf.setHasMore(false);
       }
       retList.add(leaf.build().toByteString());
     }
@@ -210,9 +212,13 @@ public final class SawtoothClientUtils {
   }
 
   public static ByteString unwrapMultipart(final List<VersionedEnvelope> veList) throws InternalError {
-    ByteString data = ByteString.EMPTY;
+    ByteString data = null;
     for (VersionedEnvelope e : veList) {
-      data = data.concat(e.getData());
+      if (data == null) {
+        data = e.getData();
+      } else {
+        data = data.concat(e.getData());
+      }
     }
     ByteString uData = uncompressByteString(data);
     return uData;

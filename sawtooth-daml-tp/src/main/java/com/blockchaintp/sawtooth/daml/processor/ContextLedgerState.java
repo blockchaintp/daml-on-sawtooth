@@ -178,7 +178,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.trace("Skipping key {} since value is null", k.toStringUtf8());
+        LOGGER.debug("Skipping key {} since value is null", k.toStringUtf8());
       }
     }
     return retMap;
