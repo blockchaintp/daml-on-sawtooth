@@ -54,7 +54,7 @@ import scala.util.Either;
 
 public final class SawtoothLedgerWriter implements LedgerWriter {
 
-  private static final int DEFAULT_TX_FRAGMENT_SIZE = 128 * 1024;
+  private static final int DEFAULT_TX_FRAGMENT_SIZE = 256 * 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
 

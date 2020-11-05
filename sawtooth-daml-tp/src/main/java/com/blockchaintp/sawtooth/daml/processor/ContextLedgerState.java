@@ -55,7 +55,7 @@ import scala.runtime.BoxedUnit;
  */
 public final class ContextLedgerState implements LedgerState<String> {
 
-  private static final int DEFAULT_MAX_VAL_SIZE = 128 * 1024;
+  private static final int DEFAULT_MAX_VAL_SIZE = 256 * 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContextLedgerState.class.getName());
 
