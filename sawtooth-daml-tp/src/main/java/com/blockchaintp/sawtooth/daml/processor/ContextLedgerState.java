@@ -93,7 +93,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     LOGGER.debug("Reading address={}", addr);
     ByteString bs = getStateOrNull(addr);
     if (bs == null) {
-      LOGGER.info("Read address={} is null", addr);
+      LOGGER.debug("Read address={} is null", addr);
       return null;
     } else {
       try {
@@ -142,9 +142,12 @@ public final class ContextLedgerState implements LedgerState<String> {
       for (String address : addrs) {
         ByteString fragBytes = fragments.get(address);
         if (fragBytes == null) {
-          LOGGER.warn("Adding fragment index={} address={} is null", index, address);
+          LOGGER.warn("Adding fragment leid={} index={} address={} is null",
+              endTx.getLogEntryId().toStringUtf8(), index, address);
+          throw new InvalidTransactionException("Fragment is null");
         } else {
-          LOGGER.warn("Adding fragment index={} address={} has size={}", index, address,
+          LOGGER.warn("Adding fragment leid={} index={} address={} has size={}",
+              endTx.getLogEntryId().toStringUtf8(), index, address,
               fragBytes.size());
           DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
           accumulatedBytes =
@@ -175,7 +178,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.debug("Skipping key {} since value is null", k);
+        LOGGER.trace("Skipping key {} since value is null", k.toStringUtf8());
       }
     }
     return retMap;
@@ -185,6 +188,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   public void setDamlStates(final Collection<Entry<ByteString, ByteString>> entries)
       throws InternalError, InvalidTransactionException {
     final Map<String, ByteString> setMap = new HashMap<>();
+    String firstAddress = "";
     for (final Entry<ByteString, ByteString> e : entries) {
       final ByteString key = e.getKey();
       List<ByteString> parts =
@@ -195,6 +199,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         final String address;
         if (index == 0) {
           address = Namespace.makeDamlStateAddress(key);
+          firstAddress = address;
         } else {
           address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
               String.valueOf(index));
@@ -203,7 +208,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         index++;
         size += p.size();
       }
-      LOGGER.info("Set address={} parts={} size={}", key.toStringUtf8(), index, size);
+      LOGGER.debug("Set address={} parts={} size={}", firstAddress, index, size);
     }
     state.setState(setMap.entrySet());
   }
