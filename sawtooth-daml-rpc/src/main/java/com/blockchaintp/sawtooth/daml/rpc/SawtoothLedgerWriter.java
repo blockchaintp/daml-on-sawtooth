@@ -258,12 +258,26 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     private final Stream stream;
     private volatile boolean keepRunning;
 
+    private String lastTransactionSignature = null;
+
     Submitter(final Stream str) {
       this.stream = str;
       this.keepRunning = true;
     }
 
-    private Transaction accumulatorToTransaction(final List<CommitPayload> accumulator) {
+    private String getLastTransactionSignature() {
+      synchronized (this) {
+          return this.lastTransactionSignature;
+      }
+    }
+
+    private void setLastTransactionSignature(final String signature) {
+      synchronized (this) {
+        this.lastTransactionSignature = signature;
+      }
+    }
+
+    private Transaction accumulatorToTransaction(final List<CommitPayload> accumulator, final String signature) {
       final Set<String> inputAddressSet = new HashSet<>();
       final Set<String> outputAddressSet = new HashSet<>();
       final List<DamlOperation> batchOps = accumulator.stream().map(commitPayload -> {
@@ -275,8 +289,12 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       final DamlOperationBatch batch =
           DamlOperationBatch.newBuilder().addAllOperations(batchOps).build();
       LOGGER.debug("Added {} ops to batch", batchOps.size());
+      List<String> dependentTransactions = new ArrayList<>();
+      if (signature != null) {
+        dependentTransactions.add(signature);
+      }
       final Transaction sawTx = SawtoothDamlUtils.makeSawtoothTransaction(keyManager, batch,
-          inputAddressSet, outputAddressSet);
+          inputAddressSet, outputAddressSet, dependentTransactions);
       return sawTx;
     }
 
@@ -303,7 +321,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         }
 
         if (accumulator.size() > 0) {
-          final Transaction sawTx = accumulatorToTransaction(accumulator);
+          final Transaction sawTx =
+              accumulatorToTransaction(accumulator, getLastTransactionSignature());
+          setLastTransactionSignature(sawTx.getHeaderSignature());
           batchCounter++;
           LOGGER.debug("Sending batch {} opCount={} ", batchCounter, accumulator.size());
           final Batch sawBatch = SawtoothClientUtils.makeSawtoothBatch(keyManager, List.of(sawTx));

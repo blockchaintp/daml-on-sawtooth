@@ -215,6 +215,8 @@ public final class ContextLedgerState implements LedgerState<String> {
         tx.getLogEntryId().toStringUtf8(), String.valueOf(tx.getParts()),
         String.valueOf(tx.getPartNumber()));
     final ByteString val = tx.toByteString();
+    LOGGER.info("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
+        address, val.size());
     final Map<String, ByteString> setMap = new HashMap<>();
     setMap.put(address, val);
     state.setState(setMap.entrySet());
