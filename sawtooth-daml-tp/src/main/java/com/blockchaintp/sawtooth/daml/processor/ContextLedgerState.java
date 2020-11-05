@@ -90,7 +90,6 @@ public final class ContextLedgerState implements LedgerState<String> {
   public ByteString getDamlState(final ByteString key)
       throws InternalError, InvalidTransactionException {
     String addr = Namespace.makeDamlStateAddress(key);
-    LOGGER.debug("Reading address={}", addr);
     ByteString bs = getStateOrNull(addr);
     if (bs == null) {
       LOGGER.debug("Read address={} is null", addr);
@@ -101,21 +100,28 @@ public final class ContextLedgerState implements LedgerState<String> {
         VersionedEnvelope envelope = VersionedEnvelope.parseFrom(bs);
         veList.add(envelope);
         boolean hasMore = envelope.getHasMore();
+        LOGGER.debug("Fetched initial address={} part=0 hasMore={} size={}", addr, hasMore,
+            bs.toByteArray().length);
         while (hasMore) {
+          int part = veList.size();
           final String nextAddr = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
-              String.valueOf(veList.size() - 1));
+              String.valueOf(part));
           bs = getStateOrNull(nextAddr);
+          int sz = 0;
           if (bs == null) {
             hasMore = false;
           } else {
+            sz = bs.toByteArray().length;
             envelope = VersionedEnvelope.parseFrom(bs);
             veList.add(envelope);
             hasMore = envelope.getHasMore();
           }
+          LOGGER.debug("Fetched next address={} part={} hasMore={} size={}", nextAddr, part,
+              hasMore, sz);
         }
         ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
         LOGGER.info("Read address={} parts={} size={}", addr, veList.size(),
-              val.size());
+              val.toByteArray().length);
         return val;
       } catch (InvalidProtocolBufferException e) {
         throw new InvalidTransactionException(e.getMessage());
@@ -137,6 +143,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     Map<String, ByteString> fragments = state.getState(addrs);
     ByteString result = null;
     byte[] accumulatedBytes = new byte[] {};
+    String contentHash = null;
     try {
       int index = 0;
       for (String address : addrs) {
@@ -147,13 +154,21 @@ public final class ContextLedgerState implements LedgerState<String> {
           throw new InvalidTransactionException("Fragment is null");
         } else {
           LOGGER.warn("Adding fragment leid={} index={} address={} has size={}",
-              endTx.getLogEntryId().toStringUtf8(), index, address,
-              fragBytes.size());
+              endTx.getLogEntryId().toStringUtf8(), index, address, fragBytes.size());
           DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
           accumulatedBytes =
               ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
+          if (null == contentHash) {
+            contentHash = frag.getContentHash();
+          }
         }
         index++;
+      }
+      String assembledHash = SawtoothClientUtils.getHash(accumulatedBytes);
+      if (contentHash.equals(assembledHash)) {
+        LOGGER.trace("Assembled hash looks good {} = {}", contentHash, assembledHash);
+      } else {
+        LOGGER.warn("Assembled hash does not match! {} != {}", contentHash, assembledHash);
       }
       result = ByteString.copyFrom(accumulatedBytes);
         DamlTransaction tx = DamlTransaction.parseFrom(result);
@@ -204,11 +219,12 @@ public final class ContextLedgerState implements LedgerState<String> {
           address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
               String.valueOf(index));
         }
+        LOGGER.debug("Set address={} part={} size={}", address, index, p.size());
         setMap.put(address, p);
         index++;
         size += p.size();
       }
-      LOGGER.debug("Set address={} parts={} size={}", firstAddress, index, size);
+      LOGGER.info("Set address={} totalParts={} totalSize={}", firstAddress, index, size);
     }
     state.setState(setMap.entrySet());
   }

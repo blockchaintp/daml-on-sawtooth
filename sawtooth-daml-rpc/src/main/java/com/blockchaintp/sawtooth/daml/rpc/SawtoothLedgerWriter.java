@@ -125,6 +125,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       int start = 0;
       List<ByteString> fragments = new ArrayList<>();
       byte[] envelopeBytes = tx.toByteArray();
+      String contentHash = SawtoothClientUtils.getHash(envelopeBytes);
       while (start < envelopeBytes.length) {
         byte[] fragBytes = ArrayUtils.subarray(envelopeBytes, start,
             Math.min(start + DEFAULT_TX_FRAGMENT_SIZE, envelopeBytes.length));
@@ -135,7 +136,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       for (ByteString frag : fragments) {
         DamlTransactionFragment txFrag = DamlTransactionFragment.newBuilder()
             .setLogEntryId(logEntryId).setParts(fragments.size()).setPartNumber(index)
-            .setSubmissionFragment(frag).build();
+            .setSubmissionFragment(frag)
+            .setContentHash(contentHash)
+            .build();
         LOGGER.info("Submitting fragment {} of {} size={}", index, fragments.size(), frag.size());
         DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
             .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();
@@ -150,7 +153,8 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       }
       DamlTransactionFragment txFrag =
           DamlTransactionFragment.newBuilder().setLogEntryId(logEntryId).setParts(fragments.size())
-              .setPartNumber(index).setSubmissionFragment(ByteString.EMPTY).build();
+              .setPartNumber(index).setSubmissionFragment(ByteString.EMPTY)
+              .setContentHash(contentHash).build();
       LOGGER.info("Submitting fragment {} of {} size={}", index, fragments.size(), ByteString.EMPTY.size());
       DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
           .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();

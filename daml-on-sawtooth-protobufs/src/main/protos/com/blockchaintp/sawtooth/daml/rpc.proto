@@ -46,6 +46,7 @@ message DamlTransactionFragment {
   int32 parts = 3;
   int32 partNumber = 4;
   bytes submissionFragment = 5;
+  string contentHash = 6;
 }
 
 message DamlLogEvent {
@@ -59,4 +60,5 @@ message VersionedEnvelope {
   string version = 1;
   bytes data = 2;
   bool hasMore = 3;
+  string contentHash = 4;
 }

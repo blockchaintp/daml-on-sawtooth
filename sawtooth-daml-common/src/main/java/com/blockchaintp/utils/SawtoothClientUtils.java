@@ -179,27 +179,25 @@ public final class SawtoothClientUtils {
   }
 
   public static ByteString wrap(final ByteString value) throws InternalError {
-    ByteString v =
-        VersionedEnvelope.newBuilder().setData(compressByteString(value))
-          .setHasMore(false)
-          .build().toByteString();
+    ByteString data = compressByteString(value);
+    String contentHash = getHash(data.toByteArray());
+    ByteString v = VersionedEnvelope.newBuilder().setData(data)
+        .setHasMore(false).setContentHash(contentHash).build().toByteString();
     return v;
   }
 
   public static List<ByteString> wrapMultipart(final ByteString value, final int maxPartSize)
       throws InternalError {
     ByteString compressedData = compressByteString(value);
-    if (compressedData.size() < maxPartSize) {
-      return List.of(wrap(value));
-    }
-
+    String contentHash = getHash(compressedData.toByteArray());
     List<ByteString> retList = new ArrayList<>();
     int i = 0;
     byte[] splitBytes = compressedData.toByteArray();
     while (i < splitBytes.length) {
       byte[] part =
           ArrayUtils.subarray(splitBytes, i, Math.min(i + maxPartSize, splitBytes.length));
-      VersionedEnvelope.Builder leaf = VersionedEnvelope.newBuilder().setData(ByteString.copyFrom(part));
+      VersionedEnvelope.Builder leaf = VersionedEnvelope.newBuilder()
+          .setData(ByteString.copyFrom(part)).setContentHash(contentHash);
       i = i + maxPartSize;
       if (i < splitBytes.length) {
         leaf.setHasMore(true);
@@ -212,14 +210,22 @@ public final class SawtoothClientUtils {
   }
 
   public static ByteString unwrapMultipart(final List<VersionedEnvelope> veList) throws InternalError {
-    ByteString data = null;
+    String contentHash = null;
+    byte[] accumulatedBytes = new byte[] {};
     for (VersionedEnvelope e : veList) {
-      if (data == null) {
-        data = e.getData();
-      } else {
-        data = data.concat(e.getData());
+      if (contentHash == null) {
+        contentHash = e.getContentHash();
       }
+      accumulatedBytes = ArrayUtils.addAll(accumulatedBytes, e.getData().toByteArray());
     }
+    ByteString data = ByteString.copyFrom(accumulatedBytes);
+    String assembledHash = getHash(accumulatedBytes);
+    if (contentHash.equals(assembledHash)) {
+      LOGGER.trace("Assembled hash looks good {} = {}", contentHash, assembledHash);
+    } else {
+      LOGGER.warn("Assembled hash does not match! {} != {}", contentHash, assembledHash);
+    }
+
     ByteString uData = uncompressByteString(data);
     return uData;
   }
@@ -231,6 +237,13 @@ public final class SawtoothClientUtils {
       switch (envelope.getVersion()) {
         case "":
         case "1":
+          String assembledHash = getHash(envelope.getData().toByteArray());
+          String contentHash = envelope.getContentHash();
+          if (contentHash.equals(assembledHash)) {
+            LOGGER.trace("Assembled hash looks good {} = {}", contentHash, assembledHash);
+          } else {
+            LOGGER.warn("Assembled hash does not match! {} != {}", contentHash, assembledHash);
+          }
           ByteString v = uncompressByteString(envelope.getData());
           return v;
         default:
@@ -288,6 +301,7 @@ public final class SawtoothClientUtils {
 
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length)) {
       final byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
+      LOGGER.debug("Uncompressing ByteString original_size={}", inputBytes.length);
       try {
         while (!inflater.finished()) {
           final int bCount = inflater.inflate(buffer);
@@ -298,7 +312,7 @@ public final class SawtoothClientUtils {
         final ByteString bs = ByteString.copyFrom(baos.toByteArray());
         final long uncompressStop = System.currentTimeMillis();
         final long uncompressTime = uncompressStop - uncompressStart;
-        LOGGER.trace("Uncompressed ByteString time={}, original_size={}, new_size={}",
+        LOGGER.debug("Uncompressed ByteString time={}, original_size={}, new_size={}",
             uncompressTime, inputBytes.length, baos.size());
         return bs;
       } catch (final DataFormatException exc) {
