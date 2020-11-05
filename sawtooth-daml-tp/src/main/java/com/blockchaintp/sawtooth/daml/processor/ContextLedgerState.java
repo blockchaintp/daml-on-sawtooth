@@ -90,8 +90,10 @@ public final class ContextLedgerState implements LedgerState<String> {
   public ByteString getDamlState(final ByteString key)
       throws InternalError, InvalidTransactionException {
     String addr = Namespace.makeDamlStateAddress(key);
+    LOGGER.debug("Reading address={}", addr);
     ByteString bs = getStateOrNull(addr);
     if (bs == null) {
+      LOGGER.info("Read address={} is null", addr);
       return null;
     } else {
       try {
@@ -100,9 +102,9 @@ public final class ContextLedgerState implements LedgerState<String> {
         veList.add(envelope);
         boolean hasMore = envelope.getHasMore();
         while (hasMore) {
-          addr = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
+          final String nextAddr = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
               String.valueOf(veList.size() - 1));
-          bs = getStateOrNull(addr);
+          bs = getStateOrNull(nextAddr);
           if (bs == null) {
             hasMore = false;
           } else {
@@ -112,7 +114,7 @@ public final class ContextLedgerState implements LedgerState<String> {
           }
         }
         ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
-        LOGGER.info("Read address={} parts={} size={}", key.toStringUtf8(), veList.size(),
+        LOGGER.info("Read address={} parts={} size={}", addr, veList.size(),
               val.size());
         return val;
       } catch (InvalidProtocolBufferException e) {

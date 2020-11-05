@@ -39,7 +39,7 @@ import com.daml.lf.engine.Engine;
 import com.daml.metrics.Metrics;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-
+import com.google.protobuf.util.JsonFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,6 +168,12 @@ public final class DamlTransactionHandler implements TransactionHandler {
           validateAndCommitCS.toCompletableFuture().get();
       if (either.isLeft()) {
         final ValidationFailed validationFailed = either.left().get();
+        try {
+          LOGGER.warn("ValidationFailed tx={}",
+              JsonFormat.printer().includingDefaultValueFields().print(tx));
+        } catch (InvalidProtocolBufferException ipbe) {
+          LOGGER.warn("ValidationFailed buffer is invalid tx={}", tx.toString());
+        }
         throw new InvalidTransactionException(validationFailed.toString());
       } else {
         final String logId = either.right().get();
