@@ -17,7 +17,7 @@ object ExtraConfig {
       zmqUrl = "tcp://localhost:4004",
       keystore = "/etc/daml/keystore",
       logLevel = "info",
-      maxOpsPerBatch = "10".toInt,
+      maxOpsPerBatch = "1000".toInt,
       maxOutStandingBatches = "2".toInt
     )
 }

@@ -58,8 +58,6 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
 
-  private static final int DEFAULT_MAX_OPS_PER_BATCH = 1000;
-  private static final int DEFAULT_MAX_OUTSTANDING_BATCHES = 1;
   private final String participantId;
   private final Metrics metrics;
   private final KeyValueCommitting kvCommitting;
@@ -77,9 +75,10 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private final int maxOpsPerBatch;
 
-  public SawtoothLedgerWriter(final String pid, final String zmqUrl, final KeyManager keyMgr) {
-    this(pid, new ZmqStream(zmqUrl), keyMgr, DEFAULT_MAX_OPS_PER_BATCH,
-        DEFAULT_MAX_OUTSTANDING_BATCHES);
+  public SawtoothLedgerWriter(final String pid, final String zmqUrl, final KeyManager keyMgr,
+      final int opsPerBatch, final int outStandingBatches) {
+    this(pid, new ZmqStream(zmqUrl), keyMgr, opsPerBatch,
+        outStandingBatches);
   }
 
   public SawtoothLedgerWriter(final String id, final Stream s, final KeyManager k,
@@ -137,7 +136,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         DamlTransactionFragment txFrag = DamlTransactionFragment.newBuilder()
             .setLogEntryId(logEntryId).setParts(fragments.size()).setPartNumber(index)
             .setSubmissionFragment(frag).build();
-        LOGGER.info("Submitting fragment {} of {} size={}", fragments.size(), index, frag.size());
+        LOGGER.info("Submitting fragment {} of {} size={}", index, fragments.size(), frag.size());
         DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
             .setSubmittingParticipant(participantId()).setLargeTransaction(txFrag).build();
         final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);

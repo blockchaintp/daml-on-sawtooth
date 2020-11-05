@@ -27,6 +27,9 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothReaderWriter.class.getName());
 
+  private static final int DEFAULT_MAX_OPS_PER_BATCH = 1000;
+  private static final int DEFAULT_MAX_OUTSTANDING_BATCHES = 1;
+
   private final SawtoothLedgerReader reader;
   private final SawtoothLedgerWriter writer;
   private final String keystoreDir;
@@ -34,6 +37,12 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
 
   public SawtoothReaderWriter(final String participantId, final String zmqUrl,
       final String k, final String ledgerId) {
+    this(participantId, zmqUrl, k, ledgerId, DEFAULT_MAX_OPS_PER_BATCH,
+        DEFAULT_MAX_OUTSTANDING_BATCHES);
+  }
+
+  public SawtoothReaderWriter(final String participantId, final String zmqUrl,
+      final String k, final String ledgerId, final int opsPerBatch, final int outstandingBatches) {
     this.keystoreDir = k;
     try {
       this.keyMgr = DirectoryKeyManager.create(this.keystoreDir);
@@ -42,7 +51,7 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
       throw new IllegalArgumentException(e);
     }
     this.reader = new SawtoothLedgerReader(ledgerId, zmqUrl);
-    this.writer = new SawtoothLedgerWriter(participantId, zmqUrl, keyMgr);
+    this.writer = new SawtoothLedgerWriter(participantId, zmqUrl, keyMgr, opsPerBatch, outstandingBatches);
   }
 
   public HealthStatus currentHealth() {
@@ -77,21 +86,24 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
     private final String zmqUrl;
     private final String keystore;
     private final String ledgerId;
+    private int outstandingBatches;
+    private int opsPerBatch;
 
-    public Owner(final String configuredParticipantId, final String z,
-        final String k,
-        final Option<String> lid) {
+    public Owner(final String configuredParticipantId, final String z, final String k,
+        final int cfgOpsPerBatch, final int cfgOutstandingBatches, final Option<String> lid) {
       this.participantId = configuredParticipantId;
       this.zmqUrl = z;
       this.keystore = k;
+      this.opsPerBatch = cfgOpsPerBatch;
+      this.outstandingBatches = cfgOutstandingBatches;
       this.ledgerId = lid.getOrElse(() -> "default-ledger-id");
 
     }
 
     @Override
     public Resource<SawtoothReaderWriter> acquire(final ExecutionContext executionContext) {
-      return Resource.successful(
-          new SawtoothReaderWriter(this.participantId, this.zmqUrl, this.keystore, this.ledgerId),
+      return Resource.successful(new SawtoothReaderWriter(this.participantId, this.zmqUrl,
+          this.keystore, this.ledgerId, this.opsPerBatch, this.outstandingBatches),
           executionContext);
     }
 
