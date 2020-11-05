@@ -29,8 +29,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import com.blockchaintp.sawtooth.daml.processor.ContextLedgerState;
-import com.blockchaintp.sawtooth.daml.processor.LedgerState;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;

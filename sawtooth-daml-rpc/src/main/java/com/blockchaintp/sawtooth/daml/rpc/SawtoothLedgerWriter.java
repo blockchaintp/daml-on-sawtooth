@@ -196,6 +196,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     }).collect(Collectors.toList());
     addresses.add(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD);
     addresses.add(Namespace.DAML_STATE_VALUE_NS);
+    addresses.add(Namespace.DAML_TX_NS);
     return addresses;
   }
 
@@ -206,13 +207,14 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       throw new RuntimeException(new Exception(either.left().get()));
     }
     final DamlSubmission submission = either.right().get();
-    final DamlLogEntryId entryId = this.kvCommitting.unpackDamlLogEntryId(logEntryId);
     final Collection<DamlStateKey> collStateKeys =
         JavaConverters.asJavaCollection(this.kvCommitting.submissionOutputs(submission));
     List<String> collect = collStateKeys.stream().map(damlStateKey -> {
       return Namespace.makeDamlStateAddress(this.kvCommitting.packDamlStateKey(damlStateKey));
     }).collect(Collectors.toList());
     collect.add(Namespace.DAML_STATE_VALUE_NS);
+    collect.add(Namespace.DAML_EVENT_NS);
+    collect.add(Namespace.DAML_TX_NS);
     return collect;
   }
 

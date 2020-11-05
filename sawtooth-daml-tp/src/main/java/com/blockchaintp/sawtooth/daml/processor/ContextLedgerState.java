@@ -127,7 +127,7 @@ public final class ContextLedgerState implements LedgerState<String> {
 
     List<String> addrs = new ArrayList<>();
     for (int i = 0; i < endTx.getParts(); i++) {
-      final String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "fragment",
+      final String address = Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment",
           endTx.getLogEntryId().toStringUtf8(), String.valueOf(endTx.getParts()),
           String.valueOf(i));
       addrs.add(address);
@@ -209,7 +209,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   @Override
   public void storeTransactionFragmet(final DamlTransactionFragment tx)
       throws InternalError, InvalidTransactionException {
-    final String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "fragment",
+    final String address = Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment",
         tx.getLogEntryId().toStringUtf8(), String.valueOf(tx.getParts()),
         String.valueOf(tx.getPartNumber()));
     final ByteString val = tx.toByteString();
@@ -375,7 +375,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     StringBuilder fetchAddressBldr = new StringBuilder();
     int totalBytes = 0;
     for (ByteString bs : multipart) {
-      String address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, "logentry", entryId,
+      String address = Namespace.makeAddress(Namespace.DAML_EVENT_NS, "logentry", entryId,
           "part", String.valueOf(index));
       if (index > 0) {
         fetchAddressBldr.append(",");

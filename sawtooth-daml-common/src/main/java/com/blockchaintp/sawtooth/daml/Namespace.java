@@ -47,6 +47,16 @@ public final class Namespace {
   public static final String DAML_STATE_VALUE_NS = getNameSpace() + "00";
 
   /**
+   * Address space for Daml event chunk storage.
+   */
+  public static final String DAML_EVENT_NS = getNameSpace() + "01";
+
+  /**
+   * Address space for Daml event chunk storage.
+   */
+  public static final String DAML_TX_NS = getNameSpace() + "02";
+
+  /**
    * Maximum number of leaf addresses for a DamlStateKey.
    */
   public static final int DAML_STATE_MAX_LEAVES = 10;
