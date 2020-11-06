@@ -123,7 +123,8 @@ public final class ContextLedgerState implements LedgerState<String> {
               LOGGER.debug("Fetched next address={} part={}/{} size={}", fAddr, e.getPartNumber(),
                   e.getParts(), val.size());
             } else {
-              LOGGER.warn("StateMap did not contain address={}", fAddr);
+              throw new InvalidTransactionException(
+                  String.format("StateMap did not contain address=%s", fAddr));
             }
           }
         }
