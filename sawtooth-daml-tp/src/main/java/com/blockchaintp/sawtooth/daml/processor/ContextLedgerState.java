@@ -307,7 +307,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         return Future.successful(Option.apply(damlState));
       }
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.error("Error reading state");
+      LOGGER.debug("Error reading state: " + e.getMessage());
       throw new RuntimeException(e);
     }
   }
@@ -327,7 +327,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       }
       return Future.successful(JavaConverters.asScalaBuffer(retList));
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.error("Error reading state");
+      LOGGER.debug("Error reading state: " + e.getMessage());
       throw new RuntimeException(e);
     }
   }
