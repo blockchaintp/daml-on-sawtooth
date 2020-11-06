@@ -116,6 +116,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
           LOGGER.debug("DamlOperation contains no supported operation, ignoring ...");
         }
       }
+      ledgerState.flushDeferredEvents();
       LOGGER.info("Completed {} operations", batch.getOperationsList().size());
     } catch (final InvalidProtocolBufferException ipbe) {
       LOGGER.error("Failed to parse DamlSubmission protocol buffer:");

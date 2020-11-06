@@ -59,6 +59,7 @@ public final class ContextLedgerState implements LedgerState<String> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ContextLedgerState.class.getName());
 
+  private List<DamlEvent> deferredEvents;
   /**
    * The state which this class wraps and delegates to.
    */
@@ -69,6 +70,7 @@ public final class ContextLedgerState implements LedgerState<String> {
    */
   public ContextLedgerState(final Context aState) {
     this.state = aState;
+    this.deferredEvents = new ArrayList<>();
   }
 
   private ByteString getStateOrNull(final String address)
@@ -77,13 +79,42 @@ public final class ContextLedgerState implements LedgerState<String> {
     if (stateMap.containsKey(address)) {
       final ByteString bs = stateMap.get(address);
       if (bs.isEmpty() || bs == null) {
+        LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
+            bs.toByteArray().length);
         return null;
       } else {
+        LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
+            bs.toByteArray().length);
         return bs;
       }
     } else {
+      LOGGER.debug("address={} is not set", address);
       return null;
     }
+  }
+
+  private ByteString getStateOrNull(final String address, final int retries)
+      throws InternalError, InvalidTransactionException {
+    final Map<String, ByteString> stateMap = state.getState(List.of(address));
+    int trials = 0;
+    while (trials < retries) {
+      if (stateMap.containsKey(address)) {
+        final ByteString bs = stateMap.get(address);
+        if (bs.isEmpty() || bs == null) {
+          LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
+              bs.toByteArray().length);
+        } else {
+          LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
+              bs.toByteArray().length);
+          return bs;
+        }
+      } else {
+        LOGGER.debug("address={} is not set", address);
+      }
+      trials++;
+      state.getState(List.of(address));
+    }
+    return null;
   }
 
   @Override
@@ -104,24 +135,23 @@ public final class ContextLedgerState implements LedgerState<String> {
             bs.toByteArray().length);
         while (hasMore) {
           int part = veList.size();
-          final String nextAddr = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
-              String.valueOf(part));
-          bs = getStateOrNull(nextAddr);
+          final String nextAddr = Namespace.makeLeafAddress(key, part);
+          final ByteString subBS = getStateOrNull(nextAddr, 10);
           int sz = 0;
-          if (bs == null) {
+          if (subBS == null) {
             hasMore = false;
           } else {
-            sz = bs.toByteArray().length;
-            envelope = VersionedEnvelope.parseFrom(bs);
-            veList.add(envelope);
-            hasMore = envelope.getHasMore();
+            sz = subBS.toByteArray().length;
+            VersionedEnvelope env = VersionedEnvelope.parseFrom(subBS);
+            veList.add(env);
+            hasMore = env.getHasMore();
           }
           LOGGER.debug("Fetched next address={} part={} hasMore={} size={}", nextAddr, part,
               hasMore, sz);
         }
         ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
         LOGGER.info("Read address={} parts={} size={}", addr, veList.size(),
-              val.toByteArray().length);
+            val.toByteArray().length);
         return val;
       } catch (InvalidProtocolBufferException e) {
         throw new InvalidTransactionException(e.getMessage());
@@ -171,8 +201,8 @@ public final class ContextLedgerState implements LedgerState<String> {
         LOGGER.warn("Assembled hash does not match! {} != {}", contentHash, assembledHash);
       }
       result = ByteString.copyFrom(accumulatedBytes);
-        DamlTransaction tx = DamlTransaction.parseFrom(result);
-        return tx;
+      DamlTransaction tx = DamlTransaction.parseFrom(result);
+      return tx;
     } catch (InvalidProtocolBufferException e) {
       throw new InvalidTransactionException(e.getMessage());
     }
@@ -202,7 +232,6 @@ public final class ContextLedgerState implements LedgerState<String> {
   @Override
   public void setDamlStates(final Collection<Entry<ByteString, ByteString>> entries)
       throws InternalError, InvalidTransactionException {
-    final Map<String, ByteString> setMap = new HashMap<>();
     String firstAddress = "";
     for (final Entry<ByteString, ByteString> e : entries) {
       final ByteString key = e.getKey();
@@ -211,30 +240,30 @@ public final class ContextLedgerState implements LedgerState<String> {
       int index = 0;
       int size = 0;
       for (ByteString p : parts) {
+        final Map<String, ByteString> setMap = new HashMap<>();
         final String address;
         if (index == 0) {
           address = Namespace.makeDamlStateAddress(key);
           firstAddress = address;
         } else {
-          address = Namespace.makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
-              String.valueOf(index));
+          address = Namespace.makeLeafAddress(key, index);
         }
         LOGGER.debug("Set address={} part={} size={}", address, index, p.size());
         setMap.put(address, p);
         index++;
         size += p.size();
+        state.setState(setMap.entrySet());
       }
       LOGGER.info("Set address={} totalParts={} totalSize={}", firstAddress, index, size);
     }
-    state.setState(setMap.entrySet());
   }
 
   @Override
   public void storeTransactionFragmet(final DamlTransactionFragment tx)
       throws InternalError, InvalidTransactionException {
-    final String address = Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment",
-        tx.getLogEntryId().toStringUtf8(), String.valueOf(tx.getParts()),
-        String.valueOf(tx.getPartNumber()));
+    final String address =
+        Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment", tx.getLogEntryId().toStringUtf8(),
+            String.valueOf(tx.getParts()), String.valueOf(tx.getPartNumber()));
     final ByteString val = tx.toByteString();
     LOGGER.info("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
         address, val.size());
@@ -400,8 +429,8 @@ public final class ContextLedgerState implements LedgerState<String> {
     StringBuilder fetchAddressBldr = new StringBuilder();
     int totalBytes = 0;
     for (ByteString bs : multipart) {
-      String address = Namespace.makeAddress(Namespace.DAML_EVENT_NS, "logentry", entryId,
-          "part", String.valueOf(index));
+      String address = Namespace.makeAddress(Namespace.DAML_EVENT_NS, "logentry", entryId, "part",
+          String.valueOf(index));
       if (index > 0) {
         fetchAddressBldr.append(",");
       }
@@ -413,7 +442,31 @@ public final class ContextLedgerState implements LedgerState<String> {
     attrMap.put(EventConstants.DAML_LOG_FETCH_IDS_ATTRIBUTE, fetchAddressBldr.toString());
     state.setState(setMap.entrySet());
     LOGGER.info("Stored {} entries totalling {} bytes", multipart.size(), totalBytes);
-    state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), ByteString.EMPTY);
+    DamlEvent de = new DamlEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap, ByteString.EMPTY);
+    this.deferredEvents.add(de);
   }
 
+  public void flushDeferredEvents() throws InternalError {
+    for (DamlEvent evt : this.deferredEvents) {
+      evt.flush(state);
+    }
+  }
+
+  private class DamlEvent {
+    private String subject;
+    private Map<String, String> attrMap;
+    private ByteString data;
+
+    DamlEvent(final String subj, final Map<String, String> attrs, final ByteString bs) {
+      this.subject = subj;
+      this.attrMap = attrs;
+      this.data = bs;
+    }
+
+    public void flush(final Context ledgerState) throws InternalError {
+      LOGGER.info("Sending event on {} with {} attributes and data size={}", subject,
+          attrMap.size(), data.size());
+      ledgerState.addEvent(subject, attrMap.entrySet(), data);
+    }
+  }
 }

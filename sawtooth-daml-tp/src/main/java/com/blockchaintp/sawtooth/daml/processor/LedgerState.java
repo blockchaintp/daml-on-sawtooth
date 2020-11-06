@@ -124,4 +124,9 @@ public interface LedgerState<T> extends LedgerStateOperations<T>, LedgerStateAcc
   DamlTransaction assembleTransactionFragments(DamlTransactionFragment endTx)
       throws InternalError, InvalidTransactionException;
 
+  /**
+   * Flush any deferred events, for instance to put them after state updates.
+   * @throws InternalError
+   */
+  void flushDeferredEvents() throws InternalError;
 }

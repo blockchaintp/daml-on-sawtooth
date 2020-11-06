@@ -89,6 +89,18 @@ public final class Namespace {
   }
 
   /**
+   * Make an address given a namespace, base key and part.
+   *
+   * @param key the base key bytestring
+   * @param part the part of the key (0 is the base)
+   * @return the address
+   */
+  public static String makeLeafAddress(final ByteString key, final int part) {
+    return makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
+        Integer.toString(part));
+  }
+
+  /**
    * Construct a context address for the given DamlStateKey.
    *
    * @param key key to be used for the address
