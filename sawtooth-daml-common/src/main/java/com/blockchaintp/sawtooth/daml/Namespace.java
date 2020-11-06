@@ -47,6 +47,16 @@ public final class Namespace {
   public static final String DAML_STATE_VALUE_NS = getNameSpace() + "00";
 
   /**
+   * Address space for Daml event chunk storage.
+   */
+  public static final String DAML_EVENT_NS = getNameSpace() + "01";
+
+  /**
+   * Address space for Daml event chunk storage.
+   */
+  public static final String DAML_TX_NS = getNameSpace() + "02";
+
+  /**
    * Maximum number of leaf addresses for a DamlStateKey.
    */
   public static final int DAML_STATE_MAX_LEAVES = 10;
@@ -76,6 +86,18 @@ public final class Namespace {
     int begin = hash.length() - ADDRESS_LENGTH + ns.length();
     hash = hash.substring(begin);
     return ns + hash;
+  }
+
+  /**
+   * Make an address given a namespace, base key and part.
+   *
+   * @param key the base key bytestring
+   * @param part the part of the key (0 is the base)
+   * @return the address
+   */
+  public static String makeLeafAddress(final ByteString key, final int part) {
+    return makeAddress(Namespace.DAML_STATE_VALUE_NS, key.toStringUtf8(), "part",
+        Integer.toString(part));
   }
 
   /**

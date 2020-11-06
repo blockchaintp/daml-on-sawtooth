@@ -1,14 +1,12 @@
-/* Copyright 2019 Blockchain Technology Partners
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-------------------------------------------------------------------------------*/
+/*
+ * Copyright 2019 Blockchain Technology Partners Licensed under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
+ * ------------------------------------------------------------------------------
+ */
 package com.blockchaintp.sawtooth.processor;
 
 import java.util.Map;
@@ -56,8 +54,8 @@ public class MTTransactionProcessor implements Runnable {
   private ExecutorService executor;
 
   /**
-   * Constructs a MTTransactionProcessor utilizing the given transaction handler.
-   * NOTE: The TransactionHandler.apply() method must be thread-safe.
+   * Constructs a MTTransactionProcessor utilizing the given transaction handler. NOTE: The
+   * TransactionHandler.apply() method must be thread-safe.
    *
    * @param txHandler The handler to apply to this processor
    * @param address   the address of the ZMQ stream
@@ -91,8 +89,8 @@ public class MTTransactionProcessor implements Runnable {
       }
       outStandingTx = enqueueCount - dequeueCount;
       if (enqueueCount % LOG_METRICS_INTERVAL == 0) {
-        LOGGER.trace("Enqueued {} transactions, Dequeued {} responses, outStanding tx={}", enqueueCount,
-            dequeueCount, outStandingTx);
+        LOGGER.trace("Enqueued {} transactions, Dequeued {} responses, outStanding tx={}",
+            enqueueCount, dequeueCount, outStandingTx);
       }
     }
 
@@ -100,7 +98,8 @@ public class MTTransactionProcessor implements Runnable {
 
   private int handleOutbound(final Map.Entry<String, TpProcessResponse> outPair) {
     if (outPair != null) {
-      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(), outPair.getValue().toByteString());
+      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(),
+          outPair.getValue().toByteString());
       return 1;
     }
     return 0;
@@ -108,7 +107,7 @@ public class MTTransactionProcessor implements Runnable {
 
   private int handleInbound(final Message inMessage) {
     if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
-      LOGGER.debug("Recieved Ping Message.");
+      LOGGER.trace("Recieved Ping Message.");
       PingResponse pingResponse = PingResponse.newBuilder().build();
       this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
           pingResponse.toByteString());
@@ -126,9 +125,11 @@ public class MTTransactionProcessor implements Runnable {
     while (!registered) {
       try {
         TpRegisterRequest registerRequest = TpRegisterRequest.newBuilder()
-            .setFamily(this.handler.transactionFamilyName()).addAllNamespaces(this.handler.getNameSpaces())
-            .setVersion(this.handler.getVersion()).setMaxOccupancy(Runtime.getRuntime().availableProcessors()).build();
-        Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
+            .setFamily(this.handler.transactionFamilyName())
+            .addAllNamespaces(this.handler.getNameSpaces()).setVersion(this.handler.getVersion())
+            .setMaxOccupancy(Runtime.getRuntime().availableProcessors()).build();
+        Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST,
+            registerRequest.toByteString());
         fut.getResult();
         registered = true;
       } catch (InterruptedException | ValidatorConnectionError e) {
@@ -164,23 +165,44 @@ public class MTTransactionProcessor implements Runnable {
           handler.apply(transactionRequest, state);
           builder.setStatus(TpProcessResponse.Status.OK);
         } catch (InvalidTransactionException ite) {
-          LOGGER.warn("Invalid Transaction: " + ite.toString(), ite);
+          LOGGER.warn("Invalid Transaction: " + ite.getMessage());
           builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
           builder.setMessage(ite.getMessage());
           if (ite.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
           }
         } catch (InternalError ie) {
-          LOGGER.warn("State Exception!: " + ie.toString(), ie);
+          LOGGER.warn("State Exception!: " + ie.getMessage(), ie);
           builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
           builder.setMessage(ie.getMessage());
           if (ie.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
           }
         } catch (Throwable t) {
-          LOGGER.warn("Unknown Exception!: " + t.toString(), t);
-          builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
-          builder.setMessage(t.getMessage());
+          Throwable cause = t.getCause();
+          if (null != cause) {
+            if (cause instanceof InvalidTransactionException) {
+              InvalidTransactionException ite = (InvalidTransactionException) cause;
+              LOGGER.info("Invalid Transaction: " + ite.getMessage());
+              builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
+              builder.setMessage(ite.getMessage());
+              if (ite.getExtendedData() != null) {
+                builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
+              }
+            } else if (cause instanceof InternalError) {
+              InternalError ie = (InternalError) cause;
+              LOGGER.warn("Internal Error: " + ie.getMessage());
+              builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+              builder.setMessage(ie.getMessage());
+              if (ie.getExtendedData() != null) {
+                builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
+              }
+            }
+          } else {
+            builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+            LOGGER.warn("Unknown Exception!: " + t.getMessage(), t);
+            builder.setMessage(t.getMessage());
+          }
         }
         responses.put(Map.entry(message.getCorrelationId(), builder.build()));
       } catch (InvalidProtocolBufferException e) {

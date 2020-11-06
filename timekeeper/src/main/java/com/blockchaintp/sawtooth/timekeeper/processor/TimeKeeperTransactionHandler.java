@@ -29,6 +29,7 @@ import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperParticipant;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
+import com.blockchaintp.utils.SawtoothClientUtils;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
@@ -85,7 +86,8 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
     basicRequestChecks(transactionRequest);
     String signerPublicKey = transactionRequest.getHeader().getSignerPublicKey();
     try {
-      TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(transactionRequest.getPayload());
+      ByteString unwrappedPayload = SawtoothClientUtils.unwrap(transactionRequest.getPayload());
+      TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(unwrappedPayload);
       String myRecordAddr = Namespace.makeAddress(this.namespace, signerPublicKey);
       LOGGER.debug("Getting global record state");
       Map<String, ByteString> sourceData = state

@@ -55,6 +55,8 @@ object Main {
       new SawtoothReaderWriter.Owner(participantConfig.participantId,
         config.extra.zmqUrl,
         config.extra.keystore,
+        config.extra.maxOpsPerBatch,
+        config.extra.maxOutStandingBatches,
         config.ledgerId)
     }
 

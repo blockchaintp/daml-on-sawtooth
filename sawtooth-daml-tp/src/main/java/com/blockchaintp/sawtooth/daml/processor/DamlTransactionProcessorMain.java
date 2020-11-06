@@ -31,11 +31,6 @@ import sawtooth.sdk.processor.TransactionHandler;
  */
 public final class DamlTransactionProcessorMain {
 
-  private static final int WARN_LOG = 0;
-  private static final int INFO_LOG = 1;
-  private static final int DEBUG_LOG = 2;
-  private static final int TRACE_LOG = 3;
-
   private static final Logger LOGGER =
       LoggerFactory.getLogger(DamlTransactionProcessorMain.class.getName());
 
