@@ -37,8 +37,7 @@ import sawtooth.sdk.protobuf.Transaction;
 import sawtooth.sdk.protobuf.TransactionHeader;
 
 /**
- * Utility methods and constants useful for interacting with Sawtooth as a
- * client.
+ * Utility methods and constants useful for interacting with Sawtooth as a client.
  */
 public final class SawtoothClientUtils {
 
@@ -60,12 +59,12 @@ public final class SawtoothClientUtils {
   /**
    * Create a batch. Transaction passed are specified to be processed in order.
    *
-   * @param keyManager A key manager handling the identity to be used for signing
-   *                   etc.
+   * @param keyManager A key manager handling the identity to be used for signing etc.
    * @param txns       a collection of transactions
    * @return the assembled batch
    */
-  public static Batch makeSawtoothBatch(final KeyManager keyManager, final Collection<Transaction> txns) {
+  public static Batch makeSawtoothBatch(final KeyManager keyManager,
+      final Collection<Transaction> txns) {
     BatchHeader.Builder batchHeaderBldr = BatchHeader.newBuilder().clearSignerPublicKey()
         .setSignerPublicKey(keyManager.getPublicKeyInHex());
     for (Transaction tx : txns) {
@@ -80,34 +79,33 @@ public final class SawtoothClientUtils {
   /**
    * Make a sawtooth transaction based on the provided parameters.
    *
-   * @param keyManager              a keymanager to provide the necessary identity
-   *                                info
+   * @param keyManager              a keymanager to provide the necessary identity info
    * @param familyName              the family name
    * @param familyVersion           the family version
-   * @param inputAddresses          state addresses required for input to this
-   *                                transaction
-   * @param outputAddresses         state addresses this transaction will output
-   *                                to
-   * @param dependentTransactionIds transaction ids this transaction is dependent
-   *                                upon
+   * @param inputAddresses          state addresses required for input to this transaction
+   * @param outputAddresses         state addresses this transaction will output to
+   * @param dependentTransactionIds transaction ids this transaction is dependent upon
    * @param payload                 the ByteString payload of this transaction
    * @return the transaction
    */
-  public static Transaction makeSawtoothTransaction(final KeyManager keyManager, final String familyName,
-      final String familyVersion, final Collection<String> inputAddresses, final Collection<String> outputAddresses,
-      final Collection<String> dependentTransactionIds, final ByteString payload) {
+  public static Transaction makeSawtoothTransaction(final KeyManager keyManager,
+      final String familyName, final String familyVersion, final Collection<String> inputAddresses,
+      final Collection<String> outputAddresses, final Collection<String> dependentTransactionIds,
+      final ByteString payload) {
     ByteString wrappedPayload = SawtoothClientUtils.wrap(payload);
     String payloadHash = getHash(wrappedPayload);
-    TransactionHeader.Builder txnHeaderBldr = TransactionHeader.newBuilder().setFamilyName(familyName)
-        .setFamilyVersion(familyVersion).clearBatcherPublicKey().setBatcherPublicKey(keyManager.getPublicKeyInHex())
-        .setNonce(SawtoothClientUtils.generateNonce()).setPayloadSha512(payloadHash).addAllInputs(inputAddresses)
-        .addAllOutputs(outputAddresses).addAllDependencies(dependentTransactionIds)
-        .setSignerPublicKey(keyManager.getPublicKeyInHex());
+    TransactionHeader.Builder txnHeaderBldr =
+        TransactionHeader.newBuilder().setFamilyName(familyName).setFamilyVersion(familyVersion)
+            .clearBatcherPublicKey().setBatcherPublicKey(keyManager.getPublicKeyInHex())
+            .setNonce(SawtoothClientUtils.generateNonce()).setPayloadSha512(payloadHash)
+            .addAllInputs(inputAddresses).addAllOutputs(outputAddresses)
+            .addAllDependencies(dependentTransactionIds)
+            .setSignerPublicKey(keyManager.getPublicKeyInHex());
     TransactionHeader txnHeader = txnHeaderBldr.build();
 
     String signedHeader = keyManager.sign(txnHeader.toByteArray());
-    return Transaction.newBuilder().setHeader(txnHeader.toByteString()).setHeaderSignature(signedHeader)
-        .setPayload(wrappedPayload).build();
+    return Transaction.newBuilder().setHeader(txnHeader.toByteString())
+        .setHeaderSignature(signedHeader).setPayload(wrappedPayload).build();
   }
 
   /**
@@ -143,8 +141,7 @@ public final class SawtoothClientUtils {
   }
 
   /**
-   * For a given string return its sha512, transform the encoding problems into
-   * RuntimeErrors.
+   * For a given string return its sha512, transform the encoding problems into RuntimeErrors.
    *
    * @param arg a string
    * @return the hash512 of the string
@@ -181,9 +178,31 @@ public final class SawtoothClientUtils {
   public static ByteString wrap(final ByteString value) throws InternalError {
     ByteString data = compressByteString(value);
     String contentHash = getHash(data.toByteArray());
-    ByteString v = VersionedEnvelope.newBuilder().setData(data)
-        .setHasMore(false).setContentHash(contentHash).build().toByteString();
+    ByteString v = VersionedEnvelope.newBuilder().setData(data).setParts(1).setPartNumber(0)
+        .setContentHash(contentHash).build().toByteString();
     return v;
+  }
+
+  private static List<byte[]> splitBytes(final byte[] value, final int maxPartSize) {
+    List<byte[]> chunks = new ArrayList<>();
+    for (int i = 0; i < value.length; i += maxPartSize) {
+      byte[] chunk = ArrayUtils.subarray(value, i, Math.min(i + maxPartSize, value.length));
+      chunks.add(chunk);
+    }
+    return chunks;
+  }
+
+  private static List<VersionedEnvelope> wrapList(final List<byte[]> vals, final String contentHash) {
+    List<VersionedEnvelope> envelopes = new ArrayList<>();
+    int index = 0;
+    for (byte[] val : vals) {
+      VersionedEnvelope env = VersionedEnvelope.newBuilder().setContentHash(contentHash)
+          .setData(ByteString.copyFrom(val)).setParts(vals.size()).setPartNumber(index)
+          .build();
+      envelopes.add(env);
+      index++;
+    }
+    return envelopes;
   }
 
   public static List<ByteString> wrapMultipart(final ByteString value, final int maxPartSize)
@@ -191,25 +210,17 @@ public final class SawtoothClientUtils {
     ByteString compressedData = compressByteString(value);
     String contentHash = getHash(compressedData.toByteArray());
     List<ByteString> retList = new ArrayList<>();
-    int i = 0;
-    byte[] splitBytes = compressedData.toByteArray();
-    while (i < splitBytes.length) {
-      byte[] part =
-          ArrayUtils.subarray(splitBytes, i, Math.min(i + maxPartSize, splitBytes.length));
-      VersionedEnvelope.Builder leaf = VersionedEnvelope.newBuilder()
-          .setData(ByteString.copyFrom(part)).setContentHash(contentHash);
-      i = i + maxPartSize;
-      if (i < splitBytes.length) {
-        leaf.setHasMore(true);
-      } else {
-        leaf.setHasMore(false);
-      }
-      retList.add(leaf.build().toByteString());
+    byte[] compressedBytes = compressedData.toByteArray();
+    List<byte[]> splitBytes = splitBytes(compressedBytes, maxPartSize);
+    List<VersionedEnvelope> envelopes = wrapList(splitBytes, contentHash);
+    for (VersionedEnvelope e : envelopes) {
+      retList.add(e.toByteString());
     }
     return retList;
   }
 
-  public static ByteString unwrapMultipart(final List<VersionedEnvelope> veList) throws InternalError {
+  public static ByteString unwrapMultipart(final List<VersionedEnvelope> veList)
+      throws InternalError {
     String contentHash = null;
     byte[] accumulatedBytes = new byte[] {};
     for (VersionedEnvelope e : veList) {
@@ -280,8 +291,8 @@ public final class SawtoothClientUtils {
       final ByteString bs = ByteString.copyFrom(baos.toByteArray());
       final long compressStop = System.currentTimeMillis();
       final long compressTime = compressStop - compressStart;
-      LOGGER.trace("Compressed ByteString time={}, original_size={}, new_size={}",
-          compressTime, inputBytes.length, baos.size());
+      LOGGER.trace("Compressed ByteString time={}, original_size={}, new_size={}", compressTime,
+          inputBytes.length, baos.size());
       return bs;
     } catch (final IOException exc) {
       LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
@@ -316,8 +327,7 @@ public final class SawtoothClientUtils {
             uncompressTime, inputBytes.length, baos.size());
         return bs;
       } catch (final DataFormatException exc) {
-        LOGGER.error("Error uncompressing stream, throwing InternalError! {}",
-            exc.getMessage());
+        LOGGER.error("Error uncompressing stream, throwing InternalError! {}", exc.getMessage());
         throw new InternalError(exc.getMessage());
       }
     } catch (final IOException exc) {

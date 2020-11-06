@@ -59,6 +59,7 @@ message DamlLogEvent {
 message VersionedEnvelope {
   string version = 1;
   bytes data = 2;
-  bool hasMore = 3;
-  string contentHash = 4;
+  string contentHash = 3;
+  int32 parts = 4;
+  int32 partNumber = 5;
 }

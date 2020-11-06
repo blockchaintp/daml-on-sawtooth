@@ -93,30 +93,6 @@ public final class ContextLedgerState implements LedgerState<String> {
     }
   }
 
-  private ByteString getStateOrNull(final String address, final int retries)
-      throws InternalError, InvalidTransactionException {
-    final Map<String, ByteString> stateMap = state.getState(List.of(address));
-    int trials = 0;
-    while (trials < retries) {
-      if (stateMap.containsKey(address)) {
-        final ByteString bs = stateMap.get(address);
-        if (bs.isEmpty() || bs == null) {
-          LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
-              bs.toByteArray().length);
-        } else {
-          LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
-              bs.toByteArray().length);
-          return bs;
-        }
-      } else {
-        LOGGER.debug("address={} is not set", address);
-      }
-      trials++;
-      state.getState(List.of(address));
-    }
-    return null;
-  }
-
   @Override
   public ByteString getDamlState(final ByteString key)
       throws InternalError, InvalidTransactionException {
@@ -128,26 +104,28 @@ public final class ContextLedgerState implements LedgerState<String> {
     } else {
       try {
         List<VersionedEnvelope> veList = new ArrayList<>();
-        VersionedEnvelope envelope = VersionedEnvelope.parseFrom(bs);
-        veList.add(envelope);
-        boolean hasMore = envelope.getHasMore();
-        LOGGER.debug("Fetched initial address={} part=0 hasMore={} size={}", addr, hasMore,
-            bs.toByteArray().length);
-        while (hasMore) {
-          int part = veList.size();
-          final String nextAddr = Namespace.makeLeafAddress(key, part);
-          final ByteString subBS = getStateOrNull(nextAddr, 10);
-          int sz = 0;
-          if (subBS == null) {
-            hasMore = false;
-          } else {
-            sz = subBS.toByteArray().length;
-            VersionedEnvelope env = VersionedEnvelope.parseFrom(subBS);
-            veList.add(env);
-            hasMore = env.getHasMore();
+        VersionedEnvelope firstEnvelope = VersionedEnvelope.parseFrom(bs);
+        veList.add(firstEnvelope);
+        LOGGER.debug("Fetched initial address={} part=0/{} size={}", addr, firstEnvelope.getParts(),
+            bs.size());
+        if (firstEnvelope.getParts() > 1) {
+          List<String> fetchAddresses = new ArrayList<>();
+          for (int i = 1; i < firstEnvelope.getParts(); i++) {
+            final String fAddr = Namespace.makeLeafAddress(key, i);
+            fetchAddresses.add(fAddr);
           }
-          LOGGER.debug("Fetched next address={} part={} hasMore={} size={}", nextAddr, part,
-              hasMore, sz);
+          Map<String, ByteString> stateMap = state.getState(fetchAddresses);
+          for (String fAddr : fetchAddresses) {
+            if (stateMap.containsKey(fAddr)) {
+              ByteString val = stateMap.get(fAddr);
+              VersionedEnvelope e = VersionedEnvelope.parseFrom(val);
+              veList.add(e);
+              LOGGER.debug("Fetched next address={} part={}/{} size={}", fAddr, e.getPartNumber(),
+                  e.getParts(), val.size());
+            } else {
+              LOGGER.warn("StateMap did not contain address={}", fAddr);
+            }
+          }
         }
         ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
         LOGGER.info("Read address={} parts={} size={}", addr, veList.size(),
