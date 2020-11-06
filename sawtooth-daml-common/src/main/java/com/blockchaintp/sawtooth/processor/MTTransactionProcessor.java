@@ -107,7 +107,7 @@ public class MTTransactionProcessor implements Runnable {
 
   private int handleInbound(final Message inMessage) {
     if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
-      LOGGER.debug("Recieved Ping Message.");
+      LOGGER.trace("Recieved Ping Message.");
       PingResponse pingResponse = PingResponse.newBuilder().build();
       this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
           pingResponse.toByteString());
@@ -185,7 +185,6 @@ public class MTTransactionProcessor implements Runnable {
               InvalidTransactionException ite = (InvalidTransactionException) cause;
               LOGGER.info("Invalid Transaction: " + ite.getMessage());
               builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
-              LOGGER.info(ite.getMessage());
               builder.setMessage(ite.getMessage());
               if (ite.getExtendedData() != null) {
                 builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
@@ -194,7 +193,6 @@ public class MTTransactionProcessor implements Runnable {
               InternalError ie = (InternalError) cause;
               LOGGER.warn("Internal Error: " + ie.getMessage());
               builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
-              LOGGER.info(ie.getMessage());
               builder.setMessage(ie.getMessage());
               if (ie.getExtendedData() != null) {
                 builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));

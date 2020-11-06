@@ -164,7 +164,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.error("Interrupted while submitting transaction", e);
+          LOGGER.warn("Interrupted while submitting transaction", e);
           throw new RuntimeException(e);
         }
       }, ExecutionContext.global());
@@ -179,7 +179,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.error("Interrupted while submitting transaction", e);
+          LOGGER.warn("Interrupted while submitting transaction", e);
           throw new RuntimeException(e);
         }
       }, ExecutionContext.global());
@@ -320,7 +320,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           LOGGER.trace("Operations to send!");
           accumulator.add(cp);
           submitQueue.drainTo(accumulator, SawtoothLedgerWriter.this.maxOpsPerBatch - 1);
-          LOGGER.trace("Accumulated {} ops", accumulator.size());
+          LOGGER.debug("Accumulated {} ops", accumulator.size());
         }
 
         if (accumulator.size() > 0) {
@@ -335,7 +335,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           boolean accepted = outStandingFutures.offer(submitBatch);
           while (keepRunning && !accepted) {
             try {
-              LOGGER.debug("Outstanding Futures count = {}", outStandingFutures.size());
+              LOGGER.trace("Outstanding Futures count = {}", outStandingFutures.size());
               final Collection<sawtooth.sdk.messaging.Future> checkList = new ArrayList<>();
               outStandingFutures.drainTo(checkList);
               int flushCount = 0;
@@ -347,7 +347,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
                   outStandingFutures.put(f);
                 }
               }
-              LOGGER.debug("Flushed {} futures", flushCount);
+              LOGGER.trace("Flushed {} futures", flushCount);
               if (outStandingFutures.size() == 0 || flushCount > 0) {
                 accepted = outStandingFutures.offer(submitBatch);
               }

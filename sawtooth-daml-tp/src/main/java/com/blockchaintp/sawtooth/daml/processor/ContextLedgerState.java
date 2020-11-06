@@ -129,7 +129,7 @@ public final class ContextLedgerState implements LedgerState<String> {
           }
         }
         ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
-        LOGGER.info("Read address={} parts={} size={}", addr, veList.size(),
+        LOGGER.debug("Read address={} parts={} size={}", addr, veList.size(),
             val.toByteArray().length);
         return val;
       } catch (InvalidProtocolBufferException e) {
@@ -158,11 +158,11 @@ public final class ContextLedgerState implements LedgerState<String> {
       for (String address : addrs) {
         ByteString fragBytes = fragments.get(address);
         if (fragBytes == null) {
-          LOGGER.warn("Adding fragment leid={} index={} address={} is null",
+          LOGGER.debug("Adding fragment leid={} index={} address={} is null",
               endTx.getLogEntryId().toStringUtf8(), index, address);
           throw new InvalidTransactionException("Fragment is null");
         } else {
-          LOGGER.warn("Adding fragment leid={} index={} address={} has size={}",
+          LOGGER.debug("Adding fragment leid={} index={} address={} has size={}",
               endTx.getLogEntryId().toStringUtf8(), index, address, fragBytes.size());
           DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
           accumulatedBytes =
@@ -202,7 +202,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.debug("Skipping key {} since value is null", k.toStringUtf8());
+        LOGGER.trace("Skipping key {} since value is null", k.toStringUtf8());
       }
     }
     return retMap;
@@ -227,13 +227,13 @@ public final class ContextLedgerState implements LedgerState<String> {
         } else {
           address = Namespace.makeLeafAddress(key, index);
         }
-        LOGGER.debug("Set address={} part={} size={}", address, index, p.size());
+        LOGGER.trace("Set address={} part={} size={}", address, index, p.size());
         setMap.put(address, p);
         index++;
         size += p.size();
         state.setState(setMap.entrySet());
       }
-      LOGGER.info("Set address={} totalParts={} totalSize={}", firstAddress, index, size);
+      LOGGER.debug("Set address={} totalParts={} totalSize={}", firstAddress, index, size);
     }
   }
 
@@ -244,7 +244,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment", tx.getLogEntryId().toStringUtf8(),
             String.valueOf(tx.getParts()), String.valueOf(tx.getPartNumber()));
     final ByteString val = tx.toByteString();
-    LOGGER.info("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
+    LOGGER.debug("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
         address, val.size());
     final Map<String, ByteString> setMap = new HashMap<>();
     setMap.put(address, val);
@@ -349,7 +349,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       setDamlStates(fromDamlSeqPair(keyValuePairs));
       return Future.successful(BoxedUnit.UNIT);
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.error("Error writing state");
+      LOGGER.warn("Error writing state " + e.getMessage());
       throw new RuntimeException(e);
     }
   }
@@ -360,7 +360,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       setDamlState(key, value);
       return Future.successful(BoxedUnit.UNIT);
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.error("Error writing state");
+      LOGGER.warn("Error writing state " + e.getMessage());
       throw new RuntimeException(e);
     }
   }
@@ -396,7 +396,7 @@ public final class ContextLedgerState implements LedgerState<String> {
 
   private void largeEvent(final String entryId, final List<ByteString> multipart)
       throws InternalError, InvalidTransactionException {
-    LOGGER.info("Publishing large event for entry = {}", entryId);
+    LOGGER.debug("Publishing large event for entry = {}", entryId);
     final Map<String, String> attrMap = new HashMap<>();
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId);
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
@@ -420,7 +420,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     }
     attrMap.put(EventConstants.DAML_LOG_FETCH_IDS_ATTRIBUTE, fetchAddressBldr.toString());
     state.setState(setMap.entrySet());
-    LOGGER.info("Stored {} entries totalling {} bytes", multipart.size(), totalBytes);
+    LOGGER.debug("Stored {} entries totalling {} bytes", multipart.size(), totalBytes);
     DamlEvent de = new DamlEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap, ByteString.EMPTY);
     this.deferredEvents.add(de);
   }

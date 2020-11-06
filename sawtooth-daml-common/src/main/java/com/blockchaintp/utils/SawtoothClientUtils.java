@@ -258,12 +258,12 @@ public final class SawtoothClientUtils {
           ByteString v = uncompressByteString(envelope.getData());
           return v;
         default:
-          LOGGER.error("Envelope specified an unknown version: " + envelope.getVersion());
+          LOGGER.warn("Envelope specified an unknown version: " + envelope.getVersion());
           throw new InternalError(
               "Envelope specified an unknown version: " + envelope.getVersion());
       }
     } catch (final InvalidProtocolBufferException e) {
-      LOGGER.error("Error deserializing value " + e.getMessage());
+      LOGGER.warn("Error deserializing value " + e.getMessage());
       throw new InternalError(e.getMessage());
     }
   }
@@ -295,7 +295,7 @@ public final class SawtoothClientUtils {
           inputBytes.length, baos.size());
       return bs;
     } catch (final IOException exc) {
-      LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      LOGGER.warn("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw new InternalError(exc.getMessage());
     }
   }
@@ -312,7 +312,7 @@ public final class SawtoothClientUtils {
 
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream(inputBytes.length)) {
       final byte[] buffer = new byte[COMPRESS_BUFFER_SIZE];
-      LOGGER.debug("Uncompressing ByteString original_size={}", inputBytes.length);
+      LOGGER.trace("Uncompressing ByteString original_size={}", inputBytes.length);
       try {
         while (!inflater.finished()) {
           final int bCount = inflater.inflate(buffer);
@@ -323,15 +323,15 @@ public final class SawtoothClientUtils {
         final ByteString bs = ByteString.copyFrom(baos.toByteArray());
         final long uncompressStop = System.currentTimeMillis();
         final long uncompressTime = uncompressStop - uncompressStart;
-        LOGGER.debug("Uncompressed ByteString time={}, original_size={}, new_size={}",
+        LOGGER.trace("Uncompressed ByteString time={}, original_size={}, new_size={}",
             uncompressTime, inputBytes.length, baos.size());
         return bs;
       } catch (final DataFormatException exc) {
-        LOGGER.error("Error uncompressing stream, throwing InternalError! {}", exc.getMessage());
+        LOGGER.warn("Error uncompressing stream, throwing InternalError! {}", exc.getMessage());
         throw new InternalError(exc.getMessage());
       }
     } catch (final IOException exc) {
-      LOGGER.error("ByteArrayOutputStream.close() has thrown an error which should never happen!");
+      LOGGER.warn("ByteArrayOutputStream.close() has thrown an error which should never happen!");
       throw new InternalError(exc.getMessage());
     }
   }
