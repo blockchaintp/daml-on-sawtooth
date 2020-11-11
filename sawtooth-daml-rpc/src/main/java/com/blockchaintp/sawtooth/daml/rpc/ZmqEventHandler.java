@@ -335,7 +335,8 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * Send a subscribe message to the validator.
    */
   public final void sendSubscribe() {
-    this.sendSubscribe(null);
+    Offset o = KVOffset.fromLong(2, 0, 0);
+    this.sendSubscribe(o);
   }
 
   /**
