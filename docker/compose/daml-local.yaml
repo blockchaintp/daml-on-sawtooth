@@ -85,7 +85,9 @@ services:
       - /dev/urandom:/dev/urandom
 
   daml-tp:
-    image: sawtooth-daml-tp:${ISOLATION_ID}
+    image: blockchaintp/sawtooth-daml-tp:${ISOLATION_ID}
+    environment:
+      -  JAVA_ARGS=-Xmx4096m
     command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
     depends_on:
       - validator
@@ -94,7 +96,9 @@ services:
       - /dev/urandom:/dev/urandom
 
   daml-rpc:
-    image: sawtooth-daml-rpc:${ISOLATION_ID}
+    image: blockchaintp/sawtooth-daml-rpc:${ISOLATION_ID}
+    environment:
+      -  JAVA_ARGS=-Xmx4096m
     expose:
       - 9000
       - 5051
@@ -117,7 +121,7 @@ services:
       - postgres
 
   timekeeper:
-    image: timekeeper:${ISOLATION_ID}
+    image: blockchaintp/timekeeper:${ISOLATION_ID}
     command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
     depends_on:
       - validator
