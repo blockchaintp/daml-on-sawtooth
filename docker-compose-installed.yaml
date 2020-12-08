@@ -34,19 +34,19 @@ services:
     build:
       context: .
       dockerfile: docker/sawtooth-daml-tp.docker
-    image: sawtooth-daml-tp:${ISOLATION_ID}
+    image: blockchaintp/sawtooth-daml-tp:${ISOLATION_ID}
     container_name: sawtooth-daml-tp
 
   sawtooth-daml-rpc:
     build:
       context: .
       dockerfile: docker/sawtooth-daml-rpc.docker
-    image: sawtooth-daml-rpc:${ISOLATION_ID}
+    image: blockchaintp/sawtooth-daml-rpc:${ISOLATION_ID}
     container_name: sawtooth-daml-rpc
 
   sawtooth-timekeeper:
     build:
       context: .
       dockerfile: docker/timekeeper.docker
-    image: timekeeper:${ISOLATION_ID}
+    image: blockchaintp/timekeeper:${ISOLATION_ID}
     container_name: sawtooth-timekeeper

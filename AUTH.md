@@ -4,7 +4,7 @@ To start `daml-om-sawtooth` with auth services you will need to modify this scri
 
 ```
   daml-rpc:
-    image: sawtooth-daml-rpc:${ISOLATION_ID}
+    image: blockchaintp/sawtooth-daml-rpc:${ISOLATION_ID}
     container_name: sawtooth-daml-rpc
     expose:
       - 9000
