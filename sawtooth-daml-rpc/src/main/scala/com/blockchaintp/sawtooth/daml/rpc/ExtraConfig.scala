@@ -8,7 +8,9 @@ final case class ExtraConfig(
     keystore: String,
     logLevel: String,
     maxOpsPerBatch: Int,
-    maxOutStandingBatches: Int
+    maxOutStandingBatches: Int,
+    authType: String,
+    secret: String
 )
 
 object ExtraConfig {
@@ -18,6 +20,8 @@ object ExtraConfig {
       keystore = "/etc/daml/keystore",
       logLevel = "info",
       maxOpsPerBatch = "1000".toInt,
-      maxOutStandingBatches = "2".toInt
+      maxOutStandingBatches = "2".toInt,
+      authType = "none",
+      secret = ""
     )
 }
