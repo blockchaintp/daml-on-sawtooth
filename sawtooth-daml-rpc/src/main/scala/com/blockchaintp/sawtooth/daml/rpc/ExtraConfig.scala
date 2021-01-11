@@ -8,7 +8,9 @@ final case class ExtraConfig(
     keystore: String,
     logLevel: String,
     maxOpsPerBatch: Int,
-    maxOutStandingBatches: Int
+    maxOutStandingBatches: Int,
+    authType: String,
+    secret: String
 )
 
 object ExtraConfig {
@@ -17,7 +19,9 @@ object ExtraConfig {
       zmqUrl = "tcp://localhost:4004",
       keystore = "/etc/daml/keystore",
       logLevel = "info",
-      maxOpsPerBatch = "10".toInt,
-      maxOutStandingBatches = "2".toInt
+      maxOpsPerBatch = "1000".toInt,
+      maxOutStandingBatches = "2".toInt,
+      authType = "none",
+      secret = ""
     )
 }

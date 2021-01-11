@@ -86,7 +86,7 @@ services:
 
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
-    command: "/opt/sawtooth-daml-tp/entrypoint.sh tcp://validator:4004"
+    command: "/opt/sawtooth-daml-tp/entrypoint.sh -vv tcp://validator:4004"
     depends_on:
       - validator
     volumes:
@@ -106,7 +106,7 @@ services:
       /opt/sawtooth-daml-rpc/entrypoint.sh \
         --participant port=9000,address=0.0.0.0,participant-id=rpc-0,server-jdbc-url=jdbc:postgresql://postgres/postgres?user=postgres \
         --ledger-id test \
-        --log-level warn \
+        --log-level info \
         --max-outstanding-batches 2 \
         --max-ops-per-batch 1000 \
         --connect tcp://validator:4004 \

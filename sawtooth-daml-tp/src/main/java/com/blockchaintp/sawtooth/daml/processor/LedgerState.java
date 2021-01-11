@@ -1,17 +1,15 @@
 /*
- *  Copyright 2020 Blockchain Technology Partners
+ * Copyright 2020 Blockchain Technology Partners
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package com.blockchaintp.sawtooth.daml.processor;
@@ -19,6 +17,8 @@ package com.blockchaintp.sawtooth.daml.processor;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
+import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.daml.ledger.validator.LedgerStateAccess;
 import com.daml.ledger.validator.LedgerStateOperations;
 import com.google.protobuf.ByteString;
@@ -103,4 +103,30 @@ public interface LedgerState<T> extends LedgerStateOperations<T>, LedgerStateAcc
    */
   com.daml.lf.data.Time.Timestamp getRecordTime() throws InternalError;
 
+  /**
+   * Stores the transaction fragment in state.
+   *
+   * @param tx the transaction fragment to store
+   * @throws InternalError               when there is an unexpected back end error.
+   * @throws InvalidTransactionException when the data itself is invalid
+   */
+  void storeTransactionFragmet(DamlTransactionFragment tx)
+      throws InternalError, InvalidTransactionException;
+
+  /**
+   * Assembles the transactiong fragments matching the end transactions into a complete transaction.
+   *
+   * @param endTx the final transaction fragment in the sequence, which is empty
+   * @return the assembled transaction
+   * @throws InternalError               when there is an unexpected back end error.
+   * @throws InvalidTransactionException when the data itself is invalid
+   */
+  DamlTransaction assembleTransactionFragments(DamlTransactionFragment endTx)
+      throws InternalError, InvalidTransactionException;
+
+  /**
+   * Flush any deferred events, for instance to put them after state updates.
+   * @throws InternalError
+   */
+  void flushDeferredEvents() throws InternalError;
 }

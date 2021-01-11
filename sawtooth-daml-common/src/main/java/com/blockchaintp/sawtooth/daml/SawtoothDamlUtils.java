@@ -19,9 +19,9 @@ public final class SawtoothDamlUtils {
 
   public static Transaction makeSawtoothTransaction(final KeyManager keyManager,
       final DamlOperationBatch batch, final Collection<String> inputAddresses,
-      final Collection<String> outputAddresses) {
+      final Collection<String> outputAddresses, final List<String> dependentTransactions) {
     return SawtoothClientUtils.makeSawtoothTransaction(keyManager, Namespace.DAML_FAMILY_NAME,
-        Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, List.of(),
+        Namespace.DAML_FAMILY_VERSION_1_0, inputAddresses, outputAddresses, dependentTransactions,
         batch.toByteString());
   }
 

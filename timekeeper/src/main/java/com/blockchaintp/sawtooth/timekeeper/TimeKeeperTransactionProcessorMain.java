@@ -34,6 +34,7 @@ import sawtooth.sdk.processor.TransactionProcessor;
  */
 public final class TimeKeeperTransactionProcessorMain {
 
+  private static final int DEFAULT_TK_UPDATE_SECONDS = 20;
   private static final Logger LOGGER = LoggerFactory.getLogger(TimeKeeperTransactionProcessorMain.class);
 
   /**
@@ -45,11 +46,23 @@ public final class TimeKeeperTransactionProcessorMain {
 
     int vCount = 0;
     String connectStr = "tcp://localhost:4004";
+    long period = DEFAULT_TK_UPDATE_SECONDS;
+
     for (String s : args) {
       if (s.startsWith("-v")) {
         for (int i = 0; i < s.length(); i++) {
           if (s.charAt(i) == 'v') {
             vCount++;
+          }
+        }
+      } else if (s.startsWith("-p")) {
+        String val = s.substring(2);
+        if (val.length() > 0) {
+          try {
+            period = Integer.valueOf(val);
+          } catch (NumberFormatException nfe) {
+            LOGGER.warn("Invalid format specified for period: {}", val);
+            period = DEFAULT_TK_UPDATE_SECONDS;
           }
         }
       } else {
@@ -62,9 +75,7 @@ public final class TimeKeeperTransactionProcessorMain {
 
     Stream stream = new ZmqStream(args[0]);
     KeyManager kmgr = InMemoryKeyManager.create();
-    final long period = 20;
-    final TimeUnit periodUnit = TimeUnit.SECONDS;
-    clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, periodUnit);
+    clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, TimeUnit.SECONDS);
 
     TransactionProcessor transactionProcessor = new TransactionProcessor(connectStr);
     TransactionHandler handler = new TimeKeeperTransactionHandler();

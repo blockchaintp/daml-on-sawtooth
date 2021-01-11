@@ -3,9 +3,13 @@
 
 package com.blockchaintp.sawtooth.daml.rpc
 
+import java.nio.file.Paths
 import java.time.Duration
 
 import akka.stream.Materializer
+
+import com.daml.ledger.api.auth.{AuthServiceJWT, AuthService, AuthServiceWildcard}
+import com.daml.jwt.{RSA256Verifier}
 import com.daml.ledger.participant.state.kvutils.api.{KeyValueLedger, KeyValueParticipantState}
 import com.daml.ledger.participant.state.kvutils.app.{Config, LedgerFactory, ParticipantConfig, Runner}
 import com.daml.ledger.participant.state.v1.{Configuration, TimeModel}
@@ -15,6 +19,7 @@ import com.daml.platform.configuration.LedgerConfiguration
 import com.daml.resources.{ProgramResource, ResourceOwner}
 import com.blockchaintp.utils.LogUtils
 import org.slf4j.event.Level
+import scala.util.Try
 import scopt.OptionParser
 
 object Main {
@@ -55,6 +60,8 @@ object Main {
       new SawtoothReaderWriter.Owner(participantConfig.participantId,
         config.extra.zmqUrl,
         config.extra.keystore,
+        config.extra.maxOpsPerBatch,
+        config.extra.maxOutStandingBatches,
         config.ledgerId)
     }
 
@@ -73,7 +80,24 @@ object Main {
         configurationLoadTimeout = Duration.ofSeconds(10),
       )
 
+    override def authService(config: Config[ExtraConfig]): AuthService = {
+        config.extra.authType match {
+          case "none" => AuthServiceWildcard
+          case "rsa256" => {
+            val verifier = RSA256Verifier
+              .fromCrtFile(config.extra.secret)
+              .valueOr(err => sys.error(s"Failed to create RSA256 verifier for: $err"))
+            AuthServiceJWT(verifier)
+          }
+        }
+    }
+
     override val defaultExtraConfig: ExtraConfig = ExtraConfig.default
+
+    private def validatePath(path: String, message: String): Either[String, Unit] = {
+      val valid = Try(Paths.get(path).toFile.canRead).getOrElse(false)
+      if (valid) Right(()) else Left(message)
+    }
 
     override final def extraConfigParser(parser: OptionParser[Config[ExtraConfig]]): Unit = {
       parser
@@ -123,6 +147,25 @@ object Main {
                 maxOpsPerBatch = v.toInt
               )
             )
+        }
+      parser
+        .opt[String]("auth-jwt-rs256-crt")
+        .optional()
+        .validate(
+          validatePath(_, "The certificate file specified via --auth-jwt-rs256-crt does not exist")
+        )
+        .text(
+          "Enables JWT-based authorization, where the JWT is signed by RSA256 with a public key loaded from the given X509 certificate file (.crt)"
+        )
+        .action {
+          case (v, config) => {
+            config.copy(
+              extra = config.extra.copy(
+                secret = v,
+                authType = "rsa256"
+              )
+            )
+          }
         }
       parser
         .opt[String]("max-outstanding-batches")
