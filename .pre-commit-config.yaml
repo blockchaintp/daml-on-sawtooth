@@ -1,45 +1,115 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
+---
 default_language_version:
-    # force all unspecified python hooks to run python3
-    python: python3
+  # force all unspecified python hooks to run python3
+  python: python3
 repos:
-- repo: https://github.com/gherynos/pre-commit-java
-  rev: v0.1.0  # Use the ref you want to point at
-  hooks:
-    - id: checkstyle
-      exclude: ".*/src/test/*"
-      args:
-        - -c
-        - build-tools/src/main/resources/checkstyle.xml
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v3.1.0
-  hooks:
-    - id: trailing-whitespace
-    - id: end-of-file-fixer
-    - id: check-added-large-files
-    - id: check-json
-    - id: check-merge-conflict
-    - id: detect-aws-credentials
-    - id: detect-private-key
-    - id: mixed-line-ending
-- repo: https://github.com/jumanjihouse/pre-commit-hooks
-  rev: 2.1.4
-  hooks:
-    - id: markdownlint
-    - id: shellcheck
-    - id: script-must-have-extension
-    - id: script-must-not-have-extension
-    - id: shfmt
-      args:
-        - -i
-        - "2"
-- repo: https://github.com/Lucas-C/pre-commit-hooks
-  rev: v1.1.7
-  hooks:
-    - id: forbid-tabs
-      #  - id: insert-license
-      #- repo: https://github.com/doublify/pre-commit-clang-format
-      #  rev: master
-      #  hooks:
-      #    - id: clang-format
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v2.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.12
+    hooks:
+      - id: helmlint
+  - repo: https://github.com/gherynos/pre-commit-java
+    rev: v0.1.0
+    hooks:
+      - id: checkstyle
+        args:
+          - -c
+          - google_checks.xml
+        exclude: ".*/src/test/.*"
+      - id: cpd
+        exclude: ".*/src/test/.*"
+      - id: pmd
+        exclude: ".*/src/test/.*"
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+    rev: 2.1.4
+    hooks:
+      - id: forbid-binary
+        exclude: ".*.(png|jpg|jpeg)$"
+      - id: shellcheck
+        args:
+          - -a
+          - -x
+          - -P
+          - SCRIPTDIR
+      - id: script-must-have-extension
+      - id: script-must-not-have-extension
+      - id: shfmt
+        args:
+          - -l
+          - -i
+          - "2"
+          - -ci
+  - repo: https://github.com/markdownlint/markdownlint
+    rev: master
+    hooks:
+      - id: markdownlint_docker
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v7.17.0
+    hooks:
+      - id: eslint
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-aws-credentials
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: no-commit-to-branch
+        args:
+          - --pattern
+          - '^(?!((fix|feature)\/[a-zA-Z0-9\-]+)$).*'
+      - id: trailing-whitespace
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-go
+    rev: v1.0.1
+    hooks:
+      - id: checkmake
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.1.9
+    hooks:
+      - id: forbid-tabs
+        exclude: "^(Makefile|.*.go)$"
+  - repo: git://github.com/doublify/pre-commit-go
+    rev: 208a4aaa7f86b44e961eaaea526743b920e187a0
+    hooks:
+      - id: fmt
+      - id: vet
+      - id: fix
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+      - id: cargo-check
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.25.0
+    hooks:
+      - id: yamllint
+        exclude: ".*/templates/.*"
+  - repo: https://github.com/IamTheFij/docker-pre-commit
+    rev: v2.0.0
+    hooks:
+      - id: docker-compose-check
+      - id: docker-compose-check
+        files: docker-compose.*y[a]{0,1}ml$
+      - id: docker-compose-check
+        files: "^docker/.*yaml$"
+      - id: hadolint
+        files: ".*.docker$"
+      - id: hadolint
+        files: "Dockerfile.*"
+  - repo: https://gitlab.com/daverona/pre-commit/cpp
+    rev: 0.8.0 # use the most recent version
+    hooks:
+      - id: docker-clang-format # clang-format in Docker container
+      - id: cpplint # cpplint in Docker container
+      - id: docker-cppcheck # cppcheck in Docker container
+        args:
+          - --force
