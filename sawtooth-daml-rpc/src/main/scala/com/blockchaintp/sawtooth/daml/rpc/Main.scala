@@ -68,16 +68,18 @@ object Main {
     override def ledgerConfig(config: Config[ExtraConfig]): LedgerConfiguration =
       LedgerConfiguration(
         initialConfiguration = Configuration(
-          generation = 1,
+          // NOTE: Any changes the the config content here require that the
+          // generation be increased
+          generation = 1L,
           timeModel = TimeModel(
             avgTransactionLatency = Duration.ofSeconds(1L),
-            minSkew = Duration.ofSeconds(40L),
+            minSkew = Duration.ofSeconds(80L),
             maxSkew = Duration.ofSeconds(80L),
           ).get,
-          maxDeduplicationTime = Duration.ofDays(1),
+          maxDeduplicationTime = Duration.ofDays(1L),
         ),
-        initialConfigurationSubmitDelay = Duration.ofSeconds(5),
-        configurationLoadTimeout = Duration.ofSeconds(10),
+        initialConfigurationSubmitDelay = Duration.ofSeconds(5L),
+        configurationLoadTimeout = Duration.ofSeconds(30L),
       )
 
     override def authService(config: Config[ExtraConfig]): AuthService = {
