@@ -73,7 +73,7 @@ public final class TimeKeeperTransactionProcessorMain {
 
     ScheduledExecutorService clockExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    Stream stream = new ZmqStream(args[0]);
+    Stream stream = new ZmqStream(connectStr);
     KeyManager kmgr = InMemoryKeyManager.create();
     clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, TimeUnit.SECONDS);
 
