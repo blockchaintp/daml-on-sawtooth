@@ -78,7 +78,7 @@ public final class TimeKeeperTransactionProcessorMain {
     clockExecutor.scheduleWithFixedDelay(new TimeKeeperRunnable(kmgr, stream), period, period, TimeUnit.SECONDS);
 
     TransactionProcessor transactionProcessor = new TransactionProcessor(connectStr);
-    TransactionHandler handler = new TimeKeeperTransactionHandler();
+    TransactionHandler handler = new TimeKeeperTransactionHandler(period);
     transactionProcessor.addHandler(handler);
 
     Thread thread = new Thread(transactionProcessor);
