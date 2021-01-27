@@ -1,3 +1,6 @@
+---
+# ------------------------------------------------------------------------------
+
 # Copyright 2019 Blockchain Technology Partners
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,12 +14,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ------------------------------------------------------------------------------
-
 version: "2.1"
 
 services:
-
   settings-tp:
     image: hyperledger/sawtooth-settings-tp:1.1
     depends_on:
@@ -37,22 +37,22 @@ services:
       - "8800:8800"
       - "5050:5050"
     entrypoint: "bash -c \"\
-        sawadm keygen && \
-        sawtooth keygen && \
-        sawset genesis -k /etc/sawtooth/keys/validator.priv \
-          -o config-genesis.batch && \
-        sawset proposal create -k /etc/sawtooth/keys/validator.priv \
-          sawtooth.consensus.min_wait_time=0 \
-          sawtooth.consensus.max_wait_time=0 \
-          -o consensus-settings.batch && \
-        sawadm genesis config-genesis.batch consensus-settings.batch && \
-        sawtooth-validator -v \
-          --scheduler parallel \
-          --endpoint tcp://validator:8800 \
-          --bind component:tcp://eth0:4004 \
-          --bind consensus:tcp://eth0:5050 \
-          --bind network:tcp://eth0:8800 \
-        \""
+      sawadm keygen && \
+      sawtooth keygen && \
+      sawset genesis -k /etc/sawtooth/keys/validator.priv \
+      -o config-genesis.batch && \
+      sawset proposal create -k /etc/sawtooth/keys/validator.priv \
+      sawtooth.consensus.min_wait_time=0 \
+      sawtooth.consensus.max_wait_time=0 \
+      -o consensus-settings.batch && \
+      sawadm genesis config-genesis.batch consensus-settings.batch && \
+      sawtooth-validator -v \
+      --scheduler parallel \
+      --endpoint tcp://validator:8800 \
+      --bind component:tcp://eth0:4004 \
+      --bind consensus:tcp://eth0:5050 \
+      --bind network:tcp://eth0:8800 \
+      \""
     volumes:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
@@ -79,7 +79,8 @@ services:
       - "8008:8008"
     depends_on:
       - validator
-    entrypoint: sawtooth-rest-api  --connect tcp://validator:4004 --bind rest-api:8008
+    entrypoint: |
+      sawtooth-rest-api  --connect tcp://validator:4004 --bind rest-api:8008
     volumes:
       - /dev/urandom:/dev/random
       - /dev/urandom:/dev/urandom
@@ -121,7 +122,7 @@ services:
 
   timekeeper:
     image: timekeeper:${ISOLATION_ID}
-    command: "/opt/timekeeper/entrypoint.sh tcp://validator:4004"
+    command: "/opt/timekeeper/entrypoint.sh -vv tcp://validator:4004"
     depends_on:
       - validator
     volumes:
@@ -131,15 +132,17 @@ services:
   # Run the integration tests at most twice to compensate for "piming the pump"
   ledger-api-testtool:
     image: ledger-api-testtool:${ISOLATION_ID}
-    # TimeIT - this is never going to pass on daml-on-sawtooth, since it is testing for a testing feature we don't
+    # TimeIT - this is never going to pass on daml-on-sawtooth, since it is
+    #          testing for a testing feature we don't
     #          support (setting time)
-    # TransactionScaleIT - scaling test that currently times out at 30s interval, disabling for the interim
+    # TransactionScaleIT - scaling test that currently times out at 30s
+    #                      interval, disabling for the interim
     entrypoint: "bash -xc \"\
       sleep 90 && \
       java -jar ledger-api-test-tool.jar \
-      --exclude=CommandDeduplicationIT:CDSimpleDeduplicationCommandClient,CommandDeduplicationIT:CDSimpleDeduplication,PackageServiceIT:PackagesList,TransactionServiceIT:TXFlatSubsetOfTrees,TransactionServiceIT:TXFlatWitnessesSubsetOfTrees
-      --timeout-scale-factor 10 \
-      --concurrent-test-runs 2 \
+        --exclude=CommandDeduplicationIT:CDSimpleDeduplicationCommandClient,CommandDeduplicationIT:CDSimpleDeduplication,PackageServiceIT:PackagesList,TransactionServiceIT:TXFlatSubsetOfTrees,TransactionServiceIT:TXFlatWitnessesSubsetOfTrees \
+        --timeout-scale-factor 10 \
+        --concurrent-test-runs 2 \
       daml-rpc:9000 \""
     depends_on:
       - daml-rpc

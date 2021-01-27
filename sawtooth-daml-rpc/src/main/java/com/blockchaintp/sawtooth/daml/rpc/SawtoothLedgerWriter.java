@@ -293,9 +293,6 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           DamlOperationBatch.newBuilder().addAllOperations(batchOps).build();
       LOGGER.debug("Added {} ops to batch", batchOps.size());
       List<String> dependentTransactions = new ArrayList<>();
-      if (signature != null) {
-        dependentTransactions.add(signature);
-      }
       final Transaction sawTx = SawtoothDamlUtils.makeSawtoothTransaction(keyManager, batch,
           inputAddressSet, outputAddressSet, dependentTransactions);
       return sawTx;

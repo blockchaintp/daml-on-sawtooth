@@ -1,4 +1,4 @@
-/* Copyright 2019 Blockchain Technology Partners
+/* Copyright 2019-21 Blockchain Technology Partners
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -9,24 +9,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ------------------------------------------------------------------------------*/
+
 package com.blockchaintp.sawtooth.timekeeper.processor;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.timekeeper.EventConstants;
 import com.blockchaintp.sawtooth.timekeeper.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
-import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperParticipant;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
 import com.blockchaintp.utils.SawtoothClientUtils;
@@ -34,6 +23,15 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
@@ -50,16 +48,19 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TimeKeeperTransactionHandler.class);
 
-  private static final int DEFAULT_MAX_HISTORY_SIZE = 10;
-
   private final String familyName;
   private final String namespace;
   private final String version;
 
+  private final long basicPeriod;
+
   /**
    * Default constructor.
+   *
+   * @param period the expected period of updates in seconds
    */
-  public TimeKeeperTransactionHandler() {
+  public TimeKeeperTransactionHandler(final long period) {
+    this.basicPeriod = period;
     this.familyName = Namespace.TIMEKEEPER_FAMILY_NAME;
     this.namespace = Namespace.getNameSpace();
     this.version = Namespace.TIMEKEEPER_FAMILY_VERSION_1_0;
@@ -81,135 +82,72 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
   }
 
   @Override
-  public void apply(final TpProcessRequest transactionRequest, final Context state)
+  public void apply(final TpProcessRequest txRequest, final Context state)
       throws InvalidTransactionException, InternalError {
-    basicRequestChecks(transactionRequest);
-    String signerPublicKey = transactionRequest.getHeader().getSignerPublicKey();
+    basicRequestChecks(txRequest);
+    final String signerPublicKey = txRequest.getHeader().getSignerPublicKey();
     try {
-      ByteString unwrappedPayload = SawtoothClientUtils.unwrap(transactionRequest.getPayload());
-      TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(unwrappedPayload);
-      String myRecordAddr = Namespace.makeAddress(this.namespace, signerPublicKey);
+      final ByteString unwrappedPayload = SawtoothClientUtils.unwrap(txRequest.getPayload());
+      final TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(unwrappedPayload);
+
+      final String partRecordAddr = Namespace.makeAddress(this.namespace, signerPublicKey);
       LOGGER.debug("Getting global record state");
-      Map<String, ByteString> sourceData = state
-          .getState(Arrays.asList(myRecordAddr, Namespace.TIMEKEEPER_GLOBAL_RECORD));
+      final Map<String, ByteString> sourceData = state
+          .getState(Arrays.asList(partRecordAddr, Namespace.TIMEKEEPER_GLOBAL_RECORD));
 
-      TimeKeeperRecord myRecord;
-      if (sourceData.containsKey(myRecordAddr)) {
-        myRecord = TimeKeeperRecord.parseFrom(sourceData.get(myRecordAddr));
+      ParticipantTimeState partTimeState;
+      if (sourceData.containsKey(partRecordAddr)) {
+        final TimeKeeperRecord myRecord = TimeKeeperRecord.parseFrom(sourceData.get(partRecordAddr));
+        partTimeState = new ParticipantTimeState(myRecord);
       } else {
-        myRecord = TimeKeeperRecord.getDefaultInstance();
+        partTimeState = new ParticipantTimeState();
       }
+      partTimeState.addUpdate(update);
+      final TimeKeeperRecord participantRecord = partTimeState.toTimeKeeperRecord();
 
-      TimeKeeperGlobalRecord globalRecord;
+      GlobalTimeState globalTimeState;
       if (sourceData.containsKey(Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
-        globalRecord = TimeKeeperGlobalRecord.parseFrom(sourceData.get(Namespace.TIMEKEEPER_GLOBAL_RECORD));
+        final TimeKeeperGlobalRecord globalRecord = TimeKeeperGlobalRecord
+            .parseFrom(sourceData.get(Namespace.TIMEKEEPER_GLOBAL_RECORD));
+        globalTimeState = new GlobalTimeState(globalRecord, basicPeriod);
       } else {
-        globalRecord = TimeKeeperGlobalRecord.getDefaultInstance();
+        globalTimeState = new GlobalTimeState(basicPeriod);
       }
+      globalTimeState.addUpdate(ByteString.copyFromUtf8(signerPublicKey), update);
+      final TimeKeeperGlobalRecord newGlobalRecord = globalTimeState.toTimeKeeperGlobalRecord();
 
-      Map<String, ByteString> setMap = new HashMap<String, ByteString>();
-      List<Timestamp> timeHistoryList = new ArrayList<>(myRecord.getTimeHistoryList());
-      timeHistoryList.add(update.getTimeUpdate());
-      timeHistoryList = prune(timeHistoryList);
+      setTimeState(state, partRecordAddr, participantRecord, newGlobalRecord);
 
-      // Set new time to max of new time and last reported time
-      Timestamp newCalculatedTs = getMaxTs(update.getTimeUpdate(), myRecord.getLastCalculatedTime());
-      LOGGER.debug("{}'s last time was {}, new time is {}", signerPublicKey,
-          new Date(Timestamps.toMillis(myRecord.getLastCalculatedTime())),
-          new Date(Timestamps.toMillis(newCalculatedTs)));
-
-      TimeKeeperRecord.Builder newRecordBldr = TimeKeeperRecord.newBuilder(myRecord);
-      newRecordBldr.clearTimeHistory().addAllTimeHistory(timeHistoryList).setLastCalculatedTime(newCalculatedTs);
-      TimeKeeperRecord newRecord = newRecordBldr.build();
-      setMap.put(myRecordAddr, newRecord.toByteString());
-
-      TimeKeeperParticipant myNewParticipant = TimeKeeperParticipant.newBuilder().setLastCalculatedTime(newCalculatedTs)
-          .setParticipantPublicKey(ByteString.copyFromUtf8(signerPublicKey)).build();
-      List<TimeKeeperParticipant> participantList = globalRecord.getParticipantList();
-      List<TimeKeeperParticipant> newParticipantList = new ArrayList<>();
-      List<Timestamp> participantTimes = new ArrayList<>();
-      boolean newParticipant = true;
-      for (TimeKeeperParticipant p : participantList) {
-        TimeKeeperParticipant addend = p;
-        if (p.getParticipantPublicKey().equals(myNewParticipant.getParticipantPublicKey())) {
-          addend = myNewParticipant;
-          newParticipant = false;
-        } else {
-          addend = p;
-        }
-        newParticipantList.add(addend);
-        participantTimes.add(addend.getLastCalculatedTime());
-      }
-      if (newParticipant) {
-        newParticipantList.add(myNewParticipant);
-        participantTimes.add(myNewParticipant.getLastCalculatedTime());
-      }
-      Timestamp globalAverageTs = getAverageTimeStamp(participantTimes);
-      Timestamp newGlobalTs = getMaxTs(globalAverageTs, globalRecord.getLastCalculatedTime());
-
-      TimeKeeperGlobalRecord.Builder newGlobalRecordBldr = TimeKeeperGlobalRecord.newBuilder(globalRecord);
-      newGlobalRecordBldr.setLastCalculatedTime(newGlobalTs).clearParticipant().addAllParticipant(newParticipantList);
-      TimeKeeperGlobalRecord newGlobalRecord = newGlobalRecordBldr.build();
-      setMap.put(Namespace.TIMEKEEPER_GLOBAL_RECORD, newGlobalRecord.toByteString());
-
-      state.setState(setMap.entrySet());
-
-      TimeKeeperEvent updateEventData = TimeKeeperEvent.newBuilder().setTimeUpdate(newGlobalTs).build();
-      Map<String, String> attrMap = new HashMap<>();
-      attrMap.put(EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE, Long.toString(Timestamps.toMicros(newGlobalTs)));
-      LOGGER.debug("New global time previous={} now={}",
-          new Date(Timestamps.toMillis(globalRecord.getLastCalculatedTime())),
-          new Date(Timestamps.toMillis(newGlobalTs)));
-      state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());
+      sendTimeEvent(state, globalTimeState);
     } catch (InvalidProtocolBufferException exc) {
-      InvalidTransactionException ite = new InvalidTransactionException(
+      final InvalidTransactionException ite = new InvalidTransactionException(
           "Transaction has bad format " + exc.getMessage());
       ite.initCause(exc);
       throw ite;
     }
   }
 
-  private List<Timestamp> prune(final List<Timestamp> timeHistoryList) {
-    // TODO Put together more policies for pruning history
-    List<Timestamp> newHistoryList;
-    if (timeHistoryList.size() > DEFAULT_MAX_HISTORY_SIZE) {
-      // len=5, 0-4, Max=3 234 start=len-max+1
-      int lastIndex = timeHistoryList.size() - 1;
-      int startIndex = lastIndex - DEFAULT_MAX_HISTORY_SIZE + 1;
-      newHistoryList = timeHistoryList.subList(startIndex, lastIndex);
-    } else {
-      newHistoryList = timeHistoryList;
-    }
-    return newHistoryList;
+  private void setTimeState(final Context state, final String recordAddr, final TimeKeeperRecord record,
+      final TimeKeeperGlobalRecord globalRecord) throws InternalError, InvalidTransactionException {
+    final Map<String, ByteString> setMap = new HashMap<>();
+    setMap.put(Namespace.TIMEKEEPER_GLOBAL_RECORD, globalRecord.toByteString());
+    setMap.put(recordAddr, record.toByteString());
+    state.setState(setMap.entrySet());
   }
 
+  private void sendTimeEvent(final Context state, final GlobalTimeState globalTimeState) throws InternalError {
+    final Timestamp currentGlobalTs = globalTimeState.getCurrentTime();
+    final TimeKeeperEvent updateEventData = TimeKeeperEvent.newBuilder().setTimeUpdate(currentGlobalTs).build();
 
-  private Timestamp getMaxTs(final Timestamp... timestamps) {
-    Timestamp maxTs = null;
-    for (Timestamp ts : timestamps) {
-      if (maxTs == null) {
-        maxTs = ts;
-      } else {
-        int cmp = Timestamps.compare(maxTs, ts);
-        if (cmp < 0) {
-          maxTs = ts;
-        }
-      }
-    }
-    return maxTs;
-  }
-
-  private Timestamp getAverageTimeStamp(final List<Timestamp> tsList) {
-    long totalMicros = 0;
-    for (Timestamp ts : tsList) {
-      totalMicros = Math.addExact(totalMicros, Timestamps.toMicros(ts));
-    }
-    long aveMicros = Math.floorDiv(totalMicros, tsList.size());
-    return Timestamps.fromMicros(aveMicros);
+    final Map<String, String> attrMap = new HashMap<>();
+    attrMap.put(EventConstants.TIMEKEEPER_MICROS_ATTRIBUTE, Long.toString(Timestamps.toMicros(currentGlobalTs)));
+    LOGGER.debug("Global time now={}", new Date(Timestamps.toMillis(currentGlobalTs)));
+    state.addEvent(EventConstants.TIMEKEEPER_EVENT_SUBJECT, attrMap.entrySet(), updateEventData.toByteString());
   }
 
   /**
    * Fundamental checks of the transaction.
+   *
    * @param tpProcessRequest the process request
    * @throws InvalidTransactionException if the transaction fails because of a
    *                                     business rule validation error
@@ -218,12 +156,12 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
    */
   private void basicRequestChecks(final TpProcessRequest tpProcessRequest)
       throws InvalidTransactionException, InternalError {
-    TransactionHeader header = tpProcessRequest.getHeader();
+    final TransactionHeader header = tpProcessRequest.getHeader();
     if (header == null) {
       throw new InvalidTransactionException("Header expected");
     }
 
-    ByteString payload = tpProcessRequest.getPayload();
+    final ByteString payload = tpProcessRequest.getPayload();
     if (payload.size() == 0) {
       throw new InvalidTransactionException("Empty payload");
     }
