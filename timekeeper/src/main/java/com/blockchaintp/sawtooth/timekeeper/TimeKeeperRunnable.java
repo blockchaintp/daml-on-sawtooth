@@ -46,13 +46,22 @@ public final class TimeKeeperRunnable implements Runnable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TimeKeeperRunnable.class);
 
-  private final KeyManager keyManager;
-  private final String recordAddress;
+  /**
+   * The maximum number of rounds that may be skipped.
+   */
+  private static final int MAX_SKIPS = 32;
 
-  private final Stream stream;
+  private final transient KeyManager keyManager;
+  private final transient String recordAddress;
+
+  private final transient Stream stream;
+
+  private transient int backoffCounter;
+  private transient int skipCounter;
 
   /**
    * Main constructor.
+   *
    * @param kmgr      A key manager implementation which will provide a keys for
    *                  the transactions,
    * @param argStream the stream connecting to the validator.
@@ -65,35 +74,49 @@ public final class TimeKeeperRunnable implements Runnable {
 
   @Override
   public void run() {
-    Clock clock = Clock.systemUTC();
-    Instant instant = clock.instant();
-    Timestamp ts = Timestamp.newBuilder().setSeconds(instant.getEpochSecond()).setNanos(instant.getNano()).build();
-    TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder().setTimeUpdate(ts).build();
+    final Clock clock = Clock.systemUTC();
+    final Instant instant = clock.instant();
+    final Timestamp ts = Timestamp.newBuilder().setSeconds(instant.getEpochSecond()).setNanos(instant.getNano())
+        .build();
+    final TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder().setTimeUpdate(ts).build();
 
-    List<String> inputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
-    List<String> outputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
-    Transaction updateTransaction = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager,
+    final List<String> inputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
+    final List<String> outputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
+    final Transaction updateTransaction = SawtoothClientUtils.makeSawtoothTransaction(this.keyManager,
         Namespace.TIMEKEEPER_FAMILY_NAME, Namespace.TIMEKEEPER_FAMILY_VERSION_1_0, inputAddresses, outputAddresses,
         Arrays.asList(), update.toByteString());
 
-    Batch batch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(updateTransaction));
+    final Batch batch = SawtoothClientUtils.makeSawtoothBatch(this.keyManager, Arrays.asList(updateTransaction));
 
     try {
       LOGGER.debug("Sending a participant time update {} time={}", this.keyManager.getPublicKeyInHex(),
           new Date(Timestamps.toMillis(ts)));
+      if (skipCounter < backoffCounter) {
+        skipCounter++;
+        return;
+      }
+      skipCounter = 0;
       sendBatch(batch);
+      if (backoffCounter > 0) {
+        backoffCounter -= 1;
+        backoffCounter = Math.max(backoffCounter, 0);
+        LOGGER.warn("Successfully updated time marker after backoff, reducing backoff to {} intervals",
+           backoffCounter);
+      }
     } catch (TimeKeeperException exc) {
-      LOGGER.warn("Error updating TimeKeeper records", exc);
+      backoffCounter = 2 * backoffCounter;
+      backoffCounter = Math.min(MAX_SKIPS, backoffCounter);
+      LOGGER.warn("Error updating TimeKeeper records, increasing backoff to {} intervals", backoffCounter);
     }
   }
 
   private void sendBatch(final Batch batch) throws TimeKeeperException {
-    ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
-    Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST, cbsReq.toByteString());
-    ClientBatchSubmitResponse submitResponse = null;
+    final ClientBatchSubmitRequest cbsReq = ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();
+    final Future streamToValidator = this.stream.send(Message.MessageType.CLIENT_BATCH_SUBMIT_REQUEST,
+        cbsReq.toByteString());
     try {
-      ByteString result = streamToValidator.getResult();
-      submitResponse = ClientBatchSubmitResponse.parseFrom(result);
+      final ByteString result = streamToValidator.getResult();
+      final ClientBatchSubmitResponse submitResponse = ClientBatchSubmitResponse.parseFrom(result);
       LOGGER.debug("Batch submitted {}", batch.getHeaderSignature());
       if (submitResponse.getStatus() != ClientBatchSubmitResponse.Status.OK) {
         LOGGER.warn("Batch submit response resulted in error: {}", submitResponse.getStatus());
@@ -101,21 +124,20 @@ public final class TimeKeeperRunnable implements Runnable {
             String.format("Batch submit response resulted in error: %s", submitResponse.getStatus()));
       }
     } catch (InterruptedException e) {
-      TimeKeeperException tke = new TimeKeeperException(
+      final TimeKeeperException tke = new TimeKeeperException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));
       tke.initCause(e);
       throw tke;
     } catch (ValidatorConnectionError e) {
-      TimeKeeperException tke = new TimeKeeperException(
+      final TimeKeeperException tke = new TimeKeeperException(
           String.format("Sawtooth validator connection error. Details: %s", e.getMessage()));
       tke.initCause(e);
       throw tke;
     } catch (InvalidProtocolBufferException e) {
-      TimeKeeperException tke = new TimeKeeperException(
+      final TimeKeeperException tke = new TimeKeeperException(
           String.format("Invalid protocol buffer exception. Details: %s", e.getMessage()));
       tke.initCause(e);
       throw tke;
     }
   }
-
 }
