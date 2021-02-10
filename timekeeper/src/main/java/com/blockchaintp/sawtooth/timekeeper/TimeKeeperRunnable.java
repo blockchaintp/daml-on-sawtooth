@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
+import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperVersion;
 import com.blockchaintp.utils.KeyManager;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.google.protobuf.ByteString;
@@ -78,7 +79,9 @@ public final class TimeKeeperRunnable implements Runnable {
     final Instant instant = clock.instant();
     final Timestamp ts = Timestamp.newBuilder().setSeconds(instant.getEpochSecond()).setNanos(instant.getNano())
         .build();
-    final TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder().setTimeUpdate(ts).build();
+    final TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder()
+      .setVersion(TimeKeeperVersion.V_2_0)
+      .setTimeUpdate(ts).build();
 
     final List<String> inputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
     final List<String> outputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);

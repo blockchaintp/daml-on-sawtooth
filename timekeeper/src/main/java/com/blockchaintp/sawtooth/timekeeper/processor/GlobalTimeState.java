@@ -16,6 +16,7 @@ import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord.Builder;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperParticipant;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
+import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperVersion;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
@@ -34,12 +35,14 @@ import org.slf4j.LoggerFactory;
  */
 public class GlobalTimeState {
 
+  private static final int LEGACY_DEFAULT_UPDATE_PERIOD = 20;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(GlobalTimeState.class);
 
   /**
    * Maxiumum number of history entries to keep.
    */
-  private static final int MAX_TIME_HISTORY = 100;
+  public static final int MAX_TIME_HISTORY = 100;
 
   /**
    * Number of update intervals back to retain participant times.
@@ -49,19 +52,19 @@ public class GlobalTimeState {
   private Timestamp currentTime;
   private List<Timestamp> history;
   private Map<ByteString, Timestamp> participantTimes;
-  private long updatePeriod;
+  private TimeKeeperVersion version;
 
   /**
    * Create a new global time state object and initialize with the provided
    * record.
    *
    * @param record the current TimeKeeperGlobal record
-   * @param period the expect period of updates in seconds
    */
-  public GlobalTimeState(final TimeKeeperGlobalRecord record, final long period) {
-    this(period);
+  public GlobalTimeState(final TimeKeeperGlobalRecord record) {
+    this();
     this.currentTime = record.getLastCalculatedTime();
     this.history.addAll(record.getTimeHistoryList());
+    this.version = record.getVersion();
     for (final TimeKeeperParticipant p : record.getParticipantList()) {
       participantTimes.put(p.getParticipantPublicKey(), p.getLastCalculatedTime());
     }
@@ -71,14 +74,12 @@ public class GlobalTimeState {
 
   /**
    * Create a new global timestate object from the beginning of EPOCH.
-   *
-   * @param period the expect period of updates in seconds
    */
-  public GlobalTimeState(final long period) {
-    this.updatePeriod = period;
+  public GlobalTimeState() {
     this.currentTime = Timestamps.EPOCH;
     this.history = new ArrayList<>();
     this.participantTimes = new HashMap<>();
+    this.version = TimeKeeperVersion.V_1_0;
   }
 
   /**
@@ -88,6 +89,9 @@ public class GlobalTimeState {
    * @param update      the update
    */
   public void addUpdate(final ByteString participant, final TimeKeeperUpdate update) {
+    if (update.getVersion().equals(TimeKeeperVersion.V_2_0)) {
+      this.version = TimeKeeperVersion.V_2_0;
+    }
     addUpdate(participant, update.getTimeUpdate());
   }
 
@@ -98,7 +102,7 @@ public class GlobalTimeState {
    * @param update      the timestamp to use for update
    */
   public void addUpdate(final ByteString participant, final Timestamp update) {
-    if (!participantTimes.containsKey(participant))  {
+    if (!participantTimes.containsKey(participant)) {
       LOGGER.info("New TimeKeeper particpant detected {}", participant.toStringUtf8());
     }
     Timestamp prevPartTime = participantTimes.getOrDefault(participant, Timestamps.EPOCH);
@@ -123,15 +127,15 @@ public class GlobalTimeState {
   private void pruneExpiredParticipants(final Map<ByteString, Timestamp> participants) {
     final List<ByteString> toRemove = new ArrayList<>();
     final long currentSeconds = currentTime.getSeconds();
-    final long bottomThreshold = currentSeconds - (PERIOD_FLOOR * this.updatePeriod);
+    final long bottomThreshold = currentSeconds - (PERIOD_FLOOR * LEGACY_DEFAULT_UPDATE_PERIOD);
 
-    for (final Map.Entry<ByteString, Timestamp> e: participants.entrySet()) {
+    for (final Map.Entry<ByteString, Timestamp> e : participants.entrySet()) {
       final long seconds = e.getValue().getSeconds();
       if (seconds <= bottomThreshold) {
         toRemove.add(e.getKey());
       }
     }
-    for (final ByteString k: toRemove) {
+    for (final ByteString k : toRemove) {
       participants.remove(k);
     }
   }
@@ -142,18 +146,22 @@ public class GlobalTimeState {
    * @return a record representing the current state of this object
    */
   public TimeKeeperGlobalRecord toTimeKeeperGlobalRecord() {
-    final Builder builder = TimeKeeperGlobalRecord.newBuilder().setLastCalculatedTime(currentTime)
-        .addAllTimeHistory(history);
+    final Builder builder = TimeKeeperGlobalRecord.newBuilder().setLastCalculatedTime(currentTime);
+    if (this.version.equals(TimeKeeperVersion.V_1_0)) {
+      builder.addAllTimeHistory(history);
+    }
     for (final Map.Entry<ByteString, Timestamp> e : participantTimes.entrySet()) {
       final TimeKeeperParticipant part = TimeKeeperParticipant.newBuilder().setParticipantPublicKey(e.getKey())
           .setLastCalculatedTime(e.getValue()).build();
       builder.addParticipant(part);
     }
+    builder.setVersion(this.version);
     return builder.build();
   }
 
   /**
    * Return the curent time.
+   *
    * @return the currentTime
    */
   public Timestamp getCurrentTime() {

@@ -12,61 +12,114 @@
 
 package com.blockchaintp.sawtooth.timekeeper.processor;
 
+import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
+import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperVersion;
+import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord.Builder;
 import com.google.protobuf.Timestamp;
-import com.google.protobuf.util.Timestamps;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class ParticipantTimeState {
+
+  /**
+   * Default maximum history to keep.
+   */
+  private static final int DEFAULT_MAX_HISTORY = 100;
+
+  private static final int DEFAULT_MAX_DEVIATION = 200;
 
   private Timestamp currentTime;
 
   private List<Timestamp> history;
 
-  /**
-   * Maximum history to keep.
-   */
-  private static final int MAX_TIME_HISTORY = 100;
+  private TimeKeeperVersion version;
+
+  private int maxHistory;
+
+  private int maxDeviation;
 
   /**
    * Create a new ParticipantTimeState based on the provided record.
+   *
    * @param record the record of this participant
    */
   public ParticipantTimeState(final TimeKeeperRecord record) {
-    this();
+    this.history = new ArrayList<>();
     this.currentTime = record.getLastCalculatedTime();
     history.addAll(record.getTimeHistoryList());
-  }
+    this.version = record.getVersion();
 
-  public ParticipantTimeState() {
-    currentTime = Timestamps.EPOCH;
-    history = new ArrayList<>();
-  }
-
-  /**
-   * Update this time state with and update from this participant.
-   *
-   * @param update      the update
-   */
-  public void addUpdate(final TimeKeeperUpdate update) {
-    addUpdate(update.getTimeUpdate());
-  }
-
-  /**
-   * Update this time state with and update from this participant.
-   *
-   * @param update      the timestamp to use for update
-   */
-  public void addUpdate(final Timestamp update) {
-    history.add(update);
-    if (history.size() > MAX_TIME_HISTORY) {
-      history = history.subList(history.size() - MAX_TIME_HISTORY, history.size());
+    if (TimeKeeperVersion.V_1_0.equals(this.version)) {
+      this.maxDeviation = DEFAULT_MAX_DEVIATION;
+      this.maxHistory = DEFAULT_MAX_HISTORY;
+    } else {
+      if (record.getMaxDeviation() != 0) {
+        this.maxDeviation = DEFAULT_MAX_DEVIATION;
+      } else {
+        this.maxDeviation = DEFAULT_MAX_DEVIATION;
+      }
+      if (record.getMaxHistory() != 0) {
+        this.maxHistory = DEFAULT_MAX_HISTORY;
+      } else {
+        this.maxHistory = DEFAULT_MAX_HISTORY;
+      }
     }
+  }
+
+  public ParticipantTimeState(final TimeKeeperUpdate update) {
+    currentTime = update.getTimeUpdate();
+    history = new ArrayList<>(List.of(update.getTimeUpdate()));
+    this.version = update.getVersion();
+
+    if (TimeKeeperVersion.V_1_0.equals(this.version)) {
+      this.maxHistory = DEFAULT_MAX_HISTORY;
+      this.maxDeviation = DEFAULT_MAX_DEVIATION;
+    } else {
+      this.maxHistory = update.getMaxHistory();
+      this.maxDeviation = update.getMaxDeviation();
+    }
+  }
+
+  /**
+   * Update this time state with and update from this participant.
+   *
+   * @param update the update
+   */
+  public void addUpdate(final TimeKeeperUpdate update) throws TimeKeeperException {
+    if (update.getVersion().equals(TimeKeeperVersion.V_1_0)) {
+      // Then we have a TimeKeeperVersion.V_1_0 update
+      if (!this.version.equals(TimeKeeperVersion.V_1_0)) {
+        // a version one update to greater than version one record
+        // This should throw an error, no backsteps
+        throw new TimeKeeperException(
+            String.format("Invalid update version=%s for record version=%s", update.getVersion(), this.version));
+      }
+    } else {
+      // then this is other than TimeKeeperVersion.V_1_0 update
+      if (this.version.equals(TimeKeeperVersion.V_1_0)) {
+        // upgrade the record
+        this.version = update.getVersion();
+      }
+      if (update.getMaxDeviation() > 0) {
+        this.maxDeviation = update.getMaxDeviation();
+      }
+      if (update.getMaxHistory() > 0) {
+        this.maxHistory = update.getMaxHistory();
+      }
+    }
+    history.add(update.getTimeUpdate());
     currentTime = TimestampUtils.max(currentTime, history);
+    pruneHistory();
+
+  }
+
+  private void pruneHistory() {
+    if (history.size() > maxHistory) {
+      history = history.subList(history.size() - maxHistory, history.size());
+    }
   }
 
   /**
@@ -75,6 +128,16 @@ public class ParticipantTimeState {
    * @return the record
    */
   public TimeKeeperRecord toTimeKeeperRecord() {
-    return TimeKeeperRecord.newBuilder().setLastCalculatedTime(currentTime).addAllTimeHistory(history).build();
+    Builder builder = TimeKeeperRecord.newBuilder().setLastCalculatedTime(currentTime).addAllTimeHistory(history);
+    if (!version.equals(TimeKeeperVersion.V_1_0)) {
+      builder = builder.setVersion(this.version);
+      if (maxDeviation != DEFAULT_MAX_DEVIATION) {
+        builder = builder.setMaxDeviation(maxDeviation);
+      }
+      if (maxHistory != DEFAULT_MAX_HISTORY) {
+        builder = builder.setMaxHistory(maxHistory);
+      }
+    }
+    return builder.build();
   }
 }
