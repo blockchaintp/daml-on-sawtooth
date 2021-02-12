@@ -25,6 +25,7 @@ pipeline {
     ansiColor('xterm')
     timestamps()
     buildDiscarder(logRotator(daysToKeepStr: '31'))
+    disableConcurrentBuilds()
   }
 
   environment {
