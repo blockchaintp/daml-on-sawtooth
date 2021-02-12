@@ -9,7 +9,7 @@ import java.time.Duration
 import akka.stream.Materializer
 
 import com.daml.ledger.api.auth.{AuthServiceJWT, AuthService, AuthServiceWildcard}
-import com.daml.jwt.{RSA256Verifier}
+import com.daml.jwt.{RSA256Verifier,JwksVerifier}
 import com.daml.ledger.participant.state.kvutils.api.{KeyValueLedger, KeyValueParticipantState}
 import com.daml.ledger.participant.state.kvutils.app.{Config, LedgerFactory, ParticipantConfig, Runner}
 import com.daml.ledger.participant.state.v1.{Configuration, TimeModel}
@@ -17,8 +17,10 @@ import com.daml.lf.engine.Engine
 import com.daml.logging.LoggingContext
 import com.daml.platform.configuration.LedgerConfiguration
 import com.daml.resources.{ProgramResource, ResourceOwner}
-import com.blockchaintp.utils.LogUtils
+
 import org.slf4j.event.Level
+import com.blockchaintp.utils.LogUtils
+
 import scala.util.Try
 import scopt.OptionParser
 
@@ -89,6 +91,10 @@ object Main {
             val verifier = RSA256Verifier
               .fromCrtFile(config.extra.secret)
               .valueOr(err => sys.error(s"Failed to create RSA256 verifier for: $err"))
+            AuthServiceJWT(verifier)
+          }
+          case "jwks" => {
+            val verifier = JwksVerifier(config.extra.jwksUrl)
             AuthServiceJWT(verifier)
           }
         }
@@ -165,6 +171,23 @@ object Main {
               extra = config.extra.copy(
                 secret = v,
                 authType = "rsa256"
+              )
+            )
+          }
+        }
+      parser
+        .opt[String]("auth-jwt-rs256-jwks")
+        .optional()
+        .validate(v => Either.cond(v.length > 0, (), "JWK server URL must be a non-empty string"))
+        .text(
+          "Enables JWT-based authorization, where the JWT is signed by RSA256 with a public key loaded from the given JWKS URL"
+        )
+        .action {
+          case (v, config) => {
+            config.copy(
+              extra = config.extra.copy(
+                jwksUrl = v,
+                authType = "jwks"
               )
             )
           }

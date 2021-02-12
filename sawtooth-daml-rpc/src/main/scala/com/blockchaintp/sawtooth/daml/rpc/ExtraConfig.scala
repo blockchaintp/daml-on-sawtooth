@@ -6,11 +6,12 @@ package com.blockchaintp.sawtooth.daml.rpc
 final case class ExtraConfig(
     zmqUrl: String,
     keystore: String,
-    logLevel: String,
     maxOpsPerBatch: Int,
     maxOutStandingBatches: Int,
+    logLevel: String,
     authType: String,
-    secret: String
+    secret: String,
+    jwksUrl: String
 )
 
 object ExtraConfig {
@@ -18,10 +19,11 @@ object ExtraConfig {
     ExtraConfig(
       zmqUrl = "tcp://localhost:4004",
       keystore = "/etc/daml/keystore",
-      logLevel = "info",
       maxOpsPerBatch = "1000".toInt,
       maxOutStandingBatches = "2".toInt,
+      logLevel = "info",
       authType = "none",
-      secret = ""
+      secret = "",
+      jwksUrl = ""
     )
 }
