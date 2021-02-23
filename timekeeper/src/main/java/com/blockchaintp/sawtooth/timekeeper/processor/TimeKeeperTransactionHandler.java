@@ -14,6 +14,7 @@ package com.blockchaintp.sawtooth.timekeeper.processor;
 
 import com.blockchaintp.sawtooth.timekeeper.EventConstants;
 import com.blockchaintp.sawtooth.timekeeper.Namespace;
+import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord;
@@ -52,15 +53,11 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
   private final String namespace;
   private final String version;
 
-  private final long basicPeriod;
-
   /**
    * Default constructor.
    *
-   * @param period the expected period of updates in seconds
    */
-  public TimeKeeperTransactionHandler(final long period) {
-    this.basicPeriod = period;
+  public TimeKeeperTransactionHandler() {
     this.familyName = Namespace.TIMEKEEPER_FAMILY_NAME;
     this.namespace = Namespace.getNameSpace();
     this.version = Namespace.TIMEKEEPER_FAMILY_VERSION_1_0;
@@ -99,19 +96,23 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
       if (sourceData.containsKey(partRecordAddr)) {
         final TimeKeeperRecord myRecord = TimeKeeperRecord.parseFrom(sourceData.get(partRecordAddr));
         partTimeState = new ParticipantTimeState(myRecord);
+        try {
+          partTimeState.addUpdate(update);
+        } catch (TimeKeeperException e) {
+          throw new InvalidTransactionException(e.getMessage());
+        }
       } else {
-        partTimeState = new ParticipantTimeState();
+        partTimeState = new ParticipantTimeState(update);
       }
-      partTimeState.addUpdate(update);
       final TimeKeeperRecord participantRecord = partTimeState.toTimeKeeperRecord();
 
       GlobalTimeState globalTimeState;
       if (sourceData.containsKey(Namespace.TIMEKEEPER_GLOBAL_RECORD)) {
         final TimeKeeperGlobalRecord globalRecord = TimeKeeperGlobalRecord
             .parseFrom(sourceData.get(Namespace.TIMEKEEPER_GLOBAL_RECORD));
-        globalTimeState = new GlobalTimeState(globalRecord, basicPeriod);
+        globalTimeState = new GlobalTimeState(globalRecord);
       } else {
-        globalTimeState = new GlobalTimeState(basicPeriod);
+        globalTimeState = new GlobalTimeState();
       }
       globalTimeState.addUpdate(ByteString.copyFromUtf8(signerPublicKey), update);
       final TimeKeeperGlobalRecord newGlobalRecord = globalTimeState.toTimeKeeperGlobalRecord();

@@ -1,4 +1,4 @@
-// Copyright 2019 Blockchain Technology Partners 
+// Copyright 2019 Blockchain Technology Partners
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,26 +19,40 @@ option java_multiple_files = true;
 package com.blockchaintp.sawtooth.timekeeper.protobuf;
 import "google/protobuf/timestamp.proto";
 
+enum TimeKeeperVersion {
+  V_1_0 = 0;
+  V_2_0 = 1;
+}
+
 message TimeKeeperUpdate {
     google.protobuf.Timestamp timeUpdate=1;
+    TimeKeeperVersion version = 2;
+    int32 maxHistory = 3;
+    int32 maxDeviation = 4;
 }
 
 message TimeKeeperEvent {
-    google.protobuf.Timestamp timeUpdate=1;    
+    google.protobuf.Timestamp timeUpdate=1;
 }
 
 message TimeKeeperRecord {
     google.protobuf.Timestamp lastCalculatedTime=1;
     repeated google.protobuf.Timestamp timeHistory=2;
+    TimeKeeperVersion version = 3;
+    int32 maxHistory = 4;
+    int32 maxDeviation = 5;
 }
 
 message TimeKeeperGlobalRecord {
     google.protobuf.Timestamp lastCalculatedTime=1;
     repeated google.protobuf.Timestamp timeHistory=2;
-    repeated TimeKeeperParticipant participant=3;    
+    repeated TimeKeeperParticipant participant=3;
+    TimeKeeperVersion version = 4;
 }
 
-message TimeKeeperParticipant { 
+message TimeKeeperParticipant {
     bytes participantPublicKey = 1;
     google.protobuf.Timestamp lastCalculatedTime=2;
+    TimeKeeperVersion version = 3;
+    int32 maxDeviation = 4;
 }
