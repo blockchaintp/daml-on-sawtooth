@@ -250,7 +250,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
           veList.add(elem);
         }
         ByteString evtData = SawtoothClientUtils.unwrapMultipart(veList);
-        LOGGER.info("Combined {} event fragments into an event of size {}", addresses.length,
+        LOGGER.debug("Combined {} event fragments into an event of size {}", addresses.length,
             evtData.size());
         final long blockNum = getCurrentBlockNum();
         final int subOffset = getCurrentSubOffset();
@@ -279,7 +279,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
             veList.add(elem);
           }
           ByteString evtData = SawtoothClientUtils.unwrapMultipart(veList);
-          LOGGER.info("Combined {} event fragments into an event of size {}", eventSoFar.size(),
+          LOGGER.debug("Combined {} event fragments into an event of size {}", eventSoFar.size(),
               evtData.size());
           final long blockNum = getCurrentBlockNum();
           final int subOffset = getCurrentSubOffset();
@@ -307,7 +307,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     final long blockNum =
         Long.parseLong(attrMap.get(EventConstants.SAWTOOTH_BLOCK_NUM_EVENT_ATTRIBUTE));
     setCurrentBlockNum(blockNum);
-    LOGGER.debug("Received block-commit block_num={}", blockNum);
+    LOGGER.info("Received block-commit block_num={}", blockNum);
   }
 
   @Override

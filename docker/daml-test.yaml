@@ -87,7 +87,7 @@ services:
 
   daml-tp:
     image: sawtooth-daml-tp:${ISOLATION_ID}
-    command: "/opt/sawtooth-daml-tp/entrypoint.sh -vv tcp://validator:4004"
+    command: "/opt/sawtooth-daml-tp/entrypoint.sh -v tcp://validator:4004"
     depends_on:
       - validator
     volumes:

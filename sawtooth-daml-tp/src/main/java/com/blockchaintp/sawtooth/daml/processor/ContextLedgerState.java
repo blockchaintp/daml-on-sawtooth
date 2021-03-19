@@ -383,7 +383,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
             String.valueOf(multipart.size()));
         attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE, String.valueOf(part));
-        LOGGER.info("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
+        LOGGER.debug("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
             bs.size(), entry.size());
         state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), bs);
         part++;
