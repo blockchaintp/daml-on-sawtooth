@@ -16,16 +16,16 @@
 
 docker-compose -f docker/docker-compose-build.yaml build
 
-docker run -it --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth \
+docker run -it --rm -v $HOME/.m2:/root/.m2 -v "$(pwd):/project/daml-on-sawtooth" \
     daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B clean
 
-docker run -it --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth \
+docker run -it --rm -v $HOME/.m2:/root/.m2 -v "$(pwd):/project/daml-on-sawtooth" \
     daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B package
 
-docker run -it --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth \
+docker run -it --rm -v $HOME/.m2:/root/.m2 -v "$(pwd):/project/daml-on-sawtooth" \
     daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository
 
-docker run -it --rm -v $HOME/.m2:/root/.m2 -v `pwd`:/project/daml-on-sawtooth \
+docker run -it --rm -v $HOME/.m2:/root/.m2 -v "$(pwd):/project/daml-on-sawtooth" \
     daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target \
     -exec chown -R $UID:$GROUPS {} \;
 
