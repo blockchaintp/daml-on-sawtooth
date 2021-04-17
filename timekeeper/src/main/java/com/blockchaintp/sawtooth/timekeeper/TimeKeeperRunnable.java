@@ -79,9 +79,8 @@ public final class TimeKeeperRunnable implements Runnable {
     final Instant instant = clock.instant();
     final Timestamp ts = Timestamp.newBuilder().setSeconds(instant.getEpochSecond()).setNanos(instant.getNano())
         .build();
-    final TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder()
-      .setVersion(TimeKeeperVersion.V_2_0)
-      .setTimeUpdate(ts).build();
+    final TimeKeeperUpdate update = TimeKeeperUpdate.newBuilder().setVersion(TimeKeeperVersion.V_2_0).setTimeUpdate(ts)
+        .build();
 
     final List<String> inputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
     final List<String> outputAddresses = Arrays.asList(this.recordAddress, Namespace.TIMEKEEPER_GLOBAL_RECORD);
@@ -103,11 +102,10 @@ public final class TimeKeeperRunnable implements Runnable {
       if (backoffCounter > 0) {
         backoffCounter -= 1;
         backoffCounter = Math.max(backoffCounter, 0);
-        LOGGER.warn("Successfully updated time marker after backoff, reducing backoff to {} intervals",
-           backoffCounter);
+        LOGGER.warn("Successfully updated time marker after backoff, reducing backoff to {} intervals", backoffCounter);
       }
     } catch (TimeKeeperException exc) {
-      backoffCounter = 2 * backoffCounter;
+      backoffCounter = Math.min(1, 2 * backoffCounter);
       backoffCounter = Math.min(MAX_SKIPS, backoffCounter);
       LOGGER.warn("Error updating TimeKeeper records, increasing backoff to {} intervals", backoffCounter);
     }
