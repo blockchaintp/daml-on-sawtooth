@@ -105,7 +105,7 @@ public final class TimeKeeperRunnable implements Runnable {
         LOGGER.warn("Successfully updated time marker after backoff, reducing backoff to {} intervals", backoffCounter);
       }
     } catch (TimeKeeperException exc) {
-      backoffCounter = Math.min(1, 2 * backoffCounter);
+      backoffCounter = Math.max(1, 2 * backoffCounter);
       backoffCounter = Math.min(MAX_SKIPS, backoffCounter);
       LOGGER.warn("Error updating TimeKeeper records, increasing backoff to {} intervals", backoffCounter);
     }
