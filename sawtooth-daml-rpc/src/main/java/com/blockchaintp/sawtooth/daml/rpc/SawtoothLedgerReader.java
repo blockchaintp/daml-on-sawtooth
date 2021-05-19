@@ -16,6 +16,9 @@ import akka.NotUsed;
 import akka.stream.scaladsl.Source;
 import scala.Option;
 
+/**
+ * A Sawtooth based LedgerReader suitable for use in DAML Apis.
+ */
 public final class SawtoothLedgerReader implements LedgerReader {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerReader.class.getName());
@@ -24,6 +27,11 @@ public final class SawtoothLedgerReader implements LedgerReader {
   private final ZmqEventHandler handler;
   private final ExecutorService executorService;
 
+  /**
+   * Create a SawtoothLedgerReader with the given ledger id and zmq url.
+   * @param lid the ledger id
+   * @param zmqUrl the url of the sawtooth node
+   */
   public SawtoothLedgerReader(final String lid, final String zmqUrl) {
     this.executorService = Executors.newWorkStealingPool();
     this.ledgerId = lid;

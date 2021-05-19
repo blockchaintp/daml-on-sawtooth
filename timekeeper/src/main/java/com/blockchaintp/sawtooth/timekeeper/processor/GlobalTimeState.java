@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Encapsulates and anages the calculations fot TimekeeperGlobalRecords.
  */
-public class GlobalTimeState {
+public final class GlobalTimeState {
 
   private static final int LEGACY_DEFAULT_UPDATE_PERIOD = 20;
 

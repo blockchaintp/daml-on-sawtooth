@@ -22,10 +22,18 @@ import com.daml.lf.engine.Engine;
  * Create a singleton instance of the DAML engine in a thread-safe way using the Bill Pugh pattern.
  */
 public final class DamlEngineSingleton {
+
+  /**
+   * Get the singleton.
+   * @return the Engine
+   */
   public static Engine getInstance() {
     return SingletonHelper.INSTANCE;
   }
 
+  /**
+   * The singleton helper.
+   */
   private static class SingletonHelper {
     private static final Engine INSTANCE = new Engine(Engine.StableConfig());
   }

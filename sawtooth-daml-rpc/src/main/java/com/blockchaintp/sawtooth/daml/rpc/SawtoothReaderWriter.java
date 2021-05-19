@@ -23,6 +23,9 @@ import scala.Option;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 
+/**
+ * A delegating class for sawtooth based LedgerReader and LedgerWriter.
+ */
 public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothReaderWriter.class.getName());
@@ -35,12 +38,30 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
   private final String keystoreDir;
   private KeyManager keyMgr;
 
+  /**
+   * Create a SawtoothReaderWriter with the provided parameters.
+   *
+   * @param participantId the participant id
+   * @param zmqUrl the zmq url of the sawtooth node
+   * @param k the path of the keystre
+   * @param ledgerId the ledger id
+   */
   public SawtoothReaderWriter(final String participantId, final String zmqUrl,
       final String k, final String ledgerId) {
     this(participantId, zmqUrl, k, ledgerId, DEFAULT_MAX_OPS_PER_BATCH,
         DEFAULT_MAX_OUTSTANDING_BATCHES);
   }
 
+  /**
+   * Create a SawtoothReaderWriter with the provided parameters.
+   *
+   * @param participantId the participant id
+   * @param zmqUrl the zmq url of the sawtooth node
+   * @param k the path of the keystre
+   * @param ledgerId the ledger id
+   * @param opsPerBatch the maximum number per batch
+   * @param outstandingBatches the number of outstanding batches before waiting
+   */
   public SawtoothReaderWriter(final String participantId, final String zmqUrl,
       final String k, final String ledgerId, final int opsPerBatch, final int outstandingBatches) {
     this.keystoreDir = k;
@@ -54,6 +75,7 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
     this.writer = new SawtoothLedgerWriter(participantId, zmqUrl, keyMgr, opsPerBatch, outstandingBatches);
   }
 
+  @Override
   public HealthStatus currentHealth() {
     if (reader.currentHealth().equals(HealthStatus.unhealthy())) {
       return HealthStatus.unhealthy();
@@ -64,22 +86,30 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
     }
   }
 
+  @Override
   public Source<LedgerRecord, NotUsed> events(final Option<Offset> startExclusive) {
     return reader.events(startExclusive);
   }
 
+  @Override
   public String ledgerId() {
     return reader.ledgerId();
   }
 
+  @Deprecated
+  @Override
   public Future<SubmissionResult> commit(final String correlationId, final ByteString envelope) {
     return writer.commit(correlationId, envelope);
   }
 
+  @Override
   public String participantId() {
     return writer.participantId();
   }
 
+  /**
+   * A resource owner suitable for DAML apis.
+   */
   public static final class Owner implements ResourceOwner<SawtoothReaderWriter> {
 
     private final String participantId;
@@ -89,6 +119,16 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
     private int outstandingBatches;
     private int opsPerBatch;
 
+    /**
+   * A resource owner suitable for DAML apis.
+     *
+     * @param configuredParticipantId the participant id
+     * @param z the zmqUrl
+     * @param k the keystore location
+     * @param cfgOpsPerBatch the max number of operations per batch
+     * @param cfgOutstandingBatches the maximum number of batches to submit before waiting.
+     * @param lid the ledger id
+     */
     public Owner(final String configuredParticipantId, final String z, final String k,
         final int cfgOpsPerBatch, final int cfgOutstandingBatches, final Option<String> lid) {
       this.participantId = configuredParticipantId;

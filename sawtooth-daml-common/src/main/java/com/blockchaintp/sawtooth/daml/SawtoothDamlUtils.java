@@ -12,11 +12,24 @@ import com.blockchaintp.utils.KeyManager;
 import sawtooth.sdk.protobuf.Transaction;
 import scala.Tuple4;
 
+/**
+ * A collection of useful functions for DAML and Sawtooth interactions.
+ */
 public final class SawtoothDamlUtils {
 
   private SawtoothDamlUtils() {
   }
 
+  /**
+   * Given a DamlOperatinBatch create the Sawtooth Transaction.
+   *
+   * @param keyManager the keyManager to sign the transaction
+   * @param batch the DamlOperationBatch
+   * @param inputAddresses the sawtooth input addresses
+   * @param outputAddresses the sawtooth output addresses
+   * @param dependentTransactions any dependent transactions
+   * @return the encoded transaction
+   */
   public static Transaction makeSawtoothTransaction(final KeyManager keyManager,
       final DamlOperationBatch batch, final Collection<String> inputAddresses,
       final Collection<String> outputAddresses, final List<String> dependentTransactions) {
@@ -25,6 +38,13 @@ public final class SawtoothDamlUtils {
         batch.toByteString());
   }
 
+  /**
+   * Transform the provided DamlOperationBatch into a tuple suitable for
+   * use in DAML apis.
+   *
+   * @param batch the daml operation batch
+   * @return the tuple
+   */
    public static Tuple4<String, String, ByteString, DamlSubmissionBatch> damlOperationBatchToDamlSubmissionBatch(
        final DamlOperationBatch batch) {
      final DamlSubmissionBatch.Builder builder = DamlSubmissionBatch.newBuilder();
