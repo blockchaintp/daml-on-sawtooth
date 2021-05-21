@@ -56,7 +56,7 @@ import sawtooth.sdk.protobuf.Message.MessageType;
  * A thread which subscribes to sawtooth events, receives those events and provides them to a
  * Processor.
  */
-public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
+public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private static final int DEFAULT_TIMEOUT = 10;
   private static final Logger LOGGER = LoggerFactory.getLogger(ZmqEventHandler.class);
@@ -161,14 +161,14 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    *
    * @return the publisher
    */
-  public final Publisher<LedgerRecord> makePublisher() {
+  public Publisher<LedgerRecord> makePublisher() {
     final UnicastProcessor<LedgerRecord> p = UnicastProcessor.create();
     this.processors.add(p);
     return p;
   }
 
   @Override
-  public final int handle(final ZLoop loop, final PollItem item, final Object arg) {
+  public int handle(final ZLoop loop, final PollItem item, final Object arg) {
     LOGGER.debug("Handling message...");
 
     final ZMsg msg = ZMsg.recvMsg(item.getSocket());
@@ -186,7 +186,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     return 0;
   }
 
-  protected final void processMessage(final Message message) throws IOException {
+  protected void processMessage(final Message message) throws IOException {
     LOGGER.debug("Processing Message");
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       handleClientEvents(message);
@@ -311,7 +311,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   }
 
   @Override
-  public final void run() {
+  public void run() {
     while (true) {
       Message receivedMsg = null;
       try {
@@ -334,7 +334,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   /**
    * Send a subscribe message to the validator.
    */
-  public final void sendSubscribe() {
+  public void sendSubscribe() {
     Offset o = KVOffset.fromLong(2, 0, 0);
     this.sendSubscribe(o);
   }
@@ -344,7 +344,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    *
    * @param beginAfter the offset to begin subscribing after
    */
-  public final void sendSubscribe(final Offset beginAfter) {
+  public void sendSubscribe(final Offset beginAfter) {
     if (this.subscribed) {
       LOGGER.warn("Attempted to subscribe twice");
       return;
@@ -398,7 +398,7 @@ public class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   /**
    * Send an unsubscribe message to the validator.
    */
-  public final void sendUnsubscribe() {
+  public void sendUnsubscribe() {
     final ClientEventsUnsubscribeRequest ceuReq =
         ClientEventsUnsubscribeRequest.newBuilder().build();
     final Future resp =

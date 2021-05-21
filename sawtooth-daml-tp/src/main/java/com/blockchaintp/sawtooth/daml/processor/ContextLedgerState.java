@@ -425,12 +425,19 @@ public final class ContextLedgerState implements LedgerState<String> {
     this.deferredEvents.add(de);
   }
 
+  /**
+   * Flush all the deferred events to the log (essentially publishing them).
+   * @throws InternalError if there is some prolem flushing an event
+   */
   public void flushDeferredEvents() throws InternalError {
     for (DamlEvent evt : this.deferredEvents) {
       evt.flush(state);
     }
   }
 
+  /**
+   * Represents a single DamlEvent.
+   */
   private class DamlEvent {
     private String subject;
     private Map<String, String> attrMap;

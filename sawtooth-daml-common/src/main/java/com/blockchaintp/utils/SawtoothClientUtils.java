@@ -175,6 +175,13 @@ public final class SawtoothClientUtils {
     return hash512(arg);
   }
 
+  /**
+   * Wrap the given ByteString with a VersionEnvelope and return.
+   *
+   * @param value The value to be wrapped
+   * @return a ByteString representatin of the VersionedEnvelope
+   * @throws InternalError for any serious error
+   */
   public static ByteString wrap(final ByteString value) throws InternalError {
     ByteString data = compressByteString(value);
     String contentHash = getHash(data.toByteArray());
@@ -192,6 +199,13 @@ public final class SawtoothClientUtils {
     return chunks;
   }
 
+  /**
+   * Wrap the the given list of byte arrays into a sequence of
+   * VersionedEnvelopes. The content must match the providedHash
+   * @param vals a List of byte arrays to wrap
+   * @param contentHash the hash of the total original data
+   * @return a List of VersionedEnvelope
+   */
   private static List<VersionedEnvelope> wrapList(final List<byte[]> vals, final String contentHash) {
     List<VersionedEnvelope> envelopes = new ArrayList<>();
     int index = 0;
@@ -205,6 +219,15 @@ public final class SawtoothClientUtils {
     return envelopes;
   }
 
+  /**
+   * Wrap a ByteString into a List of VersionedEnvelopes of at most maxPartsSize
+   * length.  The list is returned as a list of ByteStrings and is compressed.
+   *
+   * @param value the value, usually large to be wrapped
+   * @param maxPartSize the maximum size of a given part
+   * @return a list of ByteString
+   * @throws InternalError a serious parse error
+   */
   public static List<ByteString> wrapMultipart(final ByteString value, final int maxPartSize)
       throws InternalError {
     ByteString compressedData = compressByteString(value);
@@ -219,6 +242,14 @@ public final class SawtoothClientUtils {
     return retList;
   }
 
+  /**
+   * Unrwap the list of VersionedEnvelopes provided into the original
+   * ByteString.
+   *
+   * @param veList the list of VersionedEnvelopes
+   * @return the original ByteString
+   * @throws InternalError a serious error has occurred
+   */
   public static ByteString unwrapMultipart(final List<VersionedEnvelope> veList)
       throws InternalError {
     String contentHash = null;
@@ -241,6 +272,14 @@ public final class SawtoothClientUtils {
     return uData;
   }
 
+  /**
+   * Unwrap the ByteString of a given VersionedEnvelope into the original
+   * ByteString.
+   *
+   * @param wrappedVal the versioned envelope
+   * @return the original ByteString
+   * @throws InternalError a parse error
+   */
   public static ByteString unwrap(final ByteString wrappedVal) throws InternalError {
     VersionedEnvelope envelope;
     try {
@@ -336,6 +375,12 @@ public final class SawtoothClientUtils {
     }
   }
 
+  /**
+   * Subit the Batch to the sawtooth Stream.
+   * @param batch the batch to submit
+   * @param stream the stream to submit to
+   * @return a Future upon which to wait
+   */
   public static Future submitBatch(final Batch batch, final Stream stream) {
     final ClientBatchSubmitRequest cbsReq =
         ClientBatchSubmitRequest.newBuilder().addBatches(batch).build();

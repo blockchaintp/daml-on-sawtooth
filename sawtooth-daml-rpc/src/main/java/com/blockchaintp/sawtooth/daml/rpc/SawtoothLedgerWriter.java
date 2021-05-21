@@ -52,6 +52,9 @@ import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.util.Either;
 
+/**
+ * A Sawtooth based LedgerWriter.
+ */
 public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private static final int DEFAULT_TX_FRAGMENT_SIZE = 256 * 1024;
@@ -75,12 +78,30 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private final int maxOpsPerBatch;
 
+  /**
+   * Creates a SawtoothLedgerWriter suitable for use in Daml APIs.
+   *
+   * @param pid the participant id
+   * @param zmqUrl the url of the zmq endpoint to submit
+   * @param keyMgr the key manager to use for signing
+   * @param opsPerBatch the maximum number of operations per batch
+   * @param outStandingBatches how many batches to submit before waiting
+   */
   public SawtoothLedgerWriter(final String pid, final String zmqUrl, final KeyManager keyMgr,
       final int opsPerBatch, final int outStandingBatches) {
     this(pid, new ZmqStream(zmqUrl), keyMgr, opsPerBatch,
         outStandingBatches);
   }
 
+  /**
+   * Creates a SawtoothLedgerWriter suitable for use in Daml APIs.
+   *
+   * @param id the participant id
+   * @param s the sawtooth stream
+   * @param k the keymanager to sign the transactions and batches
+   * @param opsPerBatch the maximum number of operations per batch
+   * @param outStandingBatches how many batches to submit before waiting
+   */
   public SawtoothLedgerWriter(final String id, final Stream s, final KeyManager k,
       final int opsPerBatch, final int outStandingBatches) {
     this.participantId = id;
@@ -232,6 +253,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     return this.participantId;
   }
 
+  /**
+   * Represents one unit of work to be submitted.
+   */
   class CommitPayload {
     private final List<String> inputAddresses;
     private final List<String> outputAddresses;
@@ -256,6 +280,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     }
   }
 
+  /**
+   * Handles the actual submission to the Stream.
+   */
   private class Submitter implements Runnable {
 
     private final Stream stream;

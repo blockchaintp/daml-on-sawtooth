@@ -126,7 +126,8 @@ public interface LedgerState<T> extends LedgerStateOperations<T>, LedgerStateAcc
 
   /**
    * Flush any deferred events, for instance to put them after state updates.
-   * @throws InternalError
+   *
+   * @throws InternalError if there is some problem flushing the events
    */
   void flushDeferredEvents() throws InternalError;
 }

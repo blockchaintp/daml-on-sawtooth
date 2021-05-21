@@ -18,6 +18,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * A collection of utilities for dealing with Timestamps.
+ */
 public final class TimestampUtils {
 
   /**

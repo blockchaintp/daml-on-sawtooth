@@ -22,7 +22,10 @@ import com.google.protobuf.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ParticipantTimeState {
+/**
+ * Handles the time values of a given participant.
+ */
+public final class ParticipantTimeState {
 
   /**
    * Default maximum history to keep.
@@ -69,6 +72,11 @@ public class ParticipantTimeState {
     }
   }
 
+  /**
+   * Create an initial state from an individual TimeKeeperUpdate.
+   *
+   * @param update the update to initialize with
+   */
   public ParticipantTimeState(final TimeKeeperUpdate update) {
     currentTime = update.getTimeUpdate();
     history = new ArrayList<>(List.of(update.getTimeUpdate()));
@@ -87,6 +95,8 @@ public class ParticipantTimeState {
    * Update this time state with and update from this participant.
    *
    * @param update the update
+   * @throws TimeKeeperException when an incorrect style of update is sent to this
+   * ParticipantTimeState
    */
   public void addUpdate(final TimeKeeperUpdate update) throws TimeKeeperException {
     if (update.getVersion().equals(TimeKeeperVersion.V_1_0)) {
