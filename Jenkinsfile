@@ -50,23 +50,10 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh 'docker-compose -f docker/docker-compose-build.yaml build'
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B clean compile'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
-          sh 'mkdir -p test-dars && docker run --rm -v `pwd`/test-dars:/out ledger-api-testtool:${ISOLATION_ID} bash -c "java -jar ledger-api-test-tool.jar -x && cp *.dar /out"'
-        }
-        sh 'docker-compose -f docker/daml-test.yaml build'
-      }
-    }
-
-    stage('Test') {
-      steps {
-        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B test'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh '''
+            make clean build
+          '''
         }
       }
     }
@@ -74,50 +61,69 @@ pipeline {
     stage('Package') {
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B package verify'
-          sh 'docker run --rm -v $HOME/.m2/repository:/root/.m2/repository -v $MAVEN_SETTINGS:/root/.m2/settings.xml daml-on-sawtooth-build-local:${ISOLATION_ID} chown -R $UID:$GROUPS /root/.m2/repository'
-          sh 'docker run --rm -v `pwd`:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} find /project -type d -name target -exec chown -R $UID:$GROUPS {} \\;'
+          sh '''
+            make package
+          '''
         }
-        sh 'docker-compose -f docker-compose-installed.yaml build'
       }
     }
 
-    stage('Integration Test') {
+    stage('Test') {
       steps {
-        sh 'docker-compose -p ${PROJECT_ID} -f docker/daml-test.yaml up --exit-code-from ledger-api-testtool || true'
-        sh '''
-          docker logs ${PROJECT_ID}_ledger-api-testtool_1 > results.txt 2>&1
-          ./run_tests ./results.txt > tap.results
-        '''
-        step([$class: "TapPublisher", testResults: "tap.results"])
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh '''
+            make test
+          '''
+        }
+        junit '**/target/surefire-reports/*.xml'
+        step([$class: "TapPublisher", testResults: "build/daml-test.results"])
+      }
+    }
+
+    stage("Analyze") {
+      steps {
+        withSonarQubeEnv('sonarqube') {
+          configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+            sh '''
+              make clean analyze
+            '''
+          }
+        }
+      }
+    }
+
+    stage("Quality gate") {
+      steps {
+        waitForQualityGate abortPipeline: true
       }
     }
 
     stage('Create Archives') {
       steps {
-        sh '''
-            REPO=$(git remote show -n origin | grep Fetch | awk -F'[/.]' '{print $6}')
-            VERSION=`git describe --dirty`
-            git archive HEAD --format=zip -9 --output=$REPO-$VERSION.zip
-            git archive HEAD --format=tgz -9 --output=$REPO-$VERSION.tgz
-        '''
-        archiveArtifacts artifacts: '**/target/*.zip'
-        archiveArtifacts artifacts: '**/target/*.jar'
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh '''
+            make archive
+          '''
+        }
+        archiveArtifacts 'build/*.tgz, build/*.zip'
       }
     }
 
+    stage("Publish") {
+      when {
+        expression { env.BRANCH_NAME == "main" }
+      }
+      steps {
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          sh '''
+            make clean publish
+          '''
+        }
+      }
+    }
   }
 
   post {
-      always {
-        junit '**/target/surefire-reports/**/*.xml'
-        sh 'docker-compose -f docker/docker-compose-build.yaml down'
-        sh 'docker-compose -f docker/daml-test.yaml down'
-        sh 'docker run -v $PWD:/project/daml-on-sawtooth daml-on-sawtooth-build-local:${ISOLATION_ID} mvn -B clean'
-      }
-      success {
-          archiveArtifacts '*.tgz, *.zip'
-      }
       aborted {
           error "Aborted, exiting now"
       }
