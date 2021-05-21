@@ -24,7 +24,6 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.auth0.jwt.JWT;
@@ -40,7 +39,6 @@ import com.daml.ledger.api.auth.ClaimPublic$;
 import com.daml.ledger.api.auth.Claims;
 import com.daml.lf.data.Ref;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,20 +104,20 @@ public final class DamlAuthServices implements AuthService {
   private com.daml.ledger.api.auth.Claims decodeAndParse(final io.grpc.Metadata headers)
       throws Exception {
 
-    final String regex = "Bearer (.*)";
-    final Pattern pattern = Pattern.compile(regex);
+    final var regex = "Bearer (.*)";
+    final var pattern = Pattern.compile(regex);
 
     final Metadata.Key<String> authorizationKey =
         Metadata.Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER);
-    final String authKeyString = headers.get(authorizationKey);
-    final Matcher matcher = pattern.matcher(authKeyString);
-    final String tokenString = matcher.group(1);
-    if (tokenString == null) {
+    final var authKeyString = headers.get(authorizationKey);
+    final var matcher = pattern.matcher(authKeyString);
+    if (!matcher.matches()) {
       throw new Exception();
     }
+    final var tokenString = matcher.group(1);
 
     final JWTVerifier verifier = JWT.require(this.ecdsaAlgorithm).build();
-    final DecodedJWT decodedJWT = verifier.verify(tokenString);
+    final var decodedJWT = verifier.verify(tokenString);
     final AuthServiceJWTPayload jwtPayload = parsePayload(decodedJWT);
     return payloadToDAClaims(jwtPayload);
   }
@@ -140,31 +138,30 @@ public final class DamlAuthServices implements AuthService {
         scala.Option.apply(Instant.ofEpochMilli(payloadInJsonObject.optInt("exp")));
     final Boolean admin = payloadInJsonObject.optBoolean("admin");
 
-    final JSONArray actASInJSONArray = payloadInJsonObject.optJSONArray("actAs");
+    final var actASInJSONArray = payloadInJsonObject.optJSONArray("actAs");
     final List<String> actAS = List$.MODULE$.empty();
     if (actASInJSONArray != null) {
-      for (int index = 0; index < actASInJSONArray.length(); index++) {
+      for (var index = 0; index < actASInJSONArray.length(); index++) {
         actAS.$colon$colon(actASInJSONArray.getString(index));
       }
     }
 
-    final JSONArray readASInJSONArray = payloadInJsonObject.optJSONArray("readAs");
+    final var readASInJSONArray = payloadInJsonObject.optJSONArray("readAs");
     final List<String> readAS = List$.MODULE$.empty();
     if (readASInJSONArray != null) {
-      for (int index = 0; index < readASInJSONArray.length(); index++) {
+      for (var index = 0; index < readASInJSONArray.length(); index++) {
         readAS.$colon$colon(readASInJSONArray.getString(index));
       }
     }
 
-    final AuthServiceJWTPayload authServiceJWTPayload = new AuthServiceJWTPayload(ledgerID,
+    return new AuthServiceJWTPayload(ledgerID,
         participantID, applicationID, exp, admin, actAS, readAS);
 
-    return authServiceJWTPayload;
   }
 
   private Claims payloadToDAClaims(final AuthServiceJWTPayload payload) {
 
-    final ListBuffer<Claim> claimsList = new ListBuffer<Claim>();
+    final ListBuffer<Claim> claimsList = new ListBuffer<>();
 
     claimsList.$plus$eq(ClaimPublic$.MODULE$);
 
@@ -175,10 +172,7 @@ public final class DamlAuthServices implements AuthService {
     payload.actAs()
         .foreach(name -> ClaimActAsParty$.MODULE$.apply(Ref.Party().assertFromString(name)));
 
-    final Claims claims =
-        new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), Option.empty(), payload.exp());
-    return claims;
-
+    return new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), Option.empty(), payload.exp());
   }
 
 

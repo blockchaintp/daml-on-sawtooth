@@ -52,13 +52,13 @@ public final class TimeKeeperRunnable implements Runnable {
    */
   private static final int MAX_SKIPS = 32;
 
-  private final transient KeyManager keyManager;
-  private final transient String recordAddress;
+  private final KeyManager keyManager;
+  private final String recordAddress;
 
-  private final transient Stream stream;
+  private final Stream stream;
 
-  private transient int backoffCounter;
-  private transient int skipCounter;
+  private int backoffCounter;
+  private int skipCounter;
 
   /**
    * Main constructor.
@@ -128,6 +128,7 @@ public final class TimeKeeperRunnable implements Runnable {
       final TimeKeeperException tke = new TimeKeeperException(
           String.format("Sawtooth validator interrupts exception. Details: %s", e.getMessage()));
       tke.initCause(e);
+      Thread.currentThread().interrupt();
       throw tke;
     } catch (ValidatorConnectionError e) {
       final TimeKeeperException tke = new TimeKeeperException(

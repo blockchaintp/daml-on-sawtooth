@@ -44,19 +44,19 @@ public final class TimeKeeperTransactionProcessorMain {
    */
   public static void main(final String[] args) {
 
-    int vCount = 0;
-    String connectStr = "tcp://localhost:4004";
+    var vCount = 0;
+    var connectStr = "tcp://localhost:4004";
     long period = DEFAULT_TK_UPDATE_SECONDS;
 
     for (String s : args) {
       if (s.startsWith("-v")) {
-        for (int i = 0; i < s.length(); i++) {
+        for (var i = 0; i < s.length(); i++) {
           if (s.charAt(i) == 'v') {
             vCount++;
           }
         }
       } else if (s.startsWith("-p")) {
-        String val = s.substring(2);
+        var val = s.substring(2);
         if (val.length() > 0) {
           try {
             period = Integer.valueOf(val);
@@ -88,6 +88,7 @@ public final class TimeKeeperTransactionProcessorMain {
       clockExecutor.shutdownNow();
     } catch (InterruptedException exc) {
       LOGGER.warn("TransactionProcessor was interrupted");
+      Thread.currentThread().interrupt();
     }
   }
 

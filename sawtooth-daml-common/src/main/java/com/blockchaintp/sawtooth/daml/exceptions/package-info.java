@@ -10,6 +10,6 @@
  limitations under the License.
 ------------------------------------------------------------------------------*/
 /**
- * Package for RPC specific exception.
+ * Package for Daml Sawtooth exceptions.
  */
-package com.blockchaintp.sawtooth.daml.rpc.exception;
+package com.blockchaintp.sawtooth.daml.exceptions;

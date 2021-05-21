@@ -145,6 +145,11 @@
         <artifactId>sawtooth-sdk-transaction-processor</artifactId>
         <version>${sawtooth.sdk.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.zeromq</groupId>
+        <artifactId>jeromq</artifactId>
+        <version>0.3.6</version>
+      </dependency>
       <!-- DAML Dependencies -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
@@ -159,6 +164,21 @@
       <dependency>
         <groupId>com.daml</groupId>
         <artifactId>participant-state_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>participant-state-kvutils-java-proto</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>daml-lf-engine_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>daml-lf-data_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
       <dependency>
@@ -185,6 +205,51 @@
         <groupId>com.daml</groupId>
         <artifactId>participant-state-index_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>participant-state_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>ledger-api-domain_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>ledger-api-health_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>bindings-scala_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>ledger-api-scalapb_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
+        <artifactId>contextualized-logging_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.typesafe.akka</groupId>
+        <artifactId>akka-actor_${scala.lang.version}</artifactId>
+        <version>2.6.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.typesafe.akka</groupId>
+        <artifactId>akka-stream_${scala.lang.version}</artifactId>
+        <version>2.6.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>24.0-jre</version>
       </dependency>
       <!-- Logging -->
       <dependency>
