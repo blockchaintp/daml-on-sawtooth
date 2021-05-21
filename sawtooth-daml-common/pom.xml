@@ -21,7 +21,7 @@
   <parent>
     <groupId>daml-on-sawtooth</groupId>
     <artifactId>daml-on-sawtooth</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>${revision}</version>
   </parent>
   <artifactId>sawtooth-daml-common</artifactId>
   <name>sawtooth-daml-common</name>
