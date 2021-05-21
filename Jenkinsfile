@@ -111,7 +111,7 @@ pipeline {
 
     stage("Publish") {
       when {
-        expression { env.BRANCH_NAME == "main" }
+        expression { env.BRANCH_NAME == "master" }
       }
       steps {
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
