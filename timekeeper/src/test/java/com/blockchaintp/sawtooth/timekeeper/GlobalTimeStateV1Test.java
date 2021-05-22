@@ -1,6 +1,7 @@
 package com.blockchaintp.sawtooth.timekeeper;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -12,7 +13,6 @@ import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperVersion;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import com.google.protobuf.util.Timestamps;
 
 import org.junit.Test;
@@ -91,9 +91,9 @@ public class GlobalTimeStateV1Test {
       }
     }
     TimeKeeperGlobalRecord tkgr = gState.toTimeKeeperGlobalRecord();
-    assertTrue(tkgr.getLastCalculatedTime().getSeconds()==80020);
-    assertTrue(tkgr.getVersion().equals(TimeKeeperVersion.V_1_0));
-    assertTrue(tkgr.getParticipantCount() == 9);
+    assertEquals(80020, tkgr.getLastCalculatedTime().getSeconds());
+    assertEquals(TimeKeeperVersion.V_1_0, tkgr.getVersion());
+    assertEquals(9, tkgr.getParticipantCount());
   }
 
   @Test
@@ -137,8 +137,8 @@ public class GlobalTimeStateV1Test {
       gState.addUpdate(participants.get(pIndex), u);
       // v2 should not keep history in global state
       TimeKeeperGlobalRecord tkgr=gState.toTimeKeeperGlobalRecord();
-      assertTrue(tkgr.getVersion().equals(TimeKeeperVersion.V_2_0));
-      assertTrue(tkgr.getTimeHistoryCount() == 0);
+      assertEquals(TimeKeeperVersion.V_2_0, tkgr.getVersion());
+      assertEquals(0, tkgr.getTimeHistoryCount());
       //
     }
 

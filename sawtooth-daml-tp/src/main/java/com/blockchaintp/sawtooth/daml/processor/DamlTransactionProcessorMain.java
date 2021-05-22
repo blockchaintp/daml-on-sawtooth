@@ -41,11 +41,11 @@ public final class DamlTransactionProcessorMain {
    *             e.g. tcp://localhost:4004
    */
   public static void main(final String[] args) {
-    int vCount = 0;
-    String connectStr = "tcp://localhost:4004";
+    var vCount = 0;
+    var connectStr = "tcp://localhost:4004";
     for (String s : args) {
       if (s.startsWith("-v")) {
-        for (int i = 0; i < s.length(); i++) {
+        for (var i = 0; i < s.length(); i++) {
           if (s.charAt(i) == 'v') {
             vCount++;
           }
@@ -58,12 +58,13 @@ public final class DamlTransactionProcessorMain {
     TransactionHandler handler = new DamlTransactionHandler();
     MTTransactionProcessor transactionProcessor = new MTTransactionProcessor(handler, connectStr);
     LOGGER.info("Added handler {}", DamlTransactionHandler.class.getName());
-    Thread thread = new Thread(transactionProcessor);
+    var thread = new Thread(transactionProcessor);
     thread.start();
     try {
       thread.join();
     } catch (InterruptedException exc) {
       LOGGER.warn("TransactionProcessor was interrupted");
+      Thread.currentThread().interrupt();
     }
   }
 

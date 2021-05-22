@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.Namespace;
+import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
@@ -174,14 +175,13 @@ public final class ContextLedgerState implements LedgerState<String> {
         index++;
       }
       String assembledHash = SawtoothClientUtils.getHash(accumulatedBytes);
-      if (contentHash.equals(assembledHash)) {
+      if (assembledHash.equals(contentHash)) {
         LOGGER.trace("Assembled hash looks good {} = {}", contentHash, assembledHash);
       } else {
         LOGGER.warn("Assembled hash does not match! {} != {}", contentHash, assembledHash);
       }
       result = ByteString.copyFrom(accumulatedBytes);
-      DamlTransaction tx = DamlTransaction.parseFrom(result);
-      return tx;
+      return DamlTransaction.parseFrom(result);
     } catch (InvalidProtocolBufferException e) {
       throw new InvalidTransactionException(e.getMessage());
     }
@@ -270,7 +270,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         final TimeKeeperGlobalRecord tkgr =
             TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
         final com.google.protobuf.Timestamp timestamp = tkgr.getLastCalculatedTime();
-        LOGGER.debug("Record Time = {}", tkgr.getLastCalculatedTime().toString());
+        LOGGER.debug("Record Time = {}", tkgr.getLastCalculatedTime());
         final long micros = Timestamps.toMicros(timestamp);
         return new Timestamp(micros);
       } else {
@@ -292,8 +292,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       final String logId = sendLogEvent(key, value);
       return Future.successful(logId);
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.error("Error sending log event");
-      throw new RuntimeException(e);
+      throw new DamlSawtoothRuntimeException("Error sending log event", e);
     }
   }
 
@@ -307,8 +306,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         return Future.successful(Option.apply(damlState));
       }
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.debug("Error reading state: " + e.getMessage());
-      throw new RuntimeException(e);
+      throw new DamlSawtoothRuntimeException("Error reading state: " + e.getMessage(), e);
     }
   }
 
@@ -327,8 +325,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       }
       return Future.successful(JavaConverters.asScalaBuffer(retList));
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.debug("Error reading state: " + e.getMessage());
-      throw new RuntimeException(e);
+      throw new DamlSawtoothRuntimeException("Error reading state: " + e.getMessage(), e);
     }
   }
 
@@ -349,8 +346,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       setDamlStates(fromDamlSeqPair(keyValuePairs));
       return Future.successful(BoxedUnit.UNIT);
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.warn("Error writing state " + e.getMessage());
-      throw new RuntimeException(e);
+      throw new DamlSawtoothRuntimeException("Error writing state " + e.getMessage(), e);
     }
   }
 
@@ -360,8 +356,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       setDamlState(key, value);
       return Future.successful(BoxedUnit.UNIT);
     } catch (InternalError | InvalidTransactionException e) {
-      LOGGER.warn("Error writing state " + e.getMessage());
-      throw new RuntimeException(e);
+      throw new DamlSawtoothRuntimeException("Error writing state " + e.getMessage(), e);
     }
   }
 

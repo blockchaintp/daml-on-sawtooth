@@ -22,6 +22,9 @@ import java.util.concurrent.TimeoutException;
 
 import com.google.protobuf.ByteString;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.FutureByteString;
 import sawtooth.sdk.messaging.Stream;
@@ -31,6 +34,9 @@ import sawtooth.sdk.protobuf.Message;
  * A ZMQ implementation of client networking class.
  */
 public class ZmqStream implements Stream {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ZmqStream.class);
+
   /**
    * Futures that are waiting to be resolved.
    */
@@ -50,11 +56,12 @@ public class ZmqStream implements Stream {
 
   /**
    * The constructor.
+   *
    * @param address the zmq address.
    */
   public ZmqStream(final String address) {
-    this.futureHashMap = new ConcurrentHashMap<String, Future>();
-    this.receiveQueue = new LinkedBlockingQueue<SendReceiveThread.MessageWrapper>();
+    this.futureHashMap = new ConcurrentHashMap<>();
+    this.receiveQueue = new LinkedBlockingQueue<>();
     this.sendReceiveThread = new SendReceiveThread(address, futureHashMap, this.receiveQueue);
     this.thread = new Thread(sendReceiveThread);
     this.thread.start();
@@ -62,6 +69,7 @@ public class ZmqStream implements Stream {
 
   /**
    * Send a message and return a Future that will later have the Bytestring.
+   *
    * @param destination one of the Message.MessageType enum values defined in
    *                    validator.proto
    * @param contents    the ByteString that has been serialized from a Protobuf
@@ -84,6 +92,7 @@ public class ZmqStream implements Stream {
   /**
    * Send a message without getting a future back. Useful for sending a response
    * message to, for example, a transaction
+   *
    * @param destination   Message.MessageType defined in validator.proto
    * @param correlationId a random string generated on the server for the client
    *                      to send back
@@ -93,8 +102,8 @@ public class ZmqStream implements Stream {
   @Override
   public final void sendBack(final Message.MessageType destination, final String correlationId,
       final ByteString contents) {
-    Message message = Message.newBuilder().setCorrelationId(correlationId).setMessageType(destination)
-        .setContent(contents).build();
+    var message = Message.newBuilder().setCorrelationId(correlationId).setMessageType(destination).setContent(contents)
+        .build();
 
     this.sendReceiveThread.sendMessage(message);
   }
@@ -108,12 +117,14 @@ public class ZmqStream implements Stream {
       this.sendReceiveThread.stop();
       this.thread.join();
     } catch (InterruptedException ie) {
-      ie.printStackTrace();
+      LOG.warn("Interrupted while closing the stream", ie);
+      Thread.currentThread().interrupt();
     }
   }
 
   /**
    * Get a message that has been received.
+   *
    * @return result, a protobuf Message
    */
   @Override
@@ -122,7 +133,11 @@ public class ZmqStream implements Stream {
     try {
       result = this.receiveQueue.take();
     } catch (InterruptedException ie) {
-      ie.printStackTrace();
+      LOG.warn("Interrupted while taking from the receive queue", ie);
+      Thread.currentThread().interrupt();
+    }
+    if (null == result) {
+      return null;
     }
     return result.getMessage();
   }
@@ -130,6 +145,7 @@ public class ZmqStream implements Stream {
   /**
    * Get a message that has been received. If the timeout is expired, throws
    * TimeoutException.
+   *
    * @param timeout time to wait for a message.
    * @return result, a protobuf Message
    * @throws TimeoutException The Message is not received before timeout.
@@ -139,19 +155,20 @@ public class ZmqStream implements Stream {
     SendReceiveThread.MessageWrapper result = null;
     try {
       result = this.receiveQueue.poll(timeout, TimeUnit.SECONDS);
-      if (result == null) {
-        throw new TimeoutException("The recieve queue timed out.");
-      }
     } catch (InterruptedException ie) {
-      ie.printStackTrace();
+      LOG.warn("Interrupted while polling receive queue", ie);
+      Thread.currentThread().interrupt();
+    }
+    if (result == null) {
+      throw new TimeoutException("The recieve queue timed out.");
     }
     return result.getMessage();
   }
 
-
   /**
    * Get a message that has been received. If the timeout is expired, return null.
    * Also put the resolution of the timer down to millis.
+   *
    * @param timeout time to wait for a message.
    * @return result, a protobuf Message
    */
@@ -159,17 +176,19 @@ public class ZmqStream implements Stream {
     SendReceiveThread.MessageWrapper result = null;
     try {
       result = this.receiveQueue.poll(timeout, TimeUnit.MILLISECONDS);
-      if (result == null) {
-        return null;
-      }
     } catch (InterruptedException ie) {
+      LOG.warn("Interrupted while polling receive queue", ie);
+      Thread.currentThread().interrupt();
+    }
+    if (result == null) {
       return null;
     }
     return result.getMessage();
-
   }
+
   /**
    * generate a random String, to correlate sent messages. with futures
+   *
    * @return a random String
    */
   private String generateId() {

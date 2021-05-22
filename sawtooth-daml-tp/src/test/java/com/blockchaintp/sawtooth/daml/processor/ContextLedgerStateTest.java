@@ -16,29 +16,33 @@
 
 package com.blockchaintp.sawtooth.daml.processor;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateValue;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.javatuples.Pair;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import net.bytebuddy.utility.RandomString;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;
@@ -112,8 +116,8 @@ public class ContextLedgerStateTest {
       ledgerState.setDamlState(firstKey.toByteString(), firstVal);
       ByteString damlCommandDedup = ledgerState.getDamlState(firstKey.toByteString());
       assertNotNull(damlCommandDedup);
-      assertTrue(String.format("%s != %s", firstVal, damlCommandDedup),
-          firstVal.equals(damlCommandDedup));
+      assertEquals(String.format("%s != %s", firstVal, damlCommandDedup),
+          firstVal,damlCommandDedup);
 
       DamlCommandDedupKey dneDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
           .setSubmitter(submitter).setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
@@ -124,7 +128,7 @@ public class ContextLedgerStateTest {
       DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
       Map<ByteString, ByteString> retMap =
           ledgerState.getDamlStates(Arrays.asList(stateKey.toByteString()));
-      assertTrue(firstVal.equals(retMap.get(stateKey.toByteString())));
+      assertEquals(firstVal, retMap.get(stateKey.toByteString()));
       try {
         ledgerState.getDamlState(emptyKey.toByteString());
       } catch (InvalidTransactionException exc) {
@@ -133,7 +137,6 @@ public class ContextLedgerStateTest {
         fail(String.format("Should not have issued an {}", exc.getClass().getName()));
       }
     } catch (InternalError | InvalidTransactionException exc) {
-      exc.printStackTrace();
       fail("No exceptions should be thrown: " + exc.getMessage());
     }
   }

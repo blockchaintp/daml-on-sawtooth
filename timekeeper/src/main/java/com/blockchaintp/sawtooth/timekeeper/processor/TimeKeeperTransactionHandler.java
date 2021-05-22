@@ -128,11 +128,11 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
     }
   }
 
-  private void setTimeState(final Context state, final String recordAddr, final TimeKeeperRecord record,
+  private void setTimeState(final Context state, final String recordAddr, final TimeKeeperRecord tkRecord,
       final TimeKeeperGlobalRecord globalRecord) throws InternalError, InvalidTransactionException {
     final Map<String, ByteString> setMap = new HashMap<>();
     setMap.put(Namespace.TIMEKEEPER_GLOBAL_RECORD, globalRecord.toByteString());
-    setMap.put(recordAddr, record.toByteString());
+    setMap.put(recordAddr, tkRecord.toByteString());
     state.setState(setMap.entrySet());
   }
 

@@ -47,29 +47,15 @@ public final class ParticipantTimeState {
   /**
    * Create a new ParticipantTimeState based on the provided record.
    *
-   * @param record the record of this participant
+   * @param tkRecord the record of this participant
    */
-  public ParticipantTimeState(final TimeKeeperRecord record) {
+  public ParticipantTimeState(final TimeKeeperRecord tkRecord) {
     this.history = new ArrayList<>();
-    this.currentTime = record.getLastCalculatedTime();
-    history.addAll(record.getTimeHistoryList());
-    this.version = record.getVersion();
-
-    if (TimeKeeperVersion.V_1_0.equals(this.version)) {
-      this.maxDeviation = DEFAULT_MAX_DEVIATION;
-      this.maxHistory = DEFAULT_MAX_HISTORY;
-    } else {
-      if (record.getMaxDeviation() != 0) {
-        this.maxDeviation = DEFAULT_MAX_DEVIATION;
-      } else {
-        this.maxDeviation = DEFAULT_MAX_DEVIATION;
-      }
-      if (record.getMaxHistory() != 0) {
-        this.maxHistory = DEFAULT_MAX_HISTORY;
-      } else {
-        this.maxHistory = DEFAULT_MAX_HISTORY;
-      }
-    }
+    this.currentTime = tkRecord.getLastCalculatedTime();
+    history.addAll(tkRecord.getTimeHistoryList());
+    this.version = tkRecord.getVersion();
+    this.maxDeviation = DEFAULT_MAX_DEVIATION;
+    this.maxHistory = DEFAULT_MAX_HISTORY;
   }
 
   /**

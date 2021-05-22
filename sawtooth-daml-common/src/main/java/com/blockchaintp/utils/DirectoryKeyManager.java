@@ -41,6 +41,8 @@ import sawtooth.sdk.signing.Secp256k1PublicKey;
  */
 public final class DirectoryKeyManager implements KeyManager {
 
+  private static final String PRIV_KEYFILE_EXT = ".priv";
+
   private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryKeyManager.class);
 
   private static final String DEFAULT = "default";
@@ -69,7 +71,7 @@ public final class DirectoryKeyManager implements KeyManager {
     this.keystorePath = new File(path);
     this.keystorePath.mkdirs();
     if (!this.keystorePath.isDirectory()) {
-      throw new RuntimeException(String.format("keyStorePath is not a directory: %s", this.keystorePath));
+      throw new KeyManagerRuntimeException(String.format("keyStorePath is not a directory: %s", this.keystorePath));
     }
     this.privateKeyMap = new HashMap<>();
     this.publicKeyMap = new HashMap<>();
@@ -77,16 +79,16 @@ public final class DirectoryKeyManager implements KeyManager {
 
   private void initialize() throws IOException {
     scanDirectory();
-    if (!this.privateKeyMap.containsKey(DEFAULT)) {
-      Context ctx = CryptoFactory.createContext(this.algorithmName);
-      PrivateKey privKey = ctx.newRandomPrivateKey();
-      this.privateKeyMap.put(DEFAULT, privKey);
-    }
-    if (!this.publicKeyMap.containsKey(DEFAULT)) {
-      Context ctx = CryptoFactory.createContext(this.algorithmName);
-      PublicKey publicKey = ctx.getPublicKey(this.privateKeyMap.get(DEFAULT));
-      this.publicKeyMap.put(DEFAULT, publicKey);
-    }
+    this.privateKeyMap.computeIfAbsent(DEFAULT, k -> {
+      var ctx = CryptoFactory.createContext(this.algorithmName);
+      var privKey = ctx.newRandomPrivateKey();
+      return this.privateKeyMap.put(DEFAULT, privKey);
+    });
+    this.publicKeyMap.computeIfAbsent(DEFAULT, k -> {
+      var ctx = CryptoFactory.createContext(this.algorithmName);
+      var publicKey = ctx.getPublicKey(this.privateKeyMap.get(k));
+      return this.publicKeyMap.put(k, publicKey);
+    });
     flushKeys();
   }
 
@@ -97,26 +99,26 @@ public final class DirectoryKeyManager implements KeyManager {
 
   private void flushPublicKeys() throws FileNotFoundException, IOException {
     for (Entry<String, PublicKey> entry : this.publicKeyMap.entrySet()) {
-      File keyDir = new File(keystorePath, entry.getKey());
+      var keyDir = new File(keystorePath, entry.getKey());
       if (!keyDir.exists()) {
         if (keyDir.mkdirs()) {
-          File privFile = new File(keyDir, entry.getKey() + ".pub");
-          FileOutputStream fos = new FileOutputStream(privFile);
-          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
-          fos.write(bs.toByteArray());
-          fos.flush();
-          fos.close();
+          var privFile = new File(keyDir, entry.getKey() + ".pub");
+          try (var fos = new FileOutputStream(privFile)) {
+            var bs = ByteString.copyFromUtf8(entry.getValue().hex());
+            fos.write(bs.toByteArray());
+            fos.flush();
+          }
         } else {
           throw new IOException("Failed to create directory " + keyDir.getAbsolutePath());
         }
       } else {
-        File privFile = new File(keyDir, entry.getKey() + ".pub");
+        var privFile = new File(keyDir, entry.getKey() + ".pub");
         if (!privFile.exists()) {
-          FileOutputStream fos = new FileOutputStream(privFile);
-          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
-          fos.write(bs.toByteArray());
-          fos.flush();
-          fos.close();
+          try (var fos = new FileOutputStream(privFile)) {
+            var bs = ByteString.copyFromUtf8(entry.getValue().hex());
+            fos.write(bs.toByteArray());
+            fos.flush();
+          }
         }
       }
     }
@@ -124,26 +126,26 @@ public final class DirectoryKeyManager implements KeyManager {
 
   private void flushPrivateKeys() throws FileNotFoundException, IOException {
     for (Entry<String, PrivateKey> entry : this.privateKeyMap.entrySet()) {
-      File keyDir = new File(keystorePath, entry.getKey());
+      var keyDir = new File(keystorePath, entry.getKey());
       if (!keyDir.exists()) {
         if (keyDir.mkdirs()) {
-          File privFile = new File(keyDir, entry.getKey() + ".priv");
-          FileOutputStream fos = new FileOutputStream(privFile);
-          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
-          fos.write(bs.toByteArray());
-          fos.flush();
-          fos.close();
+          var privFile = new File(keyDir, entry.getKey() + PRIV_KEYFILE_EXT);
+          try (var fos = new FileOutputStream(privFile)) {
+            var bs = ByteString.copyFromUtf8(entry.getValue().hex());
+            fos.write(bs.toByteArray());
+            fos.flush();
+          }
         } else {
           throw new IOException("Failed to create directory " + keyDir.getAbsolutePath());
         }
       } else {
-        File privFile = new File(keyDir, entry.getKey() + ".priv");
+        var privFile = new File(keyDir, entry.getKey() + PRIV_KEYFILE_EXT);
         if (!privFile.exists()) {
-          FileOutputStream fos = new FileOutputStream(privFile);
-          ByteString bs = ByteString.copyFromUtf8(entry.getValue().hex());
-          fos.write(bs.toByteArray());
-          fos.flush();
-          fos.close();
+          try (var fos = new FileOutputStream(privFile)) {
+            var bs = ByteString.copyFromUtf8(entry.getValue().hex());
+            fos.write(bs.toByteArray());
+            fos.flush();
+          }
         }
       }
     }
@@ -168,33 +170,32 @@ public final class DirectoryKeyManager implements KeyManager {
 
   private void getKeyPair(final File f) throws IOException {
     String id = f.getName();
-    File[] privateKeys = f.listFiles(new EndsWithFilter(".priv"));
+    File[] privateKeys = f.listFiles(new EndsWithFilter(PRIV_KEYFILE_EXT));
     if (privateKeys.length > 1) {
-      throw new RuntimeException(String.format("too many private key files in %s", f.getAbsolutePath()));
+      throw new KeyManagerRuntimeException(String.format("too many private key files in %s", f.getAbsolutePath()));
     }
     for (File p : privateKeys) {
       byte[] data = readKeyFile(p);
-      String hexPk = ByteString.copyFrom(data).toStringUtf8();
+      var hexPk = ByteString.copyFrom(data).toStringUtf8();
       PrivateKey pk = Secp256k1PrivateKey.fromHex(hexPk);
       this.privateKeyMap.put(id, pk);
     }
     File[] publicKeys = f.listFiles(new EndsWithFilter(".pub"));
     if (publicKeys.length > 1) {
-      throw new RuntimeException(String.format("too many private key files in %s", f.getAbsolutePath()));
+      throw new KeyManagerRuntimeException(String.format("too many private key files in %s", f.getAbsolutePath()));
     }
     for (File p : privateKeys) {
       byte[] data = readKeyFile(p);
-      String hexPk = ByteString.copyFrom(data).toStringUtf8();
+      var hexPk = ByteString.copyFrom(data).toStringUtf8();
       PublicKey pk = Secp256k1PublicKey.fromHex(hexPk);
       this.publicKeyMap.put(id, pk);
     }
   }
 
   private byte[] readKeyFile(final File p) throws IOException {
-    FileInputStream fis = new FileInputStream(p);
-    byte[] data = fis.readAllBytes();
-    fis.close();
-    return data;
+    try (var fis = new FileInputStream(p)) {
+      return fis.readAllBytes();
+    }
   }
 
   @Override
@@ -225,7 +226,7 @@ public final class DirectoryKeyManager implements KeyManager {
   public String sign(final String id, final byte[] item) {
     PrivateKey privKey = this.privateKeyMap.get(id);
     if (privKey == null) {
-      throw new RuntimeException(String.format("No private key with id %s is available", id));
+      throw new KeyManagerRuntimeException(String.format("No private key with id %s is available", id));
     }
     LOGGER.debug("Signing array of size={} for id={}", item.length, id);
     return getContextForKey(privKey).sign(item, privKey);
@@ -248,9 +249,9 @@ public final class DirectoryKeyManager implements KeyManager {
 
   @Override
   public boolean verify(final String id, final byte[] item, final String signature) {
-    PublicKey pubKey = this.getPublicKey(id);
+    var pubKey = this.getPublicKey(id);
     if (pubKey == null) {
-      throw new RuntimeException(String.format("No public key with id %s is available", id));
+      throw new KeyManagerRuntimeException(String.format("No public key with id %s is available", id));
     }
     return getContextForKey(pubKey).verify(signature, item, pubKey);
   }

@@ -63,23 +63,17 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j18-impl</artifactId>
-    </dependency>
-
-    <!-- Unit testing -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>log4j-api</artifactId>
     </dependency>
 
     <!-- DAML -->
     <dependency>
       <groupId>com.daml</groupId>
-      <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
+      <artifactId>participant-state-kvutils-java-proto</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
+      <artifactId>daml-lf-engine_${scala.lang.version}</artifactId>
     </dependency>
 
     <!-- BTP -->
@@ -97,6 +91,18 @@
     <dependency>
       <groupId>org.hyperledger.sawtooth</groupId>
       <artifactId>sawtooth-sdk-transaction-processor</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hyperledger.sawtooth</groupId>
+      <artifactId>sawtooth-sdk-protos</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.zeromq</groupId>
+      <artifactId>jeromq</artifactId>
     </dependency>
 
 

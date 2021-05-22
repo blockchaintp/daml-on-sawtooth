@@ -53,9 +53,11 @@ public class MTTransactionProcessor implements Runnable {
 
   private ExecutorService executor;
 
+  private boolean stopped;
+
   /**
-   * Constructs a MTTransactionProcessor utilizing the given transaction handler. NOTE: The
-   * TransactionHandler.apply() method must be thread-safe.
+   * Constructs a MTTransactionProcessor utilizing the given transaction handler.
+   * NOTE: The TransactionHandler.apply() method must be thread-safe.
    *
    * @param txHandler The handler to apply to this processor
    * @param address   the address of the ZMQ stream
@@ -65,17 +67,26 @@ public class MTTransactionProcessor implements Runnable {
     this.outQueue = new LinkedBlockingQueue<>();
     this.stream = new ZmqStream(address);
     this.executor = Executors.newWorkStealingPool();
+    this.stopped = false;
+  }
+
+  /**
+   * If true then the processor will come to a stop at the earliest possible time.
+   *
+   * @param state true then stop, false, then keep going.
+   */
+  public final void setStopped(final boolean state) {
+    this.stopped = state;
   }
 
   @Override
   public final void run() {
-    boolean stopped = false;
     this.register();
     long outStandingTx = 0;
     long enqueueCount = 0;
     long dequeueCount = 0;
-    while (!stopped) {
-      Message inMessage = this.stream.receiveNoException(1);
+    while (!this.stopped) {
+      var inMessage = this.stream.receiveNoException(1);
       while (inMessage != null) {
         enqueueCount += handleInbound(inMessage);
         Map.Entry<String, TpProcessResponse> outPair = outQueue.poll();
@@ -89,17 +100,16 @@ public class MTTransactionProcessor implements Runnable {
       }
       outStandingTx = enqueueCount - dequeueCount;
       if (enqueueCount % LOG_METRICS_INTERVAL == 0) {
-        LOGGER.trace("Enqueued {} transactions, Dequeued {} responses, outStanding tx={}",
-            enqueueCount, dequeueCount, outStandingTx);
+        LOGGER.trace("Enqueued {} transactions, Dequeued {} responses, outStanding tx={}", enqueueCount, dequeueCount,
+            outStandingTx);
       }
     }
-
+    this.executor.shutdown();
   }
 
   private int handleOutbound(final Map.Entry<String, TpProcessResponse> outPair) {
     if (outPair != null) {
-      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(),
-          outPair.getValue().toByteString());
+      this.stream.sendBack(Message.MessageType.TP_PROCESS_REQUEST, outPair.getKey(), outPair.getValue().toByteString());
       return 1;
     }
     return 0;
@@ -108,7 +118,7 @@ public class MTTransactionProcessor implements Runnable {
   private int handleInbound(final Message inMessage) {
     if (inMessage.getMessageType() == Message.MessageType.PING_REQUEST) {
       LOGGER.trace("Recieved Ping Message.");
-      PingResponse pingResponse = PingResponse.newBuilder().build();
+      var pingResponse = PingResponse.newBuilder().build();
       this.stream.sendBack(Message.MessageType.PING_RESPONSE, inMessage.getCorrelationId(),
           pingResponse.toByteString());
       return 0;
@@ -121,18 +131,19 @@ public class MTTransactionProcessor implements Runnable {
 
   private void register() {
     LOGGER.info("Registering TP");
-    boolean registered = false;
+    var registered = false;
     while (!registered) {
       try {
         TpRegisterRequest registerRequest = TpRegisterRequest.newBuilder()
-            .setFamily(this.handler.transactionFamilyName())
-            .addAllNamespaces(this.handler.getNameSpaces()).setVersion(this.handler.getVersion())
-            .setMaxOccupancy(Runtime.getRuntime().availableProcessors()).build();
-        Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST,
-            registerRequest.toByteString());
+            .setFamily(this.handler.transactionFamilyName()).addAllNamespaces(this.handler.getNameSpaces())
+            .setVersion(this.handler.getVersion()).setMaxOccupancy(Runtime.getRuntime().availableProcessors()).build();
+        Future fut = this.stream.send(Message.MessageType.TP_REGISTER_REQUEST, registerRequest.toByteString());
         fut.getResult();
         registered = true;
-      } catch (InterruptedException | ValidatorConnectionError e) {
+      } catch (InterruptedException e) {
+        LOGGER.warn("Interrupted while attempting to register with validator");
+        Thread.currentThread().interrupt();
+      } catch (ValidatorConnectionError e) {
         LOGGER.warn("Failed to register with validator, retrying...", e);
       }
     }
@@ -160,58 +171,66 @@ public class MTTransactionProcessor implements Runnable {
         TpProcessRequest transactionRequest = TpProcessRequest.parseFrom(this.message.getContent());
         Context state = new StreamContext(stream, transactionRequest.getContextId());
 
-        TpProcessResponse.Builder builder = TpProcessResponse.newBuilder();
-        try {
-          handler.apply(transactionRequest, state);
-          builder.setStatus(TpProcessResponse.Status.OK);
-        } catch (InvalidTransactionException ite) {
-          LOGGER.warn("Invalid Transaction: " + ite.getMessage());
+        TpProcessResponse builder = buildResponse(transactionRequest, state);
+        responses.put(Map.entry(message.getCorrelationId(), builder));
+      } catch (InvalidProtocolBufferException e) {
+        LOGGER.warn("InvalidProtocolBufferException!: {}", e.getMessage(), e);
+      } catch (InterruptedException e) {
+        LOGGER.warn("Interrupted while queueing a response!", e);
+        Thread.currentThread().interrupt();
+      }
+    }
+
+    private TpProcessResponse buildResponse(final TpProcessRequest transactionRequest, final Context state) {
+      var builder = TpProcessResponse.newBuilder();
+      try {
+        handler.apply(transactionRequest, state);
+        builder.setStatus(TpProcessResponse.Status.OK);
+      } catch (InvalidTransactionException ite) {
+        LOGGER.warn("Invalid Transaction: {}", ite.getMessage(), ite);
+        builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
+        builder.setMessage(ite.getMessage());
+        if (ite.getExtendedData() != null) {
+          builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
+        }
+      } catch (InternalError ie) {
+        LOGGER.warn("State Exception!: " + ie.getMessage(), ie);
+        builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+        builder.setMessage(ie.getMessage());
+        if (ie.getExtendedData() != null) {
+          builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
+        }
+      } catch (Exception e) {
+        processException(builder, e);
+      }
+      return builder.build();
+    }
+
+    private void processException(final TpProcessResponse.Builder builder, final Throwable t) {
+      Throwable cause = t.getCause();
+      if (null != cause) {
+        if (cause instanceof InvalidTransactionException) {
+          InvalidTransactionException ite = (InvalidTransactionException) cause;
+          LOGGER.info("Invalid Transaction: {}", ite.getMessage(), ite);
           builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
           builder.setMessage(ite.getMessage());
           if (ite.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
           }
-        } catch (InternalError ie) {
-          LOGGER.warn("State Exception!: " + ie.getMessage(), ie);
+        } else if (cause instanceof InternalError) {
+          InternalError ie = (InternalError) cause;
+          LOGGER.warn("Internal Error: {}", ie.getMessage(), ie);
           builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
           builder.setMessage(ie.getMessage());
           if (ie.getExtendedData() != null) {
             builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
           }
-        } catch (Throwable t) {
-          Throwable cause = t.getCause();
-          if (null != cause) {
-            if (cause instanceof InvalidTransactionException) {
-              InvalidTransactionException ite = (InvalidTransactionException) cause;
-              LOGGER.info("Invalid Transaction: " + ite.getMessage());
-              builder.setStatus(TpProcessResponse.Status.INVALID_TRANSACTION);
-              builder.setMessage(ite.getMessage());
-              if (ite.getExtendedData() != null) {
-                builder.setExtendedData(ByteString.copyFrom(ite.getExtendedData()));
-              }
-            } else if (cause instanceof InternalError) {
-              InternalError ie = (InternalError) cause;
-              LOGGER.warn("Internal Error: " + ie.getMessage());
-              builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
-              builder.setMessage(ie.getMessage());
-              if (ie.getExtendedData() != null) {
-                builder.setExtendedData(ByteString.copyFrom(ie.getExtendedData()));
-              }
-            }
-          } else {
-            builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
-            LOGGER.warn("Unknown Exception!: " + t.getMessage(), t);
-            builder.setMessage(t.getMessage());
-          }
         }
-        responses.put(Map.entry(message.getCorrelationId(), builder.build()));
-      } catch (InvalidProtocolBufferException e) {
-        LOGGER.warn("InvalidProtocolBufferException!: " + e.toString(), e);
-      } catch (InterruptedException e) {
-        LOGGER.warn("Interrupted while queueing a response!: " + e.toString(), e);
+      } else {
+        builder.setStatus(TpProcessResponse.Status.INTERNAL_ERROR);
+        LOGGER.warn("Unknown Exception!: " + t.getMessage(), t);
+        builder.setMessage(t.getMessage());
       }
     }
-
   }
-
 }

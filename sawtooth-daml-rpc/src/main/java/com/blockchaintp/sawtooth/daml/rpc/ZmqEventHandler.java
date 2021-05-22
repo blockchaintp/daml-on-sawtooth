@@ -18,7 +18,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+
 import com.blockchaintp.sawtooth.daml.EventConstants;
+import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.utils.SawtoothClientUtils;
@@ -27,6 +29,7 @@ import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +37,7 @@ import org.zeromq.ZFrame;
 import org.zeromq.ZLoop;
 import org.zeromq.ZMQ.PollItem;
 import org.zeromq.ZMsg;
+
 import io.reactivex.processors.UnicastProcessor;
 import sawtooth.sdk.messaging.Future;
 import sawtooth.sdk.messaging.Stream;
@@ -91,7 +95,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    */
   public ZmqEventHandler(final Stream argStream) {
     this.currentBlockNum = 0;
-    this.subscriptions = new ArrayList<EventSubscription>();
+    this.subscriptions = new ArrayList<>();
     this.damlEventBuffers = new HashMap<>();
     for (final String subject : SUBSCRIBE_SUBJECTS) {
       final EventSubscription evtSubscription =
@@ -102,6 +106,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     this.processors = Collections.synchronizedList(new ArrayList<>());
   }
 
+  @SuppressWarnings("java:S1141")
   private String getBlockIdByOffset(final Offset offset) {
     // Block 1 is the genesis block, While unlikely the first possible interesting
     // data is at block 2
@@ -112,39 +117,42 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     final Future resp =
         this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
 
-    String retBlockId = null;
     LOGGER.debug("Waiting for ClientBlockGetResponse for block_num: {}", blockNum);
     try {
-      ByteString result = null;
-      while (result == null) {
+      while (!Thread.interrupted()) {
+        ByteString result = null;
         try {
           result = resp.getResult(DEFAULT_TIMEOUT);
-          final ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
-          switch (response.getStatus()) {
-            case OK:
-              LOGGER.debug("ClientBlockGetResponse received...");
-              retBlockId = response.getBlock().getHeaderSignature();
-              break;
-            case NO_RESOURCE:
-              LOGGER.warn("NO_RESOURCE received from ClientBlockGetResponse: {}",
-                  response.toString());
-              return null;
-            case INTERNAL_ERROR:
-            case UNRECOGNIZED:
-            case INVALID_ID:
-            case STATUS_UNSET:
-            default:
-              LOGGER.warn("Invalid response received from ClientBlockGetByNumRequest: {}",
-                      response.getStatus());
-          }
         } catch (final TimeoutException exc) {
           LOGGER.warn("Still waiting for ClientBlockGetResponse...");
+          continue;
+        }
+        final ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
+        switch (response.getStatus()) {
+          case OK:
+            LOGGER.debug("ClientBlockGetResponse received...");
+            return response.getBlock().getHeaderSignature();
+          case NO_RESOURCE:
+            LOGGER.warn("NO_RESOURCE received from ClientBlockGetResponse: {}",
+                response);
+            return null;
+          case INTERNAL_ERROR:
+          case UNRECOGNIZED:
+          case INVALID_ID:
+          case STATUS_UNSET:
+          default:
+            LOGGER.warn("Invalid response received from ClientBlockGetByNumRequest: {}",
+                    response.getStatus());
+            return null;
         }
       }
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
+      if ((exc instanceof InterruptedException)) {
+        Thread.currentThread().interrupt();
+      }
       LOGGER.warn(exc.getMessage());
     }
-    return retBlockId;
+    return null;
   }
 
   private Map<String, String> eventAttributeMap(final Event evt) {
@@ -186,7 +194,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     return 0;
   }
 
-  protected void processMessage(final Message message) throws IOException {
+  protected void processMessage(final Message message) {
     LOGGER.debug("Processing Message");
     if (message.getMessageType().equals(MessageType.CLIENT_EVENTS)) {
       handleClientEvents(message);
@@ -265,12 +273,12 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
       List<ByteString> eventSoFar = damlEventBuffers.getOrDefault(entryIdStr, new ArrayList<>());
       String countStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE);
       String partStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE);
-      int part = Integer.valueOf(partStr);
+      var part = Integer.parseInt(partStr);
       eventSoFar.add(e.getData());
       if (part != eventSoFar.size() - 1) {
         LOGGER.warn("Expecting part = {} but we are at part {}", part, eventSoFar.size());
       }
-      int expected = Integer.valueOf(countStr);
+      var expected = Integer.parseInt(countStr);
       if (expected == eventSoFar.size()) {
         List<VersionedEnvelope> veList = new ArrayList<>();
         try {
@@ -283,11 +291,12 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
               evtData.size());
           final long blockNum = getCurrentBlockNum();
           final int subOffset = getCurrentSubOffset();
-          final Offset eventOffset = KVOffset.fromLong(blockNum, subOffset, 0);
+          final var eventOffset = KVOffset.fromLong(blockNum, subOffset, 0);
           incrementSubOffset();
-          final LedgerRecord lr = LedgerRecord.apply(eventOffset, entryIdVal, evtData);
+          final var lr = LedgerRecord.apply(eventOffset, entryIdVal, evtData);
           sendToProcessors(lr);
         } catch (InvalidProtocolBufferException ipbe) {
+          // deepcode ignore AlwaysEmptyCollection: <please specify a reason of ignoring this>
           LOGGER.warn("Exception parsing event, elemets={}", veList.size());
         }
         damlEventBuffers.remove(entryIdStr);
@@ -303,8 +312,9 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     }
   }
 
+  @SuppressWarnings("java:S1172")
   private void handleBlockCommitEvent(final Map<String, String> attrMap, final Event e) {
-    final long blockNum =
+    final var blockNum =
         Long.parseLong(attrMap.get(EventConstants.SAWTOOTH_BLOCK_NUM_EVENT_ATTRIBUTE));
     setCurrentBlockNum(blockNum);
     LOGGER.info("Received block-commit block_num={}", blockNum);
@@ -312,7 +322,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   @Override
   public void run() {
-    while (true) {
+    while (!Thread.interrupted()) {
       Message receivedMsg = null;
       try {
         receivedMsg = this.stream.receive(DEFAULT_TIMEOUT);
@@ -321,12 +331,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
         receivedMsg = null;
       }
       if (receivedMsg != null) {
-        try {
-          processMessage(receivedMsg);
-        } catch (final IOException exc) {
-          LOGGER.warn("Error unmarshalling message of type: {}",
-              receivedMsg.getMessageType());
-        }
+        processMessage(receivedMsg);
       }
     }
   }
@@ -344,6 +349,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    *
    * @param beginAfter the offset to begin subscribing after
    */
+  @SuppressWarnings("java:S1141")
   public void sendSubscribe(final Offset beginAfter) {
     if (this.subscribed) {
       LOGGER.warn("Attempted to subscribe twice");
@@ -370,27 +376,33 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
       while (result == null) {
         try {
           result = resp.getResult(DEFAULT_TIMEOUT);
-          final ClientEventsSubscribeResponse subscribeResponse =
-              ClientEventsSubscribeResponse.parseFrom(result);
-          switch (subscribeResponse.getStatus()) {
-            case UNKNOWN_BLOCK:
-              throw new RuntimeException(
-                  String.format("Unknown blockids in subscription: %s", lastBlockIds));
-            case INVALID_FILTER:
-              LOGGER.warn("InvalidFilters response received");
-            case STATUS_UNSET:
-            case OK:
-              this.subscribed = true;
-              LOGGER.info("Subscription response received...");
-              return;
-            default:
-          }
         } catch (final TimeoutException exc) {
           LOGGER.warn("Still waiting for subscription response...");
+          continue;
+        }
+        final ClientEventsSubscribeResponse subscribeResponse =
+            ClientEventsSubscribeResponse.parseFrom(result);
+        switch (subscribeResponse.getStatus()) {
+          case UNKNOWN_BLOCK:
+            throw new DamlSawtoothRuntimeException(
+                String.format("Unknown blockids in subscription: %s", lastBlockIds));
+          case INVALID_FILTER:
+            LOGGER.warn("InvalidFilters response received");
+            throw new DamlSawtoothRuntimeException(
+                String.format("InvalidFilters response received: %s", subscribeResponse.getResponseMessage()));
+          case STATUS_UNSET:
+          case OK:
+            this.subscribed = true;
+            LOGGER.info("Subscription response received...");
+            return;
+          default:
         }
       }
 
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
+      if (exc instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       LOGGER.warn(exc.getMessage());
     }
   }
@@ -407,6 +419,9 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
       resp.getResult();
       LOGGER.debug("Unsubscribed...");
     } catch (InterruptedException | ValidatorConnectionError exc) {
+      if (exc instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       LOGGER.warn(exc.getMessage());
     }
   }
@@ -417,6 +432,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * @param address the address of the state entry
    * @return the data at the address
    */
+  @SuppressWarnings("java:S1141")
   public ByteString getState(final String address) {
     final ClientStateGetRequest req =
         ClientStateGetRequest.newBuilder().setAddress(address).build();
@@ -424,39 +440,43 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
     LOGGER.debug("Waiting for ClientStateGetResponse for address {}", address);
     try {
-      ByteString result = null;
-      while (result == null) {
+      while (!Thread.interrupted()) {
+        ByteString result = null;
         try {
           result = resp.getResult(DEFAULT_TIMEOUT);
-          final ClientStateGetResponse response = ClientStateGetResponse.parseFrom(result);
-          switch (response.getStatus()) {
-            case OK:
-              final ByteString bs = response.getValue();
-              LOGGER
-                  .debug("ClientStateGetResponse received OK for {}={}", address, bs);
-              return bs;
-            case NO_RESOURCE:
-              LOGGER.warn("Address {} not currently set", address);
-              return null;
-            case INVALID_ADDRESS:
-            case NOT_READY:
-            case NO_ROOT:
-            case INTERNAL_ERROR:
-            case UNRECOGNIZED:
-            case STATUS_UNSET:
-            case INVALID_ROOT:
-            default:
-              LOGGER.warn(
-                  "Invalid response received from ClientStateGetRequest address={} response={}",
-                  address, response.getStatus());
-              return null;
-          }
         } catch (final TimeoutException exc) {
           LOGGER.warn("Still waiting for ClientStateGetResponse address={}", address);
+          continue;
+        }
+        final var response = ClientStateGetResponse.parseFrom(result);
+        switch (response.getStatus()) {
+          case OK:
+            final ByteString bs = response.getValue();
+            LOGGER
+                .debug("ClientStateGetResponse received OK for {}={}", address, bs);
+            return bs;
+          case NO_RESOURCE:
+            LOGGER.warn("Address {} not currently set", address);
+            return null;
+          case INVALID_ADDRESS:
+          case NOT_READY:
+          case NO_ROOT:
+          case INTERNAL_ERROR:
+          case UNRECOGNIZED:
+          case STATUS_UNSET:
+          case INVALID_ROOT:
+          default:
+            LOGGER.warn(
+                "Invalid response received from ClientStateGetRequest address={} response={}",
+                address, response.getStatus());
+            return null;
         }
       }
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
       LOGGER.warn(exc.getMessage());
+      if (exc instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
     }
     return null;
   }
