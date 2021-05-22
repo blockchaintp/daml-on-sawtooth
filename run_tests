@@ -4,6 +4,13 @@ RESULTS_FILE=$1
 
 TEST_COUNT=$(grep -c "\- \[[A-Z]" "$RESULTS_FILE")
 
+if [ "${TEST_COUNT}" -eq 0 ]; then
+  echo "1..1"
+  echo "not ok 1 abject failure"
+  echo "# Tests completely failed to run"
+  exit 0
+fi
+
 echo "1..${TEST_COUNT}"
 
 count=0
