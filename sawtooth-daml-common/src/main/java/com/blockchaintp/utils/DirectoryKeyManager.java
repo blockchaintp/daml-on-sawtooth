@@ -56,7 +56,7 @@ public final class DirectoryKeyManager implements KeyManager {
    * @throws IOException there was a problem initializing the key manager
    */
   public static KeyManager create(final String path) throws IOException {
-    DirectoryKeyManager kmgr = new DirectoryKeyManager(path, "secp256k1");
+    var kmgr = new DirectoryKeyManager(path, "secp256k1");
     kmgr.initialize();
     return kmgr;
   }
@@ -79,16 +79,16 @@ public final class DirectoryKeyManager implements KeyManager {
 
   private void initialize() throws IOException {
     scanDirectory();
-    this.privateKeyMap.computeIfAbsent(DEFAULT, k -> {
-      var ctx = CryptoFactory.createContext(this.algorithmName);
-      var privKey = ctx.newRandomPrivateKey();
-      return this.privateKeyMap.put(DEFAULT, privKey);
-    });
-    this.publicKeyMap.computeIfAbsent(DEFAULT, k -> {
-      var ctx = CryptoFactory.createContext(this.algorithmName);
-      var publicKey = ctx.getPublicKey(this.privateKeyMap.get(k));
-      return this.publicKeyMap.put(k, publicKey);
-    });
+    if (!this.privateKeyMap.containsKey(DEFAULT)) {
+      Context ctx = CryptoFactory.createContext(this.algorithmName);
+      PrivateKey privKey = ctx.newRandomPrivateKey();
+      this.privateKeyMap.put(DEFAULT, privKey);
+    }
+    if (!this.publicKeyMap.containsKey(DEFAULT)) {
+     Context ctx = CryptoFactory.createContext(this.algorithmName);
+      PublicKey publicKey = ctx.getPublicKey(this.privateKeyMap.get(DEFAULT));
+      this.publicKeyMap.put(DEFAULT, publicKey);
+    }
     flushKeys();
   }
 

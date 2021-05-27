@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupKey;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlCommandDedupValue;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
@@ -90,7 +91,7 @@ public class ContextLedgerStateTest {
 
       });
     } catch (InternalError | InvalidTransactionException e) {
-      throw new RuntimeException("Shouldn't ever get an exception when building the mock");
+      throw new DamlSawtoothRuntimeException("Shouldn't ever get an exception when building the mock");
     }
     return Pair.with(s, stateMap);
   }
