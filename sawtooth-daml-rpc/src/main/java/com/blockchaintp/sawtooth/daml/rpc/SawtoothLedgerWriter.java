@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.SawtoothDamlUtils;
+import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.sawtooth.daml.exceptions.SawtoothWriteException;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
@@ -118,7 +119,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     try {
       hostname = InetAddress.getLocalHost().getHostName();
     } catch (final UnknownHostException e) {
-      throw new RuntimeException(e);
+      throw new DamlSawtoothRuntimeException(e);
     }
 
     this.metrics = new Metrics(SharedMetricRegistries.getOrCreate(hostname));
@@ -170,9 +171,10 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         try {
           this.submitQueue.put(cp);
         } catch (final InterruptedException e) {
-          LOGGER.error("Interrupted while submitting transaction", e);
+          LOGGER.warn("Interrupted while submitting transaction", e);
           Thread.currentThread().interrupt();
-          throw new RuntimeException(e);
+          return Future.apply(() -> new SubmissionResult.InternalError("Interrupted while submitting transaction"),
+              ExecutionContext.global());
         }
       }
       DamlTransactionFragment txFrag = DamlTransactionFragment.newBuilder().setLogEntryId(logEntryId)
@@ -213,7 +215,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   private List<String> extractInputAddresses(final ByteString envelope) {
     final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope);
     if (either.isLeft()) {
-      throw new RuntimeException(new Exception(either.left().get()));
+      throw new DamlSawtoothRuntimeException(either.left().get());
     }
     final DamlSubmission submission = either.right().get();
     final List<DamlStateKey> inputs = submission.getInputDamlStateList();
@@ -230,7 +232,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   private List<String> extractOutputAddresses(final ByteString envelope) {
     final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope);
     if (either.isLeft()) {
-      throw new RuntimeException(new Exception(either.left().get()));
+      throw new DamlSawtoothRuntimeException(either.left().get());
     }
     final DamlSubmission submission = either.right().get();
     final Collection<DamlStateKey> collStateKeys = JavaConverters

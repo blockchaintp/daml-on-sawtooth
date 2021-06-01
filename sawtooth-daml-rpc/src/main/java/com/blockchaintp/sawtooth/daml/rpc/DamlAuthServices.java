@@ -30,6 +30,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.daml.ledger.api.auth.AuthService;
 import com.daml.ledger.api.auth.AuthServiceJWTPayload;
 import com.daml.ledger.api.auth.Claim;
@@ -84,7 +85,7 @@ public final class DamlAuthServices implements AuthService {
       this.ecdsaAlgorithm = Algorithm.ECDSA256(ecPublicKey, null);
     } catch (NoSuchAlgorithmException | InvalidParameterSpecException | InvalidKeySpecException e) {
       LOGGER.info("Unable to obtain public key data type");
-      throw new RuntimeException("Unable to construct DamlAuthServices", e);
+      throw new DamlSawtoothRuntimeException("Unable to construct DamlAuthServices", e);
     }
 
   }
