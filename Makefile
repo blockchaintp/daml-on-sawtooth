@@ -106,7 +106,7 @@ clean_test_integration:
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test.yaml \
 		rm -f || true
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test.yaml down \
-		-v --rmi all || true
+		-v || true
 
 .PHONY: analyze
 analyze: analyze_sonar
@@ -125,7 +125,7 @@ analyze_sonar: package
 clean: clean_dirs clean_test_integration
 	$(DOCKER_MVN) clean || true
 	docker-compose -f docker/docker-compose-build.yaml rm -f || true
-	docker-compose -f docker/docker-compose-build.yaml down -v --rmi all || true
+	docker-compose -f docker/docker-compose-build.yaml down -v || true
 
 .PHONY: archive
 archive: dirs
