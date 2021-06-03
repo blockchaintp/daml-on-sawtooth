@@ -30,6 +30,21 @@ MAVEN_REVISION != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
 		echo $(VERSION); \
 	fi
 
+MAVEN_REPO_BASE ?= https://dev.catenasys.com/repository/catenasys-maven
+MAVEN_REPO_TARGET != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
+	(echo "$(LONG_VERSION)" | grep -q dirty); then \
+		echo snapshots; \
+	else \
+		echo releases; \
+	fi
+MAVEN_UPDATE_RELEASE_INFO != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
+	(echo "$(LONG_VERSION)" | grep -q dirty); then \
+		echo false; \
+	else \
+		echo true; \
+	fi
+MAVEN_DEPLOY_TARGET = $(MAVEN_REPO_TARGET)::default::$(MAVEN_REPO_BASE)-$(MAVEN_REPO_TARGET)
+
 TOOLCHAIN := docker run --rm -v $(HOME)/.m2/repository:/root/.m2/repository \
 		-v $(MAVEN_SETTINGS):/root/.m2/settings.xml -v `pwd`:/project/daml-on-sawtooth \
 		daml-on-sawtooth-build-local:$(ISOLATION_ID)
@@ -135,4 +150,5 @@ archive: dirs
 .PHONY: publish
 publish: build_toolchain
 	$(DOCKER_MVN) -Drevision=0.0.0 versions:set -DnewVersion=$(MAVEN_REVISION)
-	$(DOCKER_MVN) clean deploy
+	$(DOCKER_MVN) clean deploy -DupdateReleaseInfo=$(MAVEN_UPDATE_RELEASE_INFO) \
+		-DaltDeploymentRepository=$(MAVEN_DEPLOY_TARGET)
