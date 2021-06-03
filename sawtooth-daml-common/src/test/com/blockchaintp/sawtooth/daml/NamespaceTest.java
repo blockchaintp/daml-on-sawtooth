@@ -15,13 +15,11 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import com.blockchaintp.sawtooth.timekeeper.Namespace;
-
 public class NamespaceTest {
 
   @Test
   public void testMakeAddress() {
-    String testString = Namespace.makeAddress(Namespace.getNameSpace(), "somerandomString");
+    var testString = Namespace.makeAddress(Namespace.getNameSpace(), "somerandomString");
     assertTrue(testString.length() == 70);
   }
 
