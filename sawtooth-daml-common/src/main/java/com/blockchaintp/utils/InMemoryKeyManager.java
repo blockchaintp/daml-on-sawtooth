@@ -14,7 +14,6 @@ package com.blockchaintp.utils;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 
 import sawtooth.sdk.signing.Context;
 import sawtooth.sdk.signing.CryptoFactory;
@@ -34,11 +33,10 @@ public final class InMemoryKeyManager implements KeyManager {
    * @return KeyManager.
    */
   public static KeyManager create() {
-    Context ctx = CryptoFactory.createContext("secp256k1");
-    PrivateKey privKey = ctx.newRandomPrivateKey();
-    PublicKey pubKey = ctx.getPublicKey(privKey);
-    KeyManager kmgr = new InMemoryKeyManager(privKey, pubKey);
-    return kmgr;
+    var ctx = CryptoFactory.createContext("secp256k1");
+    var privKey = ctx.newRandomPrivateKey();
+    var pubKey = ctx.getPublicKey(privKey);
+    return new InMemoryKeyManager(privKey, pubKey);
   }
 
   /**
@@ -89,7 +87,7 @@ public final class InMemoryKeyManager implements KeyManager {
   public String sign(final String id, final byte[] item) {
     PrivateKey privKey = this.privateKeyMap.get(id);
     if (privKey == null) {
-      throw new DamlSawtoothRuntimeException(String.format("No private key with id %s is available", id));
+      throw new KeyManagerRuntimeException(String.format("No private key with id %s is available", id));
     }
     return getContextForKey(privKey).sign(item, privKey);
   }
@@ -113,7 +111,7 @@ public final class InMemoryKeyManager implements KeyManager {
   public boolean verify(final String id, final byte[] item, final String signature) {
     PublicKey pubKey = this.getPublicKey(id);
     if (pubKey == null) {
-      throw new DamlSawtoothRuntimeException(String.format("No public key with id %s is available", id));
+      throw new KeyManagerRuntimeException(String.format("No public key with id %s is available", id));
     }
     return getContextForKey(pubKey).verify(signature, item, pubKey);
   }
