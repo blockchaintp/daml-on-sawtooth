@@ -96,6 +96,11 @@
     <!-- BTP -->
     <dependency>
       <groupId>daml-on-sawtooth</groupId>
+      <artifactId>sawtooth-mttp</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>daml-on-sawtooth</groupId>
       <artifactId>sawtooth-daml-common</artifactId>
       <version>${project.parent.version}</version>
     </dependency>

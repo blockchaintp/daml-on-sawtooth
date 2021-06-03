@@ -98,6 +98,7 @@
     <module>sawtooth-daml-tp</module>
     <module>sawtooth-daml-rpc</module>
     <module>sawtooth-daml-common</module>
+    <module>sawtooth-mttp</module>
     <module>build-tools</module>
   </modules>
 
