@@ -186,7 +186,7 @@ public final class SawtoothClientUtils {
    * @throws InternalError for any serious error
    */
   public static ByteString wrap(final ByteString value) throws InternalError {
-    ByteString data = compressByteString(value);
+    var data = compressByteString(value);
     String contentHash = getHash(data.toByteArray());
     return VersionedEnvelope.newBuilder().setData(data).setParts(1).setPartNumber(0).setContentHash(contentHash).build()
         .toByteString();
@@ -231,7 +231,7 @@ public final class SawtoothClientUtils {
    * @throws InternalError a serious parse error
    */
   public static List<ByteString> wrapMultipart(final ByteString value, final int maxPartSize) throws InternalError {
-    ByteString compressedData = compressByteString(value);
+    var compressedData = compressByteString(value);
     String contentHash = getHash(compressedData.toByteArray());
     List<ByteString> retList = new ArrayList<>();
     byte[] compressedBytes = compressedData.toByteArray();
@@ -308,7 +308,7 @@ public final class SawtoothClientUtils {
     if (input.size() == 0) {
       return ByteString.EMPTY;
     }
-    final Deflater deflater = new Deflater();
+    final var deflater = new Deflater();
     deflater.setLevel(Deflater.BEST_SPEED);
     final byte[] inputBytes = input.toByteArray();
 
