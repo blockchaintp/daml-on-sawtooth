@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException;
 
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
-import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
+import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.participant.state.kvutils.KVOffset;

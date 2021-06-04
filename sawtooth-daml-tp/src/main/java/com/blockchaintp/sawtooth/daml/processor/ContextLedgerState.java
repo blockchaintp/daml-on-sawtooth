@@ -27,7 +27,7 @@ import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
-import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
+import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.daml.ledger.validator.LedgerStateOperations;
