@@ -1,4 +1,4 @@
-package com.blockchaintp.utils;
+package com.blockchaintp.keymanager;
 
 /**
  * Unchecked Exceptions specific to KeyManagers.

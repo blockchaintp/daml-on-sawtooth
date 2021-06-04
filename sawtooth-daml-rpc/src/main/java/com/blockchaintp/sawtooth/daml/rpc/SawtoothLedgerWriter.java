@@ -23,7 +23,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
-import com.blockchaintp.utils.KeyManager;
+import com.blockchaintp.keymanager.KeyManager;
 import com.blockchaintp.utils.SawtoothClientUtils;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.ledger.api.health.HealthStatus;

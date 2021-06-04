@@ -20,8 +20,8 @@ import org.slf4j.LoggerFactory;
 
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.sawtooth.timekeeper.processor.TimeKeeperTransactionHandler;
-import com.blockchaintp.utils.InMemoryKeyManager;
-import com.blockchaintp.utils.KeyManager;
+import com.blockchaintp.keymanager.InMemoryKeyManager;
+import com.blockchaintp.keymanager.KeyManager;
 import com.blockchaintp.utils.LogUtils;
 
 import sawtooth.sdk.messaging.Stream;

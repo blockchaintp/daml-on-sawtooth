@@ -24,6 +24,7 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 import com.blockchaintp.sawtooth.daml.protobuf.VersionedEnvelope;
+import com.blockchaintp.keymanager.KeyManager;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 

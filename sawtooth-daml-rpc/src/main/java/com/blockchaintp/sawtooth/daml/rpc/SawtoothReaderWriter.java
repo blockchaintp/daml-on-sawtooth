@@ -2,8 +2,8 @@ package com.blockchaintp.sawtooth.daml.rpc;
 
 import java.io.IOException;
 
-import com.blockchaintp.utils.DirectoryKeyManager;
-import com.blockchaintp.utils.KeyManager;
+import com.blockchaintp.keymanager.DirectoryKeyManager;
+import com.blockchaintp.keymanager.KeyManager;
 import com.daml.ledger.api.health.HealthStatus;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;

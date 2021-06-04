@@ -8,7 +8,7 @@ import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmissionBatch
 import com.google.protobuf.ByteString;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
-import com.blockchaintp.utils.KeyManager;
+import com.blockchaintp.keymanager.KeyManager;
 import sawtooth.sdk.protobuf.Transaction;
 import scala.Tuple4;
 

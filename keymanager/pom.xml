@@ -23,9 +23,9 @@
     <artifactId>daml-on-sawtooth</artifactId>
     <version>${revision}</version>
   </parent>
-  <artifactId>sawtooth-daml-common</artifactId>
-  <name>sawtooth-daml-common</name>
-  <description>Common libraries and utilities for DAML on Sawtooth</description>
+  <artifactId>keymanager</artifactId>
+  <name>keymanager</name>
+  <description>Public/Private Key Manager</description>
 
   <build>
     <plugins>
@@ -50,41 +50,14 @@
       <artifactId>log4j-api</artifactId>
     </dependency>
 
-    <!-- DAML -->
-    <dependency>
-      <groupId>com.daml</groupId>
-      <artifactId>participant-state-kvutils-java-proto</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.daml</groupId>
-      <artifactId>daml-lf-engine_${scala.lang.version}</artifactId>
-    </dependency>
-
-    <!-- BTP -->
-    <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>daml-on-sawtooth-protobufs</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>keymanager</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-
     <!-- Hyperledger Sawtooth -->
     <dependency>
       <groupId>org.hyperledger.sawtooth</groupId>
-      <artifactId>sawtooth-sdk-transaction-processor</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.hyperledger.sawtooth</groupId>
-      <artifactId>sawtooth-sdk-protos</artifactId>
+      <artifactId>sawtooth-sdk-signing</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
     </dependency>
-
   </dependencies>
 </project>
