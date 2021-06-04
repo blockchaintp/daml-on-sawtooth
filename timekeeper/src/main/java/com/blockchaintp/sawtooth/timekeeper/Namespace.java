@@ -11,7 +11,7 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.timekeeper;
 
-import com.blockchaintp.utils.SawtoothClientUtils;
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 
 /**
  * Utility class dealing with the common namespace functions and values with

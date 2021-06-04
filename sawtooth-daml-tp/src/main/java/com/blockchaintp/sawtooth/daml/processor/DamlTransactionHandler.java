@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
@@ -27,7 +29,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
-import com.blockchaintp.utils.SawtoothClientUtils;
+import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.caching.Cache;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -98,7 +100,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     final LedgerState<String> ledgerState = new ContextLedgerState(state);
 
     try {
-      ByteString unwrappedPayload = SawtoothClientUtils.unwrap(tpProcessRequest.getPayload());
+      ByteString unwrappedPayload = VersionedEnvelopeUtils.unwrap(tpProcessRequest.getPayload());
       final DamlOperationBatch batch = DamlOperationBatch.parseFrom(unwrappedPayload);
       LOGGER.info("Processing {} operations for {}", batch.getOperationsList().size(), tpProcessRequest.getSignature());
       for (final DamlOperation operation : batch.getOperationsList()) {

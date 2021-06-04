@@ -11,7 +11,7 @@
 ------------------------------------------------------------------------------*/
 package com.blockchaintp.sawtooth.daml;
 
-import com.blockchaintp.utils.SawtoothClientUtils;
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.google.protobuf.ByteString;
 
 /**

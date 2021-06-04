@@ -1,5 +1,8 @@
 package com.blockchaintp.sawtooth.daml.rpc;
 
+import static sawtooth.sdk.processor.Utils.hash512;
+import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -13,6 +16,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.SawtoothDamlUtils;
@@ -24,7 +28,6 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.keymanager.KeyManager;
-import com.blockchaintp.utils.SawtoothClientUtils;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.ledger.api.health.HealthStatus;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
@@ -151,7 +154,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       var start = 0;
       List<ByteString> fragments = new ArrayList<>();
       byte[] envelopeBytes = tx.toByteArray();
-      String contentHash = SawtoothClientUtils.getHash(envelopeBytes);
+      String contentHash = hash512(envelopeBytes);
       while (start < envelopeBytes.length) {
         byte[] fragBytes = Arrays.copyOfRange(envelopeBytes, start,
             Math.min(start + DEFAULT_TX_FRAGMENT_SIZE, envelopeBytes.length));
@@ -223,7 +226,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     final List<String> addresses = inputs.stream().map(damlStateKey -> {
       return Namespace.makeDamlStateAddress(this.kvCommitting.packDamlStateKey(damlStateKey));
     }).collect(Collectors.toList());
-    addresses.add(com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD);
+    addresses.add(TIMEKEEPER_GLOBAL_RECORD);
     addresses.add(Namespace.DAML_STATE_VALUE_NS);
     addresses.add(Namespace.DAML_TX_NS);
     return addresses;
@@ -336,8 +339,8 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           LOGGER.debug("Accumulated {} ops", accumulator.size());
         }
 
-        if (accumulator.size() > 0) {
-          final Transaction sawTx = accumulatorToTransaction(accumulator);
+        if (!accumulator.isEmpty()) {
+          final var sawTx = accumulatorToTransaction(accumulator);
           batchCounter++;
           LOGGER.debug("Sending batch {} opCount={} ", batchCounter, accumulator.size());
           final Batch sawBatch = SawtoothClientUtils.makeSawtoothBatch(keyManager, List.of(sawTx));
@@ -358,7 +361,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
                 }
               }
               LOGGER.trace("Flushed {} futures", flushCount);
-              if (outStandingFutures.size() == 0 || flushCount > 0) {
+              if (outStandingFutures.isEmpty()|| flushCount > 0) {
                 accepted = outStandingFutures.offer(submitBatch);
               }
             } catch (ValidatorConnectionError | InterruptedException | SawtoothWriteException
@@ -382,7 +385,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         throws InterruptedException, ValidatorConnectionError, InvalidProtocolBufferException, SawtoothWriteException {
       final ByteString result = f.getResult();
       final ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
-      final Status status = getResponse.getStatus();
+      final var status = getResponse.getStatus();
       switch (status) {
         case OK:
           LOGGER.debug("ClientBatchSubmit response is OK");

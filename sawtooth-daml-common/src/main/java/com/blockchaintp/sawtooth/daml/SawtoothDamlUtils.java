@@ -2,10 +2,11 @@ package com.blockchaintp.sawtooth.daml;
 
 import java.util.Collection;
 import java.util.List;
-import com.blockchaintp.utils.SawtoothClientUtils;
+
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmissionBatch;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmissionBatch.CorrelatedSubmission;
 import com.google.protobuf.ByteString;
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperationBatch;
 import com.blockchaintp.keymanager.KeyManager;

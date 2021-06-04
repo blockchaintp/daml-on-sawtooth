@@ -12,6 +12,7 @@
 
 package com.blockchaintp.sawtooth.timekeeper.processor;
 
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.timekeeper.EventConstants;
 import com.blockchaintp.sawtooth.timekeeper.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
@@ -19,7 +20,7 @@ import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperEvent;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperRecord;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
-import com.blockchaintp.utils.SawtoothClientUtils;
+import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
@@ -84,7 +85,7 @@ public final class TimeKeeperTransactionHandler implements TransactionHandler {
     basicRequestChecks(txRequest);
     final String signerPublicKey = txRequest.getHeader().getSignerPublicKey();
     try {
-      final ByteString unwrappedPayload = SawtoothClientUtils.unwrap(txRequest.getPayload());
+      final ByteString unwrappedPayload = VersionedEnvelopeUtils.unwrap(txRequest.getPayload());
       final TimeKeeperUpdate update = TimeKeeperUpdate.parseFrom(unwrappedPayload);
 
       final String partRecordAddr = Namespace.makeAddress(this.namespace, signerPublicKey);

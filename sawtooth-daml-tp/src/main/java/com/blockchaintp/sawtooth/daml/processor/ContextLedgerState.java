@@ -14,6 +14,7 @@
 
 package com.blockchaintp.sawtooth.daml.processor;
 
+import static sawtooth.sdk.processor.Utils.hash512;
 import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
@@ -29,7 +32,7 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
-import com.blockchaintp.utils.SawtoothClientUtils;
+import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.daml.ledger.validator.LedgerStateOperations;
 import com.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
@@ -129,7 +132,7 @@ public final class ContextLedgerState implements LedgerState<String> {
             }
           }
         }
-        ByteString val = SawtoothClientUtils.unwrapMultipart(veList);
+        ByteString val = VersionedEnvelopeUtils.unwrapMultipart(veList);
         LOGGER.debug("Read address={} parts={} size={}", addr, veList.size(),
             val.toByteArray().length);
         return val;
@@ -174,7 +177,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         }
         index++;
       }
-      String assembledHash = SawtoothClientUtils.getHash(accumulatedBytes);
+      String assembledHash = hash512(accumulatedBytes);
       if (assembledHash.equals(contentHash)) {
         LOGGER.trace("Assembled hash looks good {} = {}", contentHash, assembledHash);
       } else {
@@ -215,7 +218,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     for (final Entry<ByteString, ByteString> e : entries) {
       final ByteString key = e.getKey();
       List<ByteString> parts =
-          SawtoothClientUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
+          VersionedEnvelopeUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
       int index = 0;
       int size = 0;
       for (ByteString p : parts) {
@@ -369,7 +372,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   @Override
   public String sendLogEvent(final ByteString entryId, final ByteString entry)
       throws InternalError, InvalidTransactionException {
-    List<ByteString> multipart = SawtoothClientUtils.wrapMultipart(entry, DEFAULT_MAX_VAL_SIZE);
+    List<ByteString> multipart = VersionedEnvelopeUtils.wrapMultipart(entry, DEFAULT_MAX_VAL_SIZE);
     int part = 0;
     if (multipart.size() <= 1) {
       for (ByteString bs : multipart) {

@@ -210,11 +210,6 @@
       </dependency>
       <dependency>
         <groupId>com.daml</groupId>
-        <artifactId>participant-state_${scala.lang.version}</artifactId>
-        <version>${daml.sdk.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.daml</groupId>
         <artifactId>ledger-api-domain_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>

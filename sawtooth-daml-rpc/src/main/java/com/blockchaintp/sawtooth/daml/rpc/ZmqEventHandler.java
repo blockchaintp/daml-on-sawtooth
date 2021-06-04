@@ -19,11 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
-import com.blockchaintp.utils.SawtoothClientUtils;
+import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.daml.ledger.participant.state.kvutils.KVOffset;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;
@@ -257,7 +258,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
           VersionedEnvelope elem = VersionedEnvelope.parseFrom(chunk);
           veList.add(elem);
         }
-        ByteString evtData = SawtoothClientUtils.unwrapMultipart(veList);
+        ByteString evtData = VersionedEnvelopeUtils.unwrapMultipart(veList);
         LOGGER.debug("Combined {} event fragments into an event of size {}", addresses.length,
             evtData.size());
         final long blockNum = getCurrentBlockNum();
@@ -286,7 +287,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
             VersionedEnvelope elem = VersionedEnvelope.parseFrom(bs);
             veList.add(elem);
           }
-          ByteString evtData = SawtoothClientUtils.unwrapMultipart(veList);
+          ByteString evtData = VersionedEnvelopeUtils.unwrapMultipart(veList);
           LOGGER.debug("Combined {} event fragments into an event of size {}", eventSoFar.size(),
               evtData.size());
           final long blockNum = getCurrentBlockNum();

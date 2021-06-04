@@ -20,11 +20,11 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperUpdate;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperVersion;
 import com.blockchaintp.keymanager.KeyManager;
-import com.blockchaintp.utils.SawtoothClientUtils;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
