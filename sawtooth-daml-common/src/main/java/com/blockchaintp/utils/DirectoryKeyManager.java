@@ -14,13 +14,10 @@ package com.blockchaintp.utils;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import com.google.protobuf.ByteString;
@@ -28,8 +25,6 @@ import com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sawtooth.sdk.signing.Context;
-import sawtooth.sdk.signing.CryptoFactory;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.PublicKey;
 import sawtooth.sdk.signing.Secp256k1PrivateKey;
@@ -39,13 +34,13 @@ import sawtooth.sdk.signing.Secp256k1PublicKey;
  * The DirectoryKeyManager maintains a collection of keys in a specific
  * filesystem path.
  */
-public final class DirectoryKeyManager implements KeyManager {
+public final class DirectoryKeyManager extends BaseKeyManager {
+
+  private static final String SECP256K1 = "secp256k1";
 
   private static final String PRIV_KEYFILE_EXT = ".priv";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryKeyManager.class);
-
-  private static final String DEFAULT = "default";
 
   /**
    * Creates an instance of secp256k1 based manager with a random private key and
@@ -56,39 +51,29 @@ public final class DirectoryKeyManager implements KeyManager {
    * @throws IOException there was a problem initializing the key manager
    */
   public static KeyManager create(final String path) throws IOException {
-    var kmgr = new DirectoryKeyManager(path, "secp256k1");
+    var kmgr = new DirectoryKeyManager(path, SECP256K1);
     kmgr.initialize();
     return kmgr;
   }
 
   private final File keystorePath;
-  private final Map<String, PrivateKey> privateKeyMap;
-  private final Map<String, PublicKey> publicKeyMap;
   private final String algorithmName;
 
-  private DirectoryKeyManager(final String path, final String algoName) throws IOException {
+  private DirectoryKeyManager(final String path, final String algoName) {
+    super();
     this.algorithmName = algoName;
     this.keystorePath = new File(path);
+    LOGGER.info("Created DirectoryKeyManager at {}, please make sure this directory is secure", path);
     this.keystorePath.mkdirs();
     if (!this.keystorePath.isDirectory()) {
       throw new KeyManagerRuntimeException(String.format("keyStorePath is not a directory: %s", this.keystorePath));
     }
-    this.privateKeyMap = new HashMap<>();
-    this.publicKeyMap = new HashMap<>();
   }
 
+  @SuppressWarnings("java:S3824")
   private void initialize() throws IOException {
     scanDirectory();
-    if (!this.privateKeyMap.containsKey(DEFAULT)) {
-      Context ctx = CryptoFactory.createContext(this.algorithmName);
-      PrivateKey privKey = ctx.newRandomPrivateKey();
-      this.privateKeyMap.put(DEFAULT, privKey);
-    }
-    if (!this.publicKeyMap.containsKey(DEFAULT)) {
-     Context ctx = CryptoFactory.createContext(this.algorithmName);
-      PublicKey publicKey = ctx.getPublicKey(this.privateKeyMap.get(DEFAULT));
-      this.publicKeyMap.put(DEFAULT, publicKey);
-    }
+    fillRandomPrivateKey(this.algorithmName);
     flushKeys();
   }
 
@@ -97,8 +82,8 @@ public final class DirectoryKeyManager implements KeyManager {
     flushPublicKeys();
   }
 
-  private void flushPublicKeys() throws FileNotFoundException, IOException {
-    for (Entry<String, PublicKey> entry : this.publicKeyMap.entrySet()) {
+  private void flushPublicKeys() throws IOException {
+    for (Entry<String, PublicKey> entry : publicKeys()) {
       var keyDir = new File(keystorePath, entry.getKey());
       if (!keyDir.exists()) {
         if (keyDir.mkdirs()) {
@@ -124,8 +109,8 @@ public final class DirectoryKeyManager implements KeyManager {
     }
   }
 
-  private void flushPrivateKeys() throws FileNotFoundException, IOException {
-    for (Entry<String, PrivateKey> entry : this.privateKeyMap.entrySet()) {
+  private void flushPrivateKeys() throws IOException {
+    for (Entry<String, PrivateKey> entry : privateKeys()) {
       var keyDir = new File(keystorePath, entry.getKey());
       if (!keyDir.exists()) {
         if (keyDir.mkdirs()) {
@@ -164,11 +149,11 @@ public final class DirectoryKeyManager implements KeyManager {
       }
     }
     for (File f : keyDirectories) {
-      getKeyPair(f);
+      loadKeyPair(f);
     }
   }
 
-  private void getKeyPair(final File f) throws IOException {
+  private void loadKeyPair(final File f) throws IOException {
     String id = f.getName();
     File[] privateKeys = f.listFiles(new EndsWithFilter(PRIV_KEYFILE_EXT));
     if (privateKeys.length > 1) {
@@ -178,7 +163,7 @@ public final class DirectoryKeyManager implements KeyManager {
       byte[] data = readKeyFile(p);
       var hexPk = ByteString.copyFrom(data).toStringUtf8();
       PrivateKey pk = Secp256k1PrivateKey.fromHex(hexPk);
-      this.privateKeyMap.put(id, pk);
+      putKey(id, pk);
     }
     File[] publicKeys = f.listFiles(new EndsWithFilter(".pub"));
     if (publicKeys.length > 1) {
@@ -188,7 +173,7 @@ public final class DirectoryKeyManager implements KeyManager {
       byte[] data = readKeyFile(p);
       var hexPk = ByteString.copyFrom(data).toStringUtf8();
       PublicKey pk = Secp256k1PublicKey.fromHex(hexPk);
-      this.publicKeyMap.put(id, pk);
+      putKey(id, pk);
     }
   }
 
@@ -196,69 +181,6 @@ public final class DirectoryKeyManager implements KeyManager {
     try (var fis = new FileInputStream(p)) {
       return fis.readAllBytes();
     }
-  }
-
-  @Override
-  public PublicKey getPublicKey() {
-    return this.publicKeyMap.get(DEFAULT);
-  }
-
-  @Override
-  public String getPublicKeyInHex() {
-    return this.getPublicKey().hex();
-  }
-
-  private Context getContextForKey(final PublicKey key) {
-    return CryptoFactory.createContext(key.getAlgorithmName());
-  }
-
-  private Context getContextForKey(final PrivateKey key) {
-    LOGGER.debug("Getting context for algorithm={}", key.getAlgorithmName());
-    return CryptoFactory.createContext(key.getAlgorithmName());
-  }
-
-  @Override
-  public String sign(final byte[] item) {
-    return sign(DEFAULT, item);
-  }
-
-  @Override
-  public String sign(final String id, final byte[] item) {
-    PrivateKey privKey = this.privateKeyMap.get(id);
-    if (privKey == null) {
-      throw new KeyManagerRuntimeException(String.format("No private key with id %s is available", id));
-    }
-    LOGGER.debug("Signing array of size={} for id={}", item.length, id);
-    return getContextForKey(privKey).sign(item, privKey);
-  }
-
-  @Override
-  public PublicKey getPublicKey(final String id) {
-    return this.publicKeyMap.get(id);
-  }
-
-  @Override
-  public String getPublicKeyInHex(final String id) {
-    return getPublicKey(id).hex();
-  }
-
-  @Override
-  public boolean verify(final byte[] item, final String signature) {
-    return verify(DEFAULT, item, signature);
-  }
-
-  @Override
-  public boolean verify(final String id, final byte[] item, final String signature) {
-    var pubKey = this.getPublicKey(id);
-    if (pubKey == null) {
-      throw new KeyManagerRuntimeException(String.format("No public key with id %s is available", id));
-    }
-    return getContextForKey(pubKey).verify(signature, item, pubKey);
-  }
-
-  @Override
-  public boolean verify(final PublicKey pubKey, final byte[] item, final String signature) {
-    return getContextForKey(pubKey).verify(signature, item, pubKey);
   }
 
   /**
