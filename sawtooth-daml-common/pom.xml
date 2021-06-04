@@ -27,11 +27,38 @@
   <name>sawtooth-daml-common</name>
   <description>Common libraries and utilities for DAML on Sawtooth</description>
 
+  <properties>
+    <proto.directory>src/main/protos</proto.directory>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}target/generated-sources/protobuf/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -61,11 +88,6 @@
     </dependency>
 
     <!-- BTP -->
-    <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>daml-on-sawtooth-protobufs</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
     <dependency>
       <groupId>daml-on-sawtooth</groupId>
       <artifactId>keymanager</artifactId>

@@ -93,7 +93,6 @@
   </distributionManagement>
 
   <modules>
-    <module>daml-on-sawtooth-protobufs</module>
     <module>timekeeper</module>
     <module>keymanager</module>
     <module>sawtooth-utils</module>

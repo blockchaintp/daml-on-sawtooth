@@ -119,10 +119,5 @@
       <artifactId>sawtooth-utils</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
-    <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>daml-on-sawtooth-protobufs</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
   </dependencies>
 </project>
