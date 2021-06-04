@@ -202,15 +202,13 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
+      <groupId>com.blockchaintp</groupId>
       <artifactId>timekeeper</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
     <dependency>
       <groupId>org.hyperledger.sawtooth</groupId>
       <artifactId>sawtooth-sdk-transaction-processor</artifactId>
     </dependency>
-
 
   </dependencies>
 </project>

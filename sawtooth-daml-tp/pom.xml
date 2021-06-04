@@ -122,9 +122,12 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
+      <groupId>com.blockchaintp</groupId>
       <artifactId>timekeeper</artifactId>
-      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.blockchaintp</groupId>
+      <artifactId>sawtooth-mttp</artifactId>
     </dependency>
   </dependencies>
 

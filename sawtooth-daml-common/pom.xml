@@ -89,14 +89,12 @@
 
     <!-- BTP -->
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
+      <groupId>com.blockchaintp</groupId>
       <artifactId>keymanager</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
+      <groupId>com.blockchaintp</groupId>
       <artifactId>sawtooth-utils</artifactId>
-      <version>${project.parent.version}</version>
     </dependency>
 
     <!-- Hyperledger Sawtooth -->

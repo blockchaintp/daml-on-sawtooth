@@ -121,7 +121,7 @@ services:
       - postgres
 
   timekeeper:
-    image: timekeeper:${ISOLATION_ID}
+    image: blockchaintp/timekeeper:BTP2.1.0rc14
     command: "/opt/timekeeper/entrypoint.sh -vv tcp://validator:4004"
     depends_on:
       - validator
