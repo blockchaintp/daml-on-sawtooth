@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
-import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
@@ -41,8 +40,10 @@ import com.daml.metrics.Metrics;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.TransactionHandler;
 import sawtooth.sdk.processor.exceptions.InternalError;

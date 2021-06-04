@@ -19,12 +19,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
-import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.utils.VersionedEnvelopeUtils;
+import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.daml.ledger.participant.state.kvutils.KVOffset;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;

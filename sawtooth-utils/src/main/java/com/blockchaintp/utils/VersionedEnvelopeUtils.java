@@ -19,13 +19,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.util.Arrays;
 
-public class VersionedEnvelopeUtils {
+/**
+ * Utilities for dealing with VersionedEnvelpes.
+ */
+public final class VersionedEnvelopeUtils {
 
   private static final int COMPRESS_BUFFER_SIZE = 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(VersionedEnvelopeUtils.class);
 
-  private VersionedEnvelopeUtils() {}
+  private VersionedEnvelopeUtils() {
+  }
 
     /**
    * Wrap the given ByteString with a VersionEnvelope and return.

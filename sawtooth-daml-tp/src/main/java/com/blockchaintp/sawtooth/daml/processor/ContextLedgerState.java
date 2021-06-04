@@ -14,8 +14,9 @@
 
 package com.blockchaintp.sawtooth.daml.processor;
 
-import static sawtooth.sdk.processor.Utils.hash512;
 import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
+import static sawtooth.sdk.processor.Utils.hash512;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,22 +25,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransaction;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
-import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.utils.VersionedEnvelopeUtils;
+import com.blockchaintp.utils.protobuf.VersionedEnvelope;
 import com.daml.ledger.validator.LedgerStateOperations;
 import com.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import net.logstash.logback.encoder.org.apache.commons.lang3.ArrayUtils;
 import sawtooth.sdk.processor.Context;
 import sawtooth.sdk.processor.exceptions.InternalError;

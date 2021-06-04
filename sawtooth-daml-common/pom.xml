@@ -71,6 +71,11 @@
       <artifactId>keymanager</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
+    <dependency>
+      <groupId>daml-on-sawtooth</groupId>
+      <artifactId>sawtooth-utils</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
 
     <!-- Hyperledger Sawtooth -->
     <dependency>

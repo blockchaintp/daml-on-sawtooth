@@ -2,8 +2,8 @@ package com.blockchaintp.keymanager;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +13,9 @@ import sawtooth.sdk.signing.CryptoFactory;
 import sawtooth.sdk.signing.PrivateKey;
 import sawtooth.sdk.signing.PublicKey;
 
+/**
+ * Abstract base class for all KeyManagers.
+ */
 public abstract class BaseKeyManager implements KeyManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(BaseKeyManager.class);
@@ -28,47 +31,47 @@ public abstract class BaseKeyManager implements KeyManager {
   }
 
   @Override
-  public PublicKey getPublicKey() {
+  public final PublicKey getPublicKey() {
     return getPublicKey(DEFAULT);
   }
 
   @Override
-  public String getPublicKeyInHex() {
-    return getPublicKey(DEFAULT).hex();
-  }
-
-  @Override
-  public PublicKey getPublicKey(final String id) {
+  public final PublicKey getPublicKey(final String id) {
     return this.publicKeyMap.get(id);
   }
 
   @Override
-  public String getPublicKeyInHex(final String id) {
+  public final String getPublicKeyInHex() {
+    return getPublicKey(DEFAULT).hex();
+  }
+
+  @Override
+  public final String getPublicKeyInHex(final String id) {
     return getPublicKey(id).hex();
   }
 
   @Override
-  public String sign(final byte[] item) {
+  public final String sign(final byte[] item) {
     return sign(DEFAULT, item);
   }
 
   @Override
-  public String sign(final String id, final byte[] item) {
+  public final String sign(final String id, final byte[] item) {
     PrivateKey privKey = getPrivateKey(id);
     if (privKey == null) {
       throw new KeyManagerRuntimeException(String.format("No private key with id %s is available", id));
     }
     LOGGER.debug("Signing array of size={} for id={}", item.length, id);
-   return getContextForKey(privKey).sign(item, privKey);
+    return getContextForKey(privKey).sign(item, privKey);
   }
 
   @Override
-  public boolean verify(final byte[] item, final String signature) {
+  public final boolean verify(final byte[] item, final String signature) {
     return verify(DEFAULT, item, signature);
   }
 
   @Override
-  public boolean verify(final String id, final byte[] item, final String signature) {
+  public final boolean verify(final String id, final byte[] item, final String signature) {
     var pubKey = this.getPublicKey(id);
     if (pubKey == null) {
       throw new KeyManagerRuntimeException(String.format("No public key with id %s is available", id));
@@ -77,27 +80,27 @@ public abstract class BaseKeyManager implements KeyManager {
   }
 
   @Override
-  public boolean verify(final PublicKey pubKey, final byte[] item, final String signature) {
+  public final boolean verify(final PublicKey pubKey, final byte[] item, final String signature) {
     return getContextForKey(pubKey).verify(signature, item, pubKey);
   }
 
-  protected PrivateKey putKey(PrivateKey key) {
+  protected final PrivateKey putKey(final PrivateKey key) {
     return putKey(DEFAULT, key);
   }
 
-  protected PrivateKey putKey(String id, PrivateKey key) {
+  protected final PrivateKey putKey(final String id, final PrivateKey key) {
     return this.privateKeyMap.put(id, key);
   }
 
-  protected PublicKey putKey(PublicKey key) {
+  protected final PublicKey putKey(final PublicKey key) {
     return putKey(DEFAULT, key);
   }
 
-  protected PublicKey putKey(String id, PublicKey key) {
+  protected final PublicKey putKey(final String id, final PublicKey key) {
     return this.publicKeyMap.put(id, key);
   }
 
-  protected PrivateKey getPrivateKey(final String id) {
+  protected final PrivateKey getPrivateKey(final String id) {
     return this.privateKeyMap.get(id);
   }
 
@@ -110,39 +113,39 @@ public abstract class BaseKeyManager implements KeyManager {
     return CryptoFactory.createContext(key.getAlgorithmName());
   }
 
-  protected boolean hasDefaultPrivateKey() {
+  protected final boolean hasDefaultPrivateKey() {
     return this.privateKeyMap.containsKey(DEFAULT);
   }
 
-  protected boolean hasPrivateKey(String id) {
+  protected final boolean hasPrivateKey(final String id) {
     return this.privateKeyMap.containsKey(id);
   }
 
-  protected boolean hasDefaultPublicKey() {
+  protected final boolean hasDefaultPublicKey() {
     return this.publicKeyMap.containsKey(DEFAULT);
   }
 
-  protected boolean hasPublicKey(String id) {
+  protected final boolean hasPublicKey(final String id) {
     return this.publicKeyMap.containsKey(id);
   }
 
-  protected Set<Entry<String,PrivateKey>> privateKeys() {
+  protected final Set<Entry<String, PrivateKey>> privateKeys() {
     return this.privateKeyMap.entrySet();
   }
 
-  protected Set<Entry<String,PublicKey>> publicKeys() {
+  protected final Set<Entry<String, PublicKey>> publicKeys() {
     return this.publicKeyMap.entrySet();
   }
 
-  protected void fillPublicKeyForDefaultPrivate() {
+  protected final void fillPublicKeyForDefaultPrivate() {
     fillPublicKeyForPrivate(DEFAULT);
   }
 
-  protected void fillPublicKeyForPrivate(String id) {
+  protected final void fillPublicKeyForPrivate(final String id) {
     fillPublicKeyForPrivate(id, false);
   }
 
-  protected void fillPublicKeyForPrivate(String id, boolean force) {
+  protected final void fillPublicKeyForPrivate(final String id, final boolean force) {
     if (force || !hasPublicKey(id)) {
       var pk = getPrivateKey(id);
       String algorithmName = pk.getAlgorithmName();
@@ -152,7 +155,7 @@ public abstract class BaseKeyManager implements KeyManager {
     }
   }
 
-  protected void fillRandomPrivateKey(String id, String algorithm) {
+  protected final void fillRandomPrivateKey(final String id, final String algorithm) {
     if (!hasPrivateKey(id)) {
       var ctx = CryptoFactory.createContext(algorithm);
       var privKey = ctx.newRandomPrivateKey();
@@ -161,7 +164,7 @@ public abstract class BaseKeyManager implements KeyManager {
     }
   }
 
-  protected void fillRandomPrivateKey(String algorithm) {
+  protected final void fillRandomPrivateKey(final String algorithm) {
     fillRandomPrivateKey(DEFAULT, algorithm);
   }
 

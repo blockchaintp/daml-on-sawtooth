@@ -14,18 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  -->
- <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>daml-on-sawtooth</groupId>
     <artifactId>daml-on-sawtooth</artifactId>
     <version>${revision}</version>
   </parent>
-  <artifactId>timekeeper</artifactId>
-  <name>timekeeper</name>
-  <description>TimeKeeper is a transaction sawtooth processor/handler and client which maintains a globally agreed time on the blockchain</description>
+  <artifactId>sawtooth-utils</artifactId>
+  <name>sawtooth-utils</name>
+  <description>Common libraries and utilities for Sawtooth</description>
 
   <properties>
     <proto.directory>src/main/protos</proto.directory>
@@ -60,45 +58,30 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>com.blockchaintp.sawtooth.timekeeper.TimeKeeperTransactionProcessorMain</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-      </plugin>
     </plugins>
   </build>
 
   <dependencies>
-    <!-- Logging -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java-util</artifactId>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
     </dependency>
-    <!-- Unit testing -->
+
+    <!-- BTP -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>daml-on-sawtooth</groupId>
+      <artifactId>keymanager</artifactId>
+      <version>${project.parent.version}</version>
     </dependency>
+
     <!-- Hyperledger Sawtooth -->
     <dependency>
       <groupId>org.hyperledger.sawtooth</groupId>
@@ -108,21 +91,10 @@
       <groupId>org.hyperledger.sawtooth</groupId>
       <artifactId>sawtooth-sdk-protos</artifactId>
     </dependency>
-    <!-- BTP -->
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>sawtooth-mttp</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
     </dependency>
-    <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>sawtooth-utils</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>daml-on-sawtooth-protobufs</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
+
   </dependencies>
 </project>

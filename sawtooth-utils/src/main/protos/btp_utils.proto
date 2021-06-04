@@ -17,7 +17,6 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 package com.blockchaintp.utils.protobuf;
-import "google/protobuf/timestamp.proto";
 
 message VersionedEnvelope {
   string version = 1;

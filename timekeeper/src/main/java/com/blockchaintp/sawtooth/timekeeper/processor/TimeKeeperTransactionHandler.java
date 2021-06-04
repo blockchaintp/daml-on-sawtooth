@@ -12,7 +12,12 @@
 
 package com.blockchaintp.sawtooth.timekeeper.processor;
 
-import com.blockchaintp.sawtooth.SawtoothClientUtils;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.blockchaintp.sawtooth.timekeeper.EventConstants;
 import com.blockchaintp.sawtooth.timekeeper.Namespace;
 import com.blockchaintp.sawtooth.timekeeper.exceptions.TimeKeeperException;
@@ -25,12 +30,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
