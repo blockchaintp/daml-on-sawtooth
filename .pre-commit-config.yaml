@@ -22,8 +22,6 @@ repos:
         exclude: ".*/src/test/.*"
       - id: cpd
         exclude: ".*/src/test/.*"
-      - id: pmd
-        exclude: ".*/src/test/.*"
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 2.1.4
     hooks:

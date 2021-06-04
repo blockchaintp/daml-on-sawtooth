@@ -17,7 +17,6 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 package com.blockchaintp.sawtooth.daml.protobuf;
-import "google/protobuf/timestamp.proto";
 
 message DamlOperationBatch {
   string version = 1;
@@ -54,12 +53,4 @@ message DamlLogEvent {
   bytes logEntryId = 2;
   bytes logEntry = 3;
   bytes timeUpdate = 4;
-}
-
-message VersionedEnvelope {
-  string version = 1;
-  bytes data = 2;
-  string contentHash = 3;
-  int32 parts = 4;
-  int32 partNumber = 5;
 }

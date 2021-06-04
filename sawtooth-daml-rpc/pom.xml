@@ -49,19 +49,6 @@
             <manifest>
               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>com.blockchaintp.sawtooth.daml.rpc.JwtGenerator</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifest>
-              <addClasspath>true</addClasspath>
-              <classpathPrefix>lib/</classpathPrefix>
               <mainClass>com.blockchaintp.sawtooth.daml.rpc.Main</mainClass>
             </manifest>
           </archive>
@@ -215,15 +202,13 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>daml-on-sawtooth-protobufs</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>com.blockchaintp</groupId>
+      <artifactId>timekeeper</artifactId>
     </dependency>
     <dependency>
       <groupId>org.hyperledger.sawtooth</groupId>
       <artifactId>sawtooth-sdk-transaction-processor</artifactId>
     </dependency>
-
 
   </dependencies>
 </project>

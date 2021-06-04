@@ -27,30 +27,41 @@
   <name>sawtooth-daml-common</name>
   <description>Common libraries and utilities for DAML on Sawtooth</description>
 
+  <properties>
+    <proto.directory>src/main/protos</proto.directory>
+  </properties>
+
   <build>
     <plugins>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}target/generated-sources/protobuf/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-pmd-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </reporting>
 
   <dependencies>
     <dependency>
@@ -78,16 +89,15 @@
 
     <!-- BTP -->
     <dependency>
-      <groupId>daml-on-sawtooth</groupId>
-      <artifactId>daml-on-sawtooth-protobufs</artifactId>
-      <version>${project.parent.version}</version>
+      <groupId>com.blockchaintp</groupId>
+      <artifactId>keymanager</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.blockchaintp</groupId>
+      <artifactId>sawtooth-utils</artifactId>
     </dependency>
 
     <!-- Hyperledger Sawtooth -->
-    <dependency>
-      <groupId>org.hyperledger.sawtooth</groupId>
-      <artifactId>sawtooth-sdk-signing</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.hyperledger.sawtooth</groupId>
       <artifactId>sawtooth-sdk-transaction-processor</artifactId>
@@ -100,11 +110,6 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.zeromq</groupId>
-      <artifactId>jeromq</artifactId>
-    </dependency>
-
 
   </dependencies>
 </project>
