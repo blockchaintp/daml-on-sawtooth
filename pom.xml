@@ -522,4 +522,13 @@
     </plugins>
   </build>
 
+  <repositories>
+    <repository>
+      <id>btp-releases</id>
+      <!-- this is where mvnrepository.com ultimately points to for the only besu repo in the wild -->
+      <url>https://dev.catenasys.com/repository/catenasys-maven-releases/</url>
+    </repository>
+  </repositories>
+
+
 </project>
