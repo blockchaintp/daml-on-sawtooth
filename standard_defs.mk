@@ -148,7 +148,7 @@ analyze_sonar_mvn:
 					-Dsonar.organization=$(ORGANIZATION) \
 					-Dsonar.projectKey=$(ORGANIZATION)_$(REPO) \
 					-Dsonar.projectName="$(ORGANIZATION)/$(REPO)" \
-					-Dsonar.pullrequest.key=$(BRANCH_NAME) \
+					-Dsonar.pullrequest.key=$(PR_KEY) \
 					-Dsonar.pullrequest.branch=$(CHANGE_BRANCH) \
 					-Dsonar.pullrequest.base=$(CHANGE_TARGET) \
 					-Dsonar.projectVersion=$(VERSION) \
@@ -180,7 +180,7 @@ analyze_sonar_generic:
 					-Dsonar.organization=$(ORGANIZATION) \
 					-Dsonar.projectKey=$(ORGANIZATION)_$(REPO) \
 					-Dsonar.projectName="$(ORGANIZATION)/$(REPO)" \
-					-Dsonar.pullrequest.key=$(BRANCH_NAME) \
+					-Dsonar.pullrequest.key=$(PR_KEY) \
 					-Dsonar.pullrequest.branch=$(CHANGE_BRANCH) \
 					-Dsonar.pullrequest.base=$(CHANGE_TARGET) \
 					-Dsonar.projectVersion=$(VERSION) \
