@@ -1,44 +1,46 @@
-# Build
+# Building daml-on-besu
 
-## Using the docker based toolchain
-The basic build uses docker to pull down its toolchain and compile.
-1. Install Docker [https://docs.docker.com/install/]
-1. Install docker-compose [https://docs.docker.com/compose/install/]
+## Prerequisites
+
+1. Docker installation <https://docs.docker.com/install/>
+1. docker-compose <https://docs.docker.com/compose/install/>
+1. a relatively recent `make` tool
+
+The rest of the toolchain is pulled in via the various docker images defined in
+the project.
+
+## Steps to build
 
 1. Clone the repository.
 
-```$ git clone git@github.com:blockchaintp/daml-on-sawtooth.git```
+  ```shell
+  git clone git@github.com:blockchaintp/daml-on-sawtooth.git
+  ```
 
-4. Set export the build identifier environment variable.  This is used to distinguish different variations of builds on the same machine.
+1. if desired
 
-```$ export ISOLATION_ID=my-local-build```
+  ```shell
+  export ISOLATION_ID=somvalue
+  ```
 
-5. Execute the local build script. This will compile and package all of the java, as well as prepare docker images for local execution.
+  This will cause the dcker images to be tagged with a version of `somevalue`.
+  The default value for `ISOLATION_ID` is `local`
 
-```$ bin/build.sh```
+1. `make all`
 
-## Developing in an IDE
+This will compile, package, and run the integration tests. The following docker
+images produce the following docker images:
 
-While the final build should be tested using the docker toolchain, it can be easier to develop the project using an IDE of your choice.  The project is a conventional maven project, with one caveat
+* `sawtooth-daml-tp:${ISOLATION_ID}`
+* `sawtooth-daml-rpc:${ISOLATION_ID}`
 
-The project uses google protocol buffers and we have seen that in some cases (particularly on MacOS) that the proper version of the `protoc` binary does not download automatically. In this case a slight change to your maven `settings.xml` is necessary.
+## Developing
 
-```xml
-<settings>
-    <profiles>
-        <profile>
-            <id>osdetect</id>
-            <properties>
-                <!-- linux-x86_64 or osx-x86_64 as is appropriate for your platform -->
-                <os.detected.classifier>osx-x86_64</os.detected.classifier>
-            </properties>
-        </profile>
-    </profiles>
-    ...
-</settings>
-```
-_Please note that this profile should not be active by default otherwise it will interfere with the bin/build.sh described above!_
+An unusual item should be noted.  We derive our versions directly from the `git
+describe` on the repository which pays attention to annotated tags on the host
+repository.  In order to make that work, the `project.version` of the maven
+`pom.xml` files are defined as `${revision}`.  Therefore if you choose not to
+use the Makefile based build you must provide maven the `revision` property
+from the command line, as in the following:
 
-This will pre-populate the os.detected.classifer property and allow the correct `protoc` binary to be downloaded by the maven plugin.  Your maven commands and IDE environment will need to activate this profile in order for the build to complete successfully, as in the following command:
-
-```$ mvn package -P osdetect ```
+`mvn -Drevision=local compile`

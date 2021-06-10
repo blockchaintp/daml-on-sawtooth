@@ -19,7 +19,7 @@ services:
   daml-on-sawtooth-build:
     build:
       context: .
-      dockerfile: daml-on-sawtooth-build.docker
+      dockerfile: toolchain.docker
     image: daml-on-sawtooth-build-local:${ISOLATION_ID}
     container_name: daml-on-sawtooth-build-local
     volumes:
