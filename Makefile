@@ -3,15 +3,14 @@ include $(MAKEFILE_DIR)/standard_defs.mk
 
 export TEST_SPEC ?= --exclude ConfigManagementServiceIT:CMSetAndGetTimeModel
 
-dirs: dirs_daml
+$(MARKERS): test-dars
 
-.PHONY: dirs_daml
-dirs_daml:
+test-dars:
 	mkdir -p test-dars
 
 build: $(MARKERS)/build_mvn $(MARKERS)/build_ledgertest
 
-$(MARKERS)/build_ledgertest: dirs
+$(MARKERS)/build_ledgertest: $(MARKERS)
 	docker build -f docker/ledger-api-testtool.docker -t ledger-api-testtool:$(ISOLATION_ID) . ;
 	docker run --rm -v `pwd`/test-dars:/out \
 		ledger-api-testtool:$(ISOLATION_ID) bash \

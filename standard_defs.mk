@@ -88,10 +88,11 @@ clean: clean_dirs
 # Clean everything and the docker image, leaving the repo pristine
 .PHONY: distclean
 distclean: clean
+	rm -rf $(MARKERS)
 
 # All compilation tasks
 .PHONY: build
-build: dirs
+build: $(MARKERS)
 
 # All tasks which produce a test result
 .PHONY: test
@@ -107,11 +108,7 @@ analyze: test
 
 # Archive the source code
 .PHONY: archive
-archive: dirs archive_git
-
-# Any prerequisite directories, which should also be gitignored
-.PHONY: dirs
-dirs: dirs_standard
+archive: $(MARKERS) archive_git
 
 # Any publishing to external systems other than docker registries, e.g. Maven
 .PHONY: publish
@@ -135,14 +132,29 @@ project_%:
 
 # Maven Version of Sonar Analysis
 .PHONY: analyze_sonar_mvn
-analyze_sonar_mvn: package
+analyze_sonar_mvn:
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
-	$(DOCKER_MVN) sonar:sonar \
-			-Dsonar.projectKey=$(ORGANIZATION)_$(REPO):$(SAFE_BRANCH_NAME) \
-			-Dsonar.projectName="$(ORGANIZATION)/$(REPO) $(SAFE_BRANCH_NAME)" \
-			-Dsonar.projectVersion=$(VERSION) \
-			-Dsonar.host.url=$(SONAR_HOST_URL) \
-			-Dsonar.login=$(SONAR_AUTH_TOKEN)
+		if [ -z "$(CHANGE_BRANCH)" ]; then \
+			$(DOCKER_MVN) package sonar:sonar \
+					-Dsonar.organization=$(ORGANIZATION) \
+					-Dsonar.projectKey=$(ORGANIZATION)_$(REPO) \
+					-Dsonar.projectName="$(ORGANIZATION)/$(REPO)" \
+					-Dsonar.branch.name=$(BRANCH_NAME) \
+					-Dsonar.projectVersion=$(VERSION) \
+					-Dsonar.host.url=$(SONAR_HOST_URL) \
+					-Dsonar.login=$(SONAR_AUTH_TOKEN) ; \
+		else \
+			$(DOCKER_MVN) package sonar:sonar \
+					-Dsonar.organization=$(ORGANIZATION) \
+					-Dsonar.projectKey=$(ORGANIZATION)_$(REPO) \
+					-Dsonar.projectName="$(ORGANIZATION)/$(REPO)" \
+					-Dsonar.pullrequest.key=$(BRANCH_NAME) \
+					-Dsonar.pullrequest.branch=$(CHANGE_BRANCH) \
+					-Dsonar.pullrequest.base=$(CHANGE_TARGET) \
+					-Dsonar.projectVersion=$(VERSION) \
+					-Dsonar.host.url=$(SONAR_HOST_URL) \
+					-Dsonar.login=$(SONAR_AUTH_TOKEN) ; \
+		fi
 
 .PHONY: analyze_sonar_generic
 analyze_sonar_generic:
@@ -242,7 +254,7 @@ BUSYBOX := docker run --rm -v $(HOME)/.m2/repository:/root/.m2/repository \
 		-v $(MAVEN_SETTINGS):/root/.m2/settings.xml -v $(PWD):/project \
 		busybox:latest
 
-$(MARKERS)/build_toolchain_docker: dirs
+$(MARKERS)/build_toolchain_docker: $(MARKERS)
 	if [ -r docker/toolchain.docker ]; then \
 		docker build -f docker/toolchain.docker -t toolchain:$(ISOLATION_ID) . ; \
 	fi
@@ -280,10 +292,9 @@ $(MARKERS)/publish_mvn: $(MARKERS)/build_toolchain_docker
 		-DaltDeploymentRepository=$(MAVEN_DEPLOY_TARGET)
 
 # Any prerequisite directories, which should also be gitignored
-.PHONY: dirs_standard
-dirs_standard:
-	mkdir -p build
+$(MARKERS):
 	mkdir -p $(MARKERS)
+	mkdir -p build
 
 .PHONY: clean_dirs_standard
 clean_dirs_standard:
@@ -300,3 +311,9 @@ $(MARKERS)/check_ignores:
 ##
 # END Standardized directives
 ##
+
+.PHONY: what_version
+what_version:
+	@echo VERSION=$(VERSION)
+	@echo LONG_VERSION=$(LONG_VERSION)
+	@echo MAVEN_REVISION=$(MAVEN_REVISION)

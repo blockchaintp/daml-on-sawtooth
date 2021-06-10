@@ -53,3 +53,4 @@ keys
 .dccache
 build/
 markers
+**/pom.xml.versionsBackup
