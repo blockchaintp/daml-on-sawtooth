@@ -39,15 +39,13 @@ SONAR_AUTH_TOKEN ?=
 MAVEN_SETTINGS ?=
 MAVEN_REVISION != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
 	(echo "$(LONG_VERSION)" | grep -q dirty); then \
-	if command -v semver >/dev/null; then \
-		bump_ver=$$(command semver bump patch $(VERSION)); \
-		echo $$bump_ver-SNAPSHOT; \
-	else \
-		echo $(VERSION); \
-	fi \
-	else \
-		echo $(VERSION); \
-	fi
+        bump_ver=$(VERSION); \
+	if [ -x bin/semver ]; then \
+		bump_ver=$$(bin/semver bump patch $(VERSION))-SNAPSHOT; \
+	elif command -v semver >/dev/null; then \
+		bump_ver=$$(command semver bump patch $(VERSION))-SNAPSHOT; \
+	fi; \
+	echo $$bump_ver ; fi
 
 cmd_test:
 
