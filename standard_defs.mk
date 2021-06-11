@@ -102,7 +102,7 @@ package: build
 
 # Linting, Static Analysis, Test Analysis and reporting
 .PHONY: analyze
-analyze: test
+analyze:
 
 # Archive the source code
 .PHONY: archive
