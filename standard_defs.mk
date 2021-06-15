@@ -36,7 +36,9 @@ SONAR_AUTH_TOKEN ?=
 ##
 # Maven related settings
 ##
-MAVEN_SETTINGS ?=
+MAVEN_SETTINGS ?= $(shell if [ -r $(HOME)/.m2/settings.xml ]; then \
+	echo $(HOME)/.m2/settings.xml; else echo ""; fi)
+
 MAVEN_REVISION != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
 	(echo "$(LONG_VERSION)" | grep -q dirty); then \
         bump_ver=$(VERSION); \
@@ -48,7 +50,7 @@ MAVEN_REVISION != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
 	echo $$bump_ver ; fi
 
 cmd_test:
-
+	if [ -r $(HOME)/.m2/settings.xml ]; then echo $(HOME)/.m2/settings.xml; else echo ""; fi
 
 MAVEN_REPO_BASE ?= https://dev.catenasys.com/repository/catenasys-maven
 MAVEN_REPO_TARGET != if [ "$(LONG_VERSION)" = "$(VERSION)" ] || \
@@ -130,7 +132,7 @@ project_%:
 
 # Maven Version of Sonar Analysis
 .PHONY: analyze_sonar_mvn
-analyze_sonar_mvn:
+analyze_sonar_mvn: $(MARKERS)/build_toolchain_docker
 	[ -z "$(SONAR_AUTH_TOKEN)" ] || \
 		if [ -z "$(CHANGE_BRANCH)" ]; then \
 			$(DOCKER_MVN) package sonar:sonar \
@@ -249,7 +251,7 @@ TOOLCHAIN := docker run --rm -v $(HOME)/.m2/repository:/root/.m2/repository \
 DOCKER_MVN := $(TOOLCHAIN) mvn -Drevision=$(MAVEN_REVISION) -B
 BUSYBOX := docker run --rm -v $(HOME)/.m2/repository:/root/.m2/repository \
 		$(shell if [ -n "$(MAVEN_SETTINGS)" ]; then echo -v $(MAVEN_SETTINGS):/root/.m2/settings.xml; fi) \
-		-v $(MAVEN_SETTINGS):/root/.m2/settings.xml -v $(PWD):/project \
+		-v $(PWD):/project \
 		busybox:latest
 
 $(MARKERS)/build_toolchain_docker: $(MARKERS)
@@ -261,8 +263,7 @@ $(MARKERS)/build_toolchain_docker: $(MARKERS)
 .PHONY: fix_permissions
 fix_permissions:
 	$(BUSYBOX) chown -R $(UID):$(GID) /root/.m2/repository
-	$(BUSYBOX) find /project -type d -name target -exec chown \
-		-R $(UID):$(GID) {} \;
+	$(BUSYBOX) chown -R $(UID):$(GID) /project
 
 # This will reset the build status possible causing steps to rerun
 .PHONY: clean_markers
