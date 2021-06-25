@@ -162,7 +162,9 @@ public final class DamlTransactionHandler implements TransactionHandler {
       if (either.isLeft()) {
         final ValidationFailed validationFailed = either.left().get();
         try {
-          LOGGER.info("ValidationFailed tx={}", JsonFormat.printer().includingDefaultValueFields().print(tx));
+          if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("ValidationFailed tx={}", JsonFormat.printer().includingDefaultValueFields().print(tx));
+          }
         } catch (InvalidProtocolBufferException ipbe) {
           LOGGER.info("ValidationFailed buffer is invalid tx={}", tx);
         }
