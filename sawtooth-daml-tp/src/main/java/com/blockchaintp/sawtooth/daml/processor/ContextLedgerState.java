@@ -145,6 +145,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
+  @SuppressWarnings("java:S3776")
   public DamlTransaction assembleTransactionFragments(final DamlTransactionFragment endTx)
       throws InternalError, InvalidTransactionException {
 
