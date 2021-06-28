@@ -145,6 +145,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
+  @SuppressWarnings("java:S3776")
   public DamlTransaction assembleTransactionFragments(final DamlTransactionFragment endTx)
       throws InternalError, InvalidTransactionException {
 
@@ -164,12 +165,16 @@ public final class ContextLedgerState implements LedgerState<String> {
       for (String address : addrs) {
         ByteString fragBytes = fragments.get(address);
         if (fragBytes == null) {
-          LOGGER.debug("Adding fragment leid={} index={} address={} is null",
+          if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Adding fragment leid={} index={} address={} is null",
               endTx.getLogEntryId().toStringUtf8(), index, address);
+          }
           throw new InvalidTransactionException("Fragment is null");
         } else {
-          LOGGER.debug("Adding fragment leid={} index={} address={} has size={}",
-              endTx.getLogEntryId().toStringUtf8(), index, address, fragBytes.size());
+          if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Adding fragment leid={} index={} address={} has size={}",
+                endTx.getLogEntryId().toStringUtf8(), index, address, fragBytes.size());
+          }
           DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
           accumulatedBytes =
               ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
@@ -207,7 +212,9 @@ public final class ContextLedgerState implements LedgerState<String> {
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
-        LOGGER.trace("Skipping key {} since value is null", k.toStringUtf8());
+        if (LOGGER.isTraceEnabled()) {
+          LOGGER.trace("Skipping key {} since value is null", k.toStringUtf8());
+        }
       }
     }
     return retMap;
@@ -249,8 +256,10 @@ public final class ContextLedgerState implements LedgerState<String> {
         Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment", tx.getLogEntryId().toStringUtf8(),
             String.valueOf(tx.getParts()), String.valueOf(tx.getPartNumber()));
     final ByteString val = tx.toByteString();
-    LOGGER.debug("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
         address, val.size());
+    }
     final Map<String, ByteString> setMap = new HashMap<>();
     setMap.put(address, val);
     state.setState(setMap.entrySet());
@@ -383,8 +392,10 @@ public final class ContextLedgerState implements LedgerState<String> {
         attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
             String.valueOf(multipart.size()));
         attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE, String.valueOf(part));
-        LOGGER.debug("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
+        if (LOGGER.isDebugEnabled()) {
+          LOGGER.debug("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
             bs.size(), entry.size());
+        }
         state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), bs);
         part++;
       }
