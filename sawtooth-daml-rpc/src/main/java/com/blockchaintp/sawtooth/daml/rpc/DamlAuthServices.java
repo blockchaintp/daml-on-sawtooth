@@ -103,8 +103,7 @@ public final class DamlAuthServices implements AuthService {
   }
 
   private com.daml.ledger.api.auth.Claims decodeAndParse(final io.grpc.Metadata headers)
-      throws Exception {
-
+      throws AuthorizationHeaderMissing {
     final var regex = "Bearer (.*)";
     final var pattern = Pattern.compile(regex);
 
@@ -113,7 +112,7 @@ public final class DamlAuthServices implements AuthService {
     final var authKeyString = headers.get(authorizationKey);
     final var matcher = pattern.matcher(authKeyString);
     if (!matcher.matches()) {
-      throw new Exception();
+      throw new AuthorizationHeaderMissing();
     }
     final var tokenString = matcher.group(1);
 
