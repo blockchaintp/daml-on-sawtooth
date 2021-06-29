@@ -112,7 +112,7 @@ public final class DamlAuthServices implements AuthService {
     final var authKeyString = headers.get(authorizationKey);
     final var matcher = pattern.matcher(authKeyString);
     if (!matcher.matches()) {
-      throw new AuthorizationHeaderMissing("Authorization header not present");
+      throw new AuthorizationHeaderMissing();
     }
     final var tokenString = matcher.group(1);
 
