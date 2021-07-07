@@ -1,0 +1,28 @@
+---
+on:
+  schedule:
+    # 9:25 am Mon-Fri, just in time for stand up
+    - cron:  '25 13 * * 1-5'
+
+jobs:
+  pr-monitor-job:
+    runs-on: ubuntu-latest
+    name: PR monitor
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: PR Monitor
+        uses: andrewandante/pr-monitor-slack-action@v1.0.1
+        id: scan
+        with:
+          # required inputs
+          slack-token: ${{ secrets.SLACK_OAUTH_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # optional inputs (with defaults set)
+          channel: '#engineering'
+          sort: 'updated'
+          sort-direction: 'desc'
+          approved-emoji: 'heavy_check_mark'
+          pending-emoji: 'heavy_minus_sign'
+          changes-requested-emoji: 'x'
+          requested-reviewer-emoji: 'heavy_minus_sign'

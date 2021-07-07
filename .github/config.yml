@@ -1,0 +1,4 @@
+---
+COMMIT_MESSAGE_REGEX: >-
+  /^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)!?(\([a-z \-\._]+\))?(: )([^\n]+)(\n{1}?((\n{1}[^\n]+)+)?)?(\n{1}(\n{1}[^\n]+)+)?.*/
+PR_TITLE_REGEX: /.*/

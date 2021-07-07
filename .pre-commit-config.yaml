@@ -4,7 +4,7 @@ default_language_version:
   python: python3
 repos:
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v2.13.0
+    rev: v2.17.12
     hooks:
       - id: commitizen
         stages: [commit-msg]
@@ -23,7 +23,7 @@ repos:
       - id: cpd
         exclude: ".*/src/test/.*"
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 2.1.4
+    rev: 2.1.5
     hooks:
       - id: forbid-binary
         exclude: ".*.(png|jpg|jpeg)$"
@@ -46,11 +46,11 @@ repos:
     hooks:
       - id: markdownlint_docker
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v7.17.0
+    rev: v7.30.0
     hooks:
       - id: eslint
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.0.1
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -71,7 +71,7 @@ repos:
     hooks:
       - id: checkmake
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.1.9
+    rev: v1.1.10
     hooks:
       - id: forbid-tabs
         exclude: "^(Makefile|.*.go|.*.mk)$"
@@ -87,12 +87,12 @@ repos:
       - id: fmt
       - id: cargo-check
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.25.0
+    rev: v1.26.1
     hooks:
       - id: yamllint
         exclude: ".*/templates/.*"
   - repo: https://github.com/IamTheFij/docker-pre-commit
-    rev: v2.0.0
+    rev: v2.0.1
     hooks:
       - id: docker-compose-check
       - id: docker-compose-check
