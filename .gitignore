@@ -54,3 +54,6 @@ keys
 build/
 markers
 **/pom.xml.versionsBackup
+
+# MkDocs documentation
+site/
