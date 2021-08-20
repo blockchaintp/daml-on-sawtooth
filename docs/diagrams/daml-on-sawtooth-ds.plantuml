@@ -1,0 +1,75 @@
+@startuml daml-on-sawtooth-ds
+
+' Kubernetes
+!define KubernetesPuml https://raw.githubusercontent.com/dcasati/kubernetes-PlantUML/master/dist
+
+!include KubernetesPuml/kubernetes_Common.puml
+!include KubernetesPuml/kubernetes_Context.puml
+
+!include KubernetesPuml/OSS/KubernetesDeploy.puml
+!include KubernetesPuml/OSS/KubernetesSts.puml
+!include KubernetesPuml/OSS/KubernetesDs.puml
+!include KubernetesPuml/OSS/KubernetesSvc.puml
+!include KubernetesPuml/OSS/KubernetesPvc.puml
+!include KubernetesPuml/OSS/KubernetesPod.puml
+!include KubernetesPuml/OSS/KubernetesCm.puml
+!include KubernetesPuml/OSS/KubernetesJob.puml
+
+
+Namespace_Boundary(daml,"daml") {
+  KubernetesSts(damlrpc, "daml-rpc", "provides the particiant ledger api")
+
+  KubernetesDs(sawtooth, "sawtooth", "4 nodes") {
+    KubernetesPod(sawtooth0,"sawtooth-aaaa","")
+    KubernetesPod(sawtooth1,"sawtooth-bbbb","")
+    KubernetesPod(sawtooth2,"sawtooth-cccc","")
+    KubernetesPod(sawtooth3,"sawtooth-dddd","")
+  }
+
+  KubernetesSvc(sawtoothsvc, "sawtooth", "all nodes")
+  ' KubernetesSvc(sawtoothsvc0, "enode sawtooth-0", "sawtooth-0")
+  ' KubernetesSvc(sawtoothsvc1, "enode sawtooth-1", "sawtooth-1")
+  ' KubernetesSvc(sawtoothsvc2, "enode sawtooth-2", "sawtooth-2")
+  ' KubernetesSvc(sawtoothsvc3, "enode sawtooth-3", "sawtooth-3")
+  ' KubernetesPvc(sawtooth0pvc, "volume sawtooth-0", "sawtooth-0")
+  ' KubernetesPvc(sawtooth1pvc, "volume sawtooth-1", "sawtooth-1")
+  ' KubernetesPvc(sawtooth2pvc, "volume sawtooth-2", "sawtooth-2")
+  ' KubernetesPvc(sawtooth3pvc, "volume sawtooth-3", "sawtooth-3")
+
+  sawtoothsvc --> sawtooth
+  ' sawtoothsvc0 --> sawtooth0
+  ' sawtoothsvc1 --> sawtooth1
+  ' sawtoothsvc2 --> sawtooth2
+  ' sawtoothsvc3 --> sawtooth3
+  damlrpc --> sawtoothsvc
+
+  ' sawtooth0 --> sawtooth0pvc
+  ' sawtooth1 --> sawtooth1pvc
+  ' sawtooth2 --> sawtooth2pvc
+  ' sawtooth3 --> sawtooth3pvc
+
+  KubernetesSvc(damlgrpc,"grpc","tcp:39000")
+  KubernetesSvc(damljsonapi,"jsonapi","http:8080")
+  damlgrpc --> damlrpc
+  damljsonapi --> damlrpc
+
+  ' KubernetesCm(genesiscm, "genesis ConfigMap", "")
+  ' sawtooth0 -l-> genesiscm: uses
+  ' sawtooth1 -l-> genesiscm: uses
+  ' sawtooth2 -l-> genesiscm: uses
+  ' sawtooth3 -l-> genesiscm: uses
+
+  ' KubernetesJob(initjob,"Initialization job","")
+  ' initjob --> genesiscm: produces
+
+}
+
+KubernetesSvc(jwksProvider, "JWKS Provider","")
+damlrpc --> jwksProvider
+
+actor actor
+actor --> damlgrpc: <<jwt>>
+actor --> damljsonapi: <<jwt>>
+actor --> jwksProvider: <<jwt>>
+
+@enduml
