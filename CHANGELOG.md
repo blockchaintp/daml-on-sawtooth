@@ -1,392 +1,409 @@
 # CHANGELOG
 
+## v1.3.11
+
+* build(deps): Bump guava from 24.0-jre to 29.0-jre [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1bc1d8d9ac451711baa00f17138d7d4ce4373a4d)
+* build(deps): Bump dns-packet from 1.3.1 to 1.3.4 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9dc86aae8d6b339c7dd3347832613c725c94090f)
+* build(deps): Bump axios from 0.18.1 to 0.21.2 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/74378a013d33286cae17e0d1cf9fdb6da66284f7)
+* build(deps): Bump acorn from 5.7.3 to 5.7.4 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5b4c4e6aae5922a765cb42dc691a57fe79482ce1)
+* build(deps): Bump tar from 4.4.8 to 4.4.19 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9394a854b4514a7aee22b162f8c61c166c163a7e)
+* build(deps): Bump ws from 6.2.1 to 6.2.2 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0debb39e3fd050f1f87c8a71e68746c012b8552c)
+* build(deps): Bump url-parse from 1.4.6 to 1.5.3 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c4163c4b86c377b80f8d4975f2b04e9fd3bd3414)
+* build(deps): Bump path-parse from 1.0.6 to 1.0.7 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f4c4850331bee621a9b9e48e80928e38d67a5ca0)
+
 ## v1.3.10
 
-* fix: Satisfy checkstyle, make spelling consistent
-* fix: Add Javadoc
-* A very much more specific exception
-* Supress this warning
-* Guard expensive log operations
-* docs: update build instructions
-* build: update build to match standard patterns
-* build: add a direct pom reference to btp-releases repository
-* refactor: remove timekeeper,sawtooth-mttp,sawtooth-utils,and keymanager
-* refactor: eliminate daml-on-sawtooth-protobufs module
-* refactor: separate out sawtooth-utils and rearrange protos
-* refactor: relocate VersionedEnvelope in prep for isolation
-* refactor: isolate VersionedEnvelope
-* refactor: isolate keymanager
-* refactor: extract BaseKeyManager from km classes
-* refactor: simplify var declarations
-* refactor(sawtooth-daml-common): isolate MTTTransactionProcessr
-* refactor: correct use of wrong exception
-* refactor(sawtooth-daml-common): remove classes which are now correct upstream
-* refactor(timekeeper): completely isolate timekeeper classes into the timekeeper pkg
+* docs: add deployment diagrams [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7a0ba77e0e58dfa698703447742eb32945e78208)
+* docs: add mkdocs setup [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9774839a45bba8469f857a0be6cb60683a2e7c40)
+* fix: Satisfy checkstyle, make spelling consistent [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9c191765d5eab57f601cf781f74f73497baa127f)
+* fix: Add Javadoc [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/19bc6634695d98958d0640803c3c59cb8c9e9e84)
+* A very much more specific exception [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b85c9adb0527f60edf176b44de3968f5e8865107)
+* Supress this warning [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/bcf3ce9a60775770a8da635273f53a4bf19de5dc)
+* Guard expensive log operations [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4d0816b5ab39bca89133b36fd7213bcb95c2bd05)
+* docs: update build instructions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1e4f1729126b390272b3c6dcb244563c181499d3)
+* build: update build to match standard patterns [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cff5b034a2ee2bf41cb5f81361169a1e304470cb)
+* build: add a direct pom reference to btp-releases repository [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f79ae3a38ed255b332261ce7f2e8fd457f9ad5c1)
+* refactor: remove timekeeper,sawtooth-mttp,sawtooth-utils,and keymanager [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/681ffaa713ec97705977fd2ec299f4f60bccf2ff)
+* refactor: eliminate daml-on-sawtooth-protobufs module [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f6398c44dbcf2e9816582cba9b0ab8c6081ea8ac)
+* refactor: separate out sawtooth-utils and rearrange protos [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7db5ff721c990a4b0cf9f57ac3988d3c953178af)
+* refactor: relocate VersionedEnvelope in prep for isolation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/07e261859ae370d6a786f9ad6a0935d95ff27a6c)
+* refactor: isolate VersionedEnvelope [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/adb4b0c8b23ab8947f6da7bf07e5c2881f6abde2)
+* refactor: isolate keymanager [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d8f56646ce78bce000cd0cb90b0bba0997b59f19)
+* refactor: extract BaseKeyManager from km classes [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4e35b9caba7256941c380ed3a91f8fd6b0a80d69)
+* refactor: simplify var declarations [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c69928f6bea553c480ee55b434261e405f9e40a8)
+* refactor(sawtooth-daml-common): isolate MTTTransactionProcessr [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/59d6c900d6658cb2f6066d11321cdb701aabe88c)
+* refactor: correct use of wrong exception [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/dff123d7b6431377f54feff92d686d0bd4633e68)
+* refactor(sawtooth-daml-common): remove classes which are now correct upstream [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/600ecd358c26f575b7a519c52e6afbc90837556e)
+* refactor(timekeeper): completely isolate timekeeper classes into the timekeeper pkg [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d408a289f8d4a9a57469b54438d574e04e14b11b)
 
-## v1.3.9
+## stopBuild/v1.3.9
 
-* fix: correct issues arising from sonar checks
-* refactor: correct sonar bugs
-* refactor: address checkstyle issues now that it works
-* build: update checkstyle configuration
+* fix: correct issues arising from sonar checks [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7c262f1478fb694c0dd2017c1f422fae43ff42e1)
+* refactor: correct sonar bugs [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f037750adf3971c920fb8562be35d110d153534d)
+* refactor: address checkstyle issues now that it works [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/be7d2a8ae5cf92e8927024415a63747e7a5a0e1d)
+* build: update checkstyle configuration [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a8c07672c6dce39283da111fdd0975e8067514bc)
 
-## v1.3.8
+## stopBuild/v1.3.8
 
-* fix(timekeeper): correct initial backoff counter increment
+* fix(timekeeper): correct initial backoff counter increment [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/bf4141efa17c2103140f0f4c7c66bc020b8b8606)
 
-## v1.3.7
+## stopBuild/v1.3.7
 
-* fix(timekeeper): correct initial backoff counter increment
-* fix: correct logging levels to reduce noice at info level
-* Correct docker/run.sh to deal with paths with empty spaces
-* Correct build.sh to deal with paths with empty spaces
+* fix(timekeeper): correct initial backoff counter increment [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0b3098031a77c3fabbbebe05e754fd0efe83d490)
+* fix: correct logging levels to reduce noice at info level [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ca492aac60c8683fb14c5df3af26a8fd1d7e58bf)
+* Correct docker/run.sh to deal with paths with empty spaces [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b2fd01d09dba2d31227a7cd892289d859ed195bb)
+* Correct build.sh to deal with paths with empty spaces [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a294364533153472901dcd4f8dda6c997bf65f7e)
 
-## v1.3.6
+## stopBuild/v1.3.6
 
-* fix(timekeeper): version and limit data growth
-* feat(sawtooth-daml-rpc): add jwks authentication method SXT-504
-* feat(timekeeper): add exponential back off to timekeeper
+* fix(timekeeper): version and limit data growth [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9f1f5e3a750c641c9de2be64c56db40946d405bd)
+* feat(sawtooth-daml-rpc): add jwks authentication method SXT-504 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/962b07ec278b4ef620810f03dfebb75137470294)
+* feat(timekeeper): add exponential back off to timekeeper [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b2a8a3d9f64db859c63ff9a66e907d11c4928973)
 
-## v1.3.5
+## stopBuild/v1.3.5
 
-* refactor(timekeeper): make time calculations more correct and clearer SXT-552
-* fix: correct a bug in timekeeper arg parsing
-* fix(rpc): adjust timemodel parameters to compensate for a bug in SDK 1.3.0
-* fix(rpc): disable dependent transactions SXT-552
-* build(pre-commit): update config SXT-552
+* refactor(timekeeper): make time calculations more correct and clearer SXT-552 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/03351d23e59a5c227a311c3d65435152b4046de1)
+* fix: correct a bug in timekeeper arg parsing [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/abcf44156ace46eddc2ad8650b111fddd818c2e2)
+* fix(rpc): adjust timemodel parameters to compensate for a bug in SDK 1.3.0 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cb8675dc76000aba94bcf14280144b119dee62cd)
+* fix(rpc): disable dependent transactions SXT-552 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/03a0e3f67fba31bd52666195b69bd8ebeea11ebc)
+* build(pre-commit): update config SXT-552 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/723bed67cb24774dcba321a12b072837f5a16ef7)
 
-## v1.3.4
+## stopBuild/v1.3.4
 
-* fix(rpc): enable rsa256 auth method SXT-511
+* fix(rpc): enable rsa256 auth method SXT-511 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e39e3ca5e5a7e9f51b5617163981a3fff4f6613c)
 
-## v1.3.3
+## stopBuild/v1.3.3
 
-* fix(zmqeventhandler): if no beginafter is set then start at the beginning
+* fix(zmqeventhandler): if no beginafter is set then start at the beginning [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ec955707a9460d6b063c541ee6d354133dea696b)
 
-## v1.3.2
+## stopBuild/v1.3.2
 
-* fix(sawtooth-daml): improve logging
-* fix(sawtooth-daml-tp): improve normal exception handling
-* fix(sawtooth-daml-tp): throw InvalidTransactionException when missing a leaf key
-* refactor(sawtooth-daml-tp): make leaf assembly less duplicative
-* fix(sawtooth-daml-tp): defer events until after all other activities
-* fix(protobufs): add hash checking to VersionedEnvelope and DamlTransactionFragment
-* fix(sawtooth-daml-common): improvements to multipart start parsing
-* fix(sawtooth-daml-rpc): correct maxopsperbatch and maxOutstandingBatches cli arg parsing
-* fix(sawtooth-daml-tp): switch batch to 256k
-* fix(sawtooth-daml-tp): improve logging
-* fix(sawtooth-daml-common): use dependent transactions
-* fix(sawtooth-daml-tp): improve reporting of ValidationFailed errors
-* fix(sawtooth-daml-tp): adjust fragment size down to 128k
-* fix(timekeeper): add the ability to configure the tk period
-* fix(various): clean up DAML namespaces and fix build
-* fix(events): send events ids to be fetched asynchronously
-* fix(sawtooth-daml-tp): correct handling of fragments
-* fix(sawtooth-daml-rpc): adjust default max-ops-per-batch and max-outstanding-batches
-* fix(processor): adjust logging
-* fix(sawtooth-daml-rpc): add the ability to fragment large transactions
-* fix(sawtooth-daml-common): add multipart events
-* fix(sawtooth-daml-rpc): specify the entire namespace as the write target
-* fix(sawtooth-daml-common): split damlstate k/v's across multiple stl k/v's
-* fix(sawtooth-daml-commonn): add StreamContext override, increase TIME_OUT
-* fix(daml-rpc): compress batches across the wire
+* fix(sawtooth-daml): improve logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0a14c7b3b4e2b50d61e4a9674d28ccb33af3eb70)
+* fix(sawtooth-daml-tp): improve normal exception handling [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/319854c0f1990752e56acaec1d5f3e45e2085109)
+* fix(sawtooth-daml-tp): throw InvalidTransactionException when missing a leaf key [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6e32008adb6166d80e019f24a1f005df0a299dbb)
+* refactor(sawtooth-daml-tp): make leaf assembly less duplicative [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cdd0674dd2884153f34552b096565f4567e62618)
+* fix(sawtooth-daml-tp): defer events until after all other activities [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/71542138a74606d826c6f79d631ec92f32d55848)
+* fix(protobufs): add hash checking to VersionedEnvelope and DamlTransactionFragment [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9e8e47c24b79fb850fed3dc37ac0b0b3716de7f9)
+* fix(sawtooth-daml-common): improvements to multipart start parsing [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1bfc74948d40b41383793b2458788bb8dce875dc)
+* fix(sawtooth-daml-rpc): correct maxopsperbatch and maxOutstandingBatches cli arg parsing [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5376f925fd42f2c1e977e637f3f8ed8486413e14)
+* fix(sawtooth-daml-tp): switch batch to 256k [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/81fc6347b307cf4934e078e971596fc515a24e6d)
+* fix(sawtooth-daml-tp): improve logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9715331d3542ba0b70ec43aa4a7d4165df1f01c0)
+* fix(sawtooth-daml-common): use dependent transactions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6446f17d43c73745727062684ae0e7ccd8d7cd31)
+* fix(sawtooth-daml-tp): improve reporting of ValidationFailed errors [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a439bcd6979927f0e734591b4c6da0a21a579f3e)
+* fix(sawtooth-daml-tp): adjust fragment size down to 128k [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/04701c1ade55d91bbeaefe86acb385648f0d5024)
+* fix(timekeeper): add the ability to configure the tk period [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4f8bb99e68b1259f08e7bd09817edf4f43018ef7)
+* fix(various): clean up DAML namespaces and fix build [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/adec52f062d8510e630fbec8bb915eed3e9e1776)
+* fix(events): send events ids to be fetched asynchronously [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f97700f984dd3650c0fc6b295d0a590f223eb37a)
+* fix(sawtooth-daml-tp): correct handling of fragments [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/357af4de2317c09fa91fed2a6a214b79197eecb5)
+* fix(sawtooth-daml-rpc): adjust default max-ops-per-batch and max-outstanding-batches [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b823f5fdd3d4f3bbb7051f0a13020d17c68a2736)
+* fix(processor): adjust logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/48ecf0c7aad2ab2625b448c7453944dff0f8972e)
+* fix(sawtooth-daml-rpc): add the ability to fragment large transactions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2c6265b7e708eb130aac1dfd30d34c75a4c958e9)
+* fix(sawtooth-daml-common): add multipart events [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9ce007e969c66ad6b675b31b9435db84e9b3a6fe)
+* fix(sawtooth-daml-rpc): specify the entire namespace as the write target [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cabfab7ca000a68e4626182a50dd95e44d4f2ef2)
+* fix(sawtooth-daml-common): split damlstate k/v's across multiple stl k/v's [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7e145e5082cfeba60a1e2d1fdc0bc1ff1d0178a8)
+* fix(sawtooth-daml-commonn): add StreamContext override, increase TIME_OUT [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6314b0da82939352ce91d770b42502f7e29df16a)
+* fix(daml-rpc): compress batches across the wire [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/56465a34b52f26901c7782f50eb7342d5faf38cb)
 
-## v1.3.1
+## stopBuild/v1.3.1
 
-* fix(sawtooth-daml-rpc): patch ApiPackageManagementService to extend the timeout to 600s
+* fix(sawtooth-daml-rpc): patch ApiPackageManagementService to extend the timeout to 600s [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/745b34df37a956a01a8fd73e239bd848ccb8191d)
 
-## v1.3.0
+## stopBuild/v1.3.0
 
-* Tweak punctuation and remove unnecessary phrase
-* Capitalization tweaks courtesy of Mac checker
-* test(integration): exclude consistently failing tests
-* test(integration): add TAP result processing
-* feat(sdk): upgrade to DAML SDK 1.3.0
+* Tweak punctuation and remove unnecessary phrase [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c28270b24fbad7c1c742142ec44b2ffd99f0fcfc)
+* Capitalization tweaks courtesy of Mac checker [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e4571284577b3afe8ddb87a2069b7cd199d1255e)
+* test(integration): exclude consistently failing tests [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1d2e7504c83149e2498e94f8db899702853e1bb5)
+* test(integration): add TAP result processing [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/17d91dd812bd369fc2126abf5c1b04762102d071)
+* feat(sdk): upgrade to DAML SDK 1.3.0 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a81b1d13b72c1f21efa3804d46456080801ab78a)
 
 ## v1.2.99
 
-* refactor(messaging): move messaging up to sawtooth
-* refactor(imports): organize imports
-* refactor(tp): move ...processor.impl classes to ...processor
-* refactor(timekeeper): move ...timekeeper.utils classes to ...timekeeper
-* refactor(daml.utils): move ...daml.utils classes to ...daml
-* style(checkstyle): fix checkstyle violations
-* fix(logging): migrate to slf4j logging
-* Update checkstyle plugin version
-* Update pre-commit config and fix checkstyle
-* Update pre-commit
-* Add probot-stale config
-* Fix format
-* Fix bug in cli scala
-* Recommend approach to generate JWT token
-* Re-phrase statement
-* Change assists to assistant
-* Instruction to use daml cli
-* Prepare for DA artifacts only being published to maven central rather than public bintray
+* refactor(messaging): move messaging up to sawtooth [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/72648c6d5cb24751b18d9f3a84e765ccef68afb3)
+* refactor(imports): organize imports [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e47b7b505db009f45e842bfa31421cbb4232ce0c)
+* refactor(tp): move ...processor.impl classes to ...processor [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3db8a7a29b7fd8ee9a8dda6f95b49d69ea7afa5f)
+* refactor(timekeeper): move ...timekeeper.utils classes to ...timekeeper [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/83f5ed9238c7b2e150882b942b3e08b84f6ffb04)
+* refactor(daml.utils): move ...daml.utils classes to ...daml [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9d80566ef352a29e32fe4f3d13157e74ea73ade2)
+* style(checkstyle): fix checkstyle violations [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2ec2c2c906e5d12a4a066afea60f622d85db0daa)
+* fix(logging): migrate to slf4j logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9579130fb9709164b0d092012964539d57a790dc)
+* Update checkstyle plugin version [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/153070438e2fd38ffe7364dd0211aaa02f1f6691)
+* Update pre-commit config and fix checkstyle [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c944babeff0771e967ee6d0655155253b98eedaa)
+* Update pre-commit [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b51a6ed3147fbcb508a763819e767d2f1bb4fd1c)
+* Add probot-stale config [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c50025a5808a5dc3d0da5115ba8a4e0b168dbadc)
+* Fix format [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f8c75c3f575ce970d6b306b1876557e2848e7472)
+* Fix bug in cli scala [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e8b3cbcda4bfdc7e5c7115fde769192320d32135)
+* Recommend approach to generate JWT token [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/57a27775d284467add2471eef36dc70d3e700c23)
+* Re-phrase statement [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/97d6d3382b879bdbb96958bd90f7927db1b9f68e)
+* Change assists to assistant [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a09b77f8e7703e71d9a217a541cb3d577b2d071f)
+* Instruction to use daml cli [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f5769277d456ac80f258dc555f10c55bdc3ed083)
+* Prepare for DA artifacts only being published to maven central rather than public bintray [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/72966bd7e6a43c6bc8b25960acfe04ab41ac3a6e)
 
 ## v0.2.3
 
-* Delay rpc and test start up by 30s
-* Add Shay Gordon, Remove Paul Sitoh
-* Set postgres to use host_auth trust
-* Add pre-commit config
+* Delay rpc and test start up by 30s [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6396f905e2b7888a38ab31e605ca71b0a97508f9)
+* Add Shay Gordon, Remove Paul Sitoh [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b4d8eb20cd36c5687f096dd0f46e46659d717207)
+* Set postgres to use host_auth trust [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/765dc900edc40ffbe506c24337d0c9cebd7ea90e)
+* Add pre-commit config [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/807d9d28525d8a6ba76998b2793122411f063f62)
 
 ## v0.2.2
 
-* Catch as run time exception
-* Add newlines
-* Add newline
-* Add new line
-* Update AUTH README
-* Update AuthService options
-* Remove unused import
-* Add default auth settings
-* Bugfix: Update algorithm EC256
-* sxt-271: Instruction to start auth services
-* SXT-272: Fix token generator
-* Using sawtooth private key
-* Add option to turn on AuthService
-* Update README
-* Fix public key handling
-* Resolve checkStyle issues - add required spacing around colons and brackets - define magic values as class instance level constants - make methods private which need not be public
-* add javadocs and final modifiers to resolve checkStyle issues
-* Script to start and stop local daml-on-sawtooth
-* Update to match incoming changes
-* concurrent run of 1
-* exclude TransactionScaleIT from test suite run
-* only exclude TimeIT, set scale factor to 50% (used by lots of parties it and transaction scale tests)
-* address start import warning
-* Address warnings, refactor to avoid code duplication, use singleton instance of SubmissionResult to avoid spurious errors
-* Return healthy case object rather than abstract class
-* Address warnings
-* Upgrade to SDK 0.13.41 - Implement health services in read and write services - Async interfaces for party and package management - TimeModel change in package path
-* Update README
-* Fix JWT generators
-* Fix typo so name match bash script
-* Add bash script to trigger jwtgenerator
-* Update RPC Pom
-* Add cli to JWTgenerator
-* Fix pub/private key handling
-* Implement JWTGenerator
-* Implementation of DAMLAuthSerivce
-* Add implementation of AuthService
-* Add authService from digital assets
-* Implementing AuthService
-* Relocate ci builds to away from master node
-* batch submission was returning overloaded on unknown transactions
-* Hints may not be sent and we need to pick a party id before submission
-* Improve the daml-rpc and daml-tp parallel behavior
-* Update dependencies to version recommended
+* Catch as run time exception [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/425803a56a7c98fe050159ce702708374c33e3da)
+* Add newlines [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4cb00c5a0bf2dd6c75b7fdcbecec697d2c9f63d9)
+* Add newline [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8670d94aa29c15b7451185dcd3bd190144ea3910)
+* Add new line [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/738a608d6b71fb86150c9f5e622092a8925f90b2)
+* Update AUTH README [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/20b48d954eac1ed4cbc4849f43bb2d6a9e4b1403)
+* Update AuthService options [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9952ad7c482d359350309556d6f41636fa9f40a6)
+* Remove unused import [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/092c17a079a7648d6fc0b71b73761ef813fbe8eb)
+* Add default auth settings [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e939b88edac2177b578cc367aa6fce1bf45798a7)
+* Bugfix: Update algorithm EC256 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e32d18f63a68055621aa0fa330549fa749227e31)
+* sxt-271: Instruction to start auth services [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9e83176b63172426f029aaaf7645a86606df27d0)
+* SXT-272: Fix token generator [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/32d7d5929fd9d01bfc1bf5f66c1f3858de6c070d)
+* Using sawtooth private key [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/26d76c2e55fecd83a594c3e8b0b4a452466c2312)
+* Add option to turn on AuthService [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/12e840892eb3f9ea79eb341cad88718ee3f15e2c)
+* Update README [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/734578a30de6cb14443a039fb7c00051bcbb4bd4)
+* Fix public key handling [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/43f8e2603a288ae9f88cbb2c5b77bb0cfbb1d509)
+* Resolve checkStyle issues - add required spacing around colons and brackets - define magic values as class instance level constants - make methods private which need not be public [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/032c96505efbcb444c6563c966be88921948d16d)
+* add javadocs and final modifiers to resolve checkStyle issues [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/48379deb379f512a3cc1e1cdd294e4e10f9d3772)
+* Script to start and stop local daml-on-sawtooth [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/119166ee64ae20e39cf262135a39507f2762a3da)
+* Update to match incoming changes [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/01afc463b8f6a9203133e335a36a8a824f128b38)
+* concurrent run of 1 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1c8bbedea7b16c39a2889bea4b9864ba6e05240c)
+* exclude TransactionScaleIT from test suite run [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4f9e7af98bdf2331c337fd4c0098885dc148476c)
+* only exclude TimeIT, set scale factor to 50% (used by lots of parties it and transaction scale tests) [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4f5518a0438f6881551a46f607fd58b0699eb33b)
+* address start import warning [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/be02e49b42fad07a248570fcba53e3bfd66d815f)
+* Address warnings, refactor to avoid code duplication, use singleton instance of SubmissionResult to avoid spurious errors [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7ea72871ef4a9452df6caacb660ddfc470222b0b)
+* Return healthy case object rather than abstract class [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a2bdac554a4a8e2ac4e506f92527d61328e330ca)
+* Address warnings [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5fc48b5fa9c09df61c062ba1339b1f8bc9f7c671)
+* Upgrade to SDK 0.13.41 - Implement health services in read and write services - Async interfaces for party and package management - TimeModel change in package path [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ba1085b778263feb018720bd3721c8fe9d174c70)
+* Update README [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e1299887d6cdc55f6bfb95ea797e32d938084df9)
+* Fix JWT generators [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d9cb27766ef8b12055dcad0ec1f770ff4ebf4aae)
+* Fix typo so name match bash script [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b49938b7a6fb6c9b08bdfd0edb79f8630ce00643)
+* Add bash script to trigger jwtgenerator [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b3ae9ff1fb1bfd005c164307dd3b0b3ddb9c719c)
+* Update RPC Pom [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d3baa9680c869a6f14949e303627126129389970)
+* Add cli to JWTgenerator [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ca0533987364cd8882fbaf3374b61741d6b66ff5)
+* Fix pub/private key handling [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b689725f1a2188c8709f7ec19c33aa0fc3a9b81a)
+* Implement JWTGenerator [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6b07e0b81c8cb9546a41b933657b690094abf623)
+* Implementation of DAMLAuthSerivce [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/087f4468cd047e3291275be741f4351e5e292109)
+* Add implementation of AuthService [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e0330be09246a4ea63334b1e04a1e39003e260e7)
+* Add authService from digital assets [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4be7cd76d2880898a679d51b581fd7eb1376f97e)
+* Implementing AuthService [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2b124a23bb83dbdc33a58242ef2273a0ebe04c35)
+* Relocate ci builds to away from master node [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7cc71b2b8f5cf3824b7f71ad425dd57e8bb17728)
+* batch submission was returning overloaded on unknown transactions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/72396573201d4f3ead35ae8aa241d193ed3ecc78)
+* Hints may not be sent and we need to pick a party id before submission [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/95a71f1afc723c1f3e4f3a7ae0a7a6c1a361fb54)
+* Improve the daml-rpc and daml-tp parallel behavior [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3ffc62910a9168d837258038bfd830609a25b358)
+* Update dependencies to version recommended [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3443e2d6f83cb185da6ca44d6e6e4587533cb6b0)
 
 ## v0.2.0
 
-* Adjust defaults to match timekeeper defaults
-* UNKNOWN is not a terminal state
-* Update to DAML SDK 0.13.37
-* Additional error catching
-* Remove synchronization
-* Update to SDK 13.29
-* Switch to using a thread-safe ZmqStream impl
-* Couple of minor markdown edits
-* add intellij related extensions to gitignore
-* Fix typo
-* Update README
-* Move BUILD.md content to README.md
-* Remove address contention b/w input and output
-* Add and use MTTransactionProcessor
+* Adjust defaults to match timekeeper defaults [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d5f9b4ce2b96bb00a015adae4d14fa65105d6a12)
+* UNKNOWN is not a terminal state [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d06e201f5ece2379b4f8b7de99d9f6c581fd40d8)
+* Update to DAML SDK 0.13.37 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/bc25426248f85087022b0c897a1a0e5b4ef44e90)
+* Additional error catching [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/31a538d379d658b4059c5715e4c1f2ee164b6e61)
+* Additional error catching [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5fa0cef04e42157b17a92cf454f408516111f57f)
+* Remove synchronization [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/06bdea779b83b61264927326a533d45738bdfa92)
+* Update to SDK 13.29 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3a0f748337d992282a2bb6f66a537863c34d05fc)
+* Switch to using a thread-safe ZmqStream impl [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/65a06c3491c8302c179399509bef6a9a550f89c3)
+* Couple of minor markdown edits [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5649130afb4f464b910202452e4d983795273e58)
+* add intellij related extensions to gitignore [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/75474ebd11e91aac663c497cb4ea15686ecabd04)
+* Fix typo [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f158963dcfab88ff4eff828c6c549ea5a54c23e5)
+* Update README [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/02e6bad14c86b1e2f648a7bb25965b66d61c98bf)
+* Move BUILD.md content to README.md [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f365e9831ac9e40a101aff27ccbd9ae05a190014)
+* Remove address contention b/w input and output [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/524a8de5b71d296e65a14be97bd46f253a2f12ec)
+* Add and use MTTransactionProcessor [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d96a54c5bd2ff71ed35ec8d40c945bc1c6c9d59d)
 
 ## v0.1.3
 
-* Fixed BUILD.md link
-* Remove synchronization on sendToValidator
-* Adjust default TimeModel to tighter values
-* Update testtool SDK to 13.21
-* Add some detailed logging wrt timemodel
-* Update to use sdk 0.13.18
-* Change to using protobuf JsonFormat
-* Fix Java spacing.
-* Temporary fix
-* Ignore node modules
-* SXT-113 Update dependencies and add resolutions
-* Remove noop-transaction-processor
-* Refactor submissions and correct party allocation
-* Correct Paul Sitoh in CODEOWNERS
-* Update instruction for user to customise noxy
-* Change tracer-ui compose port to expose directive
+* Fixed BUILD.md link [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c4bb4cb6bf55f55a9ed53cb4da347026a5b141f3)
+* Remove synchronization on sendToValidator [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f35662526808f7f136e09c78886cf659a6f7416e)
+* Adjust default TimeModel to tighter values [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8faa4da67c2404282a04fd39a418d2593b992008)
+* Update testtool SDK to 13.21 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e9f9f861421b9a5cd48ebb7e351af3a96b6f78cf)
+* Add some detailed logging wrt timemodel [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3f1d4728d6eaf32e4c1d9e866cfd6baebed173e6)
+* Update to use sdk 0.13.18 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/45dd572514f8454d3af80729cbd19f6a5491b8c9)
+* Change to using protobuf JsonFormat [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/837d5d36408038dc1ace901833bccda9517c7e41)
+* Fix Java spacing. [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/eba5938c2436594492d5f15faef3603b5e797821)
+* Temporary fix [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b865d81025fba448dcc7b189ed2a44bd0b352ab5)
+* Ignore node modules [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7525018e29b5a899b146ecd51dba75c8db1f5d86)
+* SXT-113 Update dependencies and add resolutions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fdea8a7e10ad43202f07937d409149212fa76737)
+* Remove noop-transaction-processor [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/28b1317d10526df19a78f2f80464e383b996abe2)
+* Refactor submissions and correct party allocation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f39d94d658110ac23ac5e4fe721cee10ea04bd06)
+* Correct Paul Sitoh in CODEOWNERS [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2e18a086dc573b060b3abad2eeb5f5e110d58d4e)
+* Update instruction for user to customise noxy [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c3c6dca49d3670a5a4f92e0d39b4cf686ea10ddf)
+* Change tracer-ui compose port to expose directive [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/dc069de6f13aefe3b99081c274c8178e5c93a129)
 
 ## v0.1.2
 
-* Remove noop-transaction-processor
-* Refactor submissions and correct party allocation
-* Correct Paul Sitoh in CODEOWNERS
-* Add Brian Healey
-* Add Marcin Ziolek
-* Add Jussi Maki as CODEOWNER
-* Updates to BUILD.md instructions
-* correct build image name in build.sh
-* Update README.md
-* Add OSS related scaffolding documents
-* Update README.md
-*  mount /dev/urandom
-* Fix SecureRandom generation
-* Execute stream send before completionstage
-* move verify
-* batch mode mvn clean
-* Bump sawtooth SDK to official v0.1.3
-* fix build-helper version
-* Resolve checkstyle issues
-* Add verify goal to trigger checkstyle
-* if offset is unknown start at 0
-* Remove tracer-ui from test
-* Add build of images
-* Include the daml-test.yaml
-* Add integration tests to Jenkinsfile
-* Add JAVA_ARGS to entrypoints
-* Add ledger-api-testtool docker
-* Add a docker build for the ledger-api-testtool
-* Update Readme
-* Implement party allocation on RPC
-* Implement party adding on the TP
-* Add SawtoothDamlOperation and SawtoothDamlParty
-* Format rpc.proto
-* Remove outdated README
-* Update RPC for new SDK
-* Update TP for new SDK
-* Update SDK to 0.13.16
-* Write keys as hex
-* Fix nonce to properly generate
-* Add reading of ledger-id from ledger
-* Reduce logging levels
-* Remove LRU cache, no substantial effect
-* Add an LRU cache, not MT safe
-* Re-enable compression
-* Disable compression
-* Add timings to compression
-* improve concurrency in submission
-* Correct test failure
-* set multiple values at once
-* Logging refinements
-* Add performance timing, reduce log noise
-* Support restarts using for reset index server
-* Pull timemodel from ledger
-* Reissue the request
-* Reinitialize ZmqStream in case it is early
-* Set default timeout=10, return on NO_RESOURCE
-* Resolve NPE, improve logging
-* Fix checkstyle
-* Get TimeModel from chain or default
-* Add timemodel storing at the backend
-* Add catchup handling to SawtoothReadService
-* Add logging to batch submission
-* Fix submission status check
-* unwind multi k/v assignment
-* Update to sdk 13.5
-* Improve client exception handling
-* return to 12.25
-* Adjust time model
-* Add some record time logging
-* Adjust time model for 1m/1m/5m
-* Update sdk to 13.0
+* Remove noop-transaction-processor [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/df1cbd488884c4a0ffcc8658ba346a17cd659ec1)
+* Refactor submissions and correct party allocation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7e5ea59b6c4eac631071b26bccfec6fa5230b396)
+* Correct Paul Sitoh in CODEOWNERS [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/993b6c8a1cf937274553b6cd1aa622021a34fac5)
+* Add Brian Healey [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7df5c5d3f85e52dbec84288a8d647db71f472808)
+* Add Marcin Ziolek [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b78e1bcbc60beded6e1c9d407b00c84e30b6f1ba)
+* Add Jussi Maki as CODEOWNER [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cf28de5db90dc53d8cffe59d701679982f6889b2)
+* Updates to BUILD.md instructions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a39e542eeb5f043b0ace7eb4ca53b8db3bf9d976)
+* correct build image name in build.sh [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f121a0eb75c31fc4eb0ae0cc5979411a90968f08)
+* Update README.md [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2af5d389e48f905e1f74ca46890c54699ae2aecb)
+* Add OSS related scaffolding documents [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/efdf8ce7a623ef857e2dd114601e21284d3eb5bd)
+* Update README.md [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4a63f2185a0bf49419f254afc78dd0ac2576a9be)
+*  mount /dev/urandom [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/69fccbc2a4efb8e459037b476ff3094eba3641cd)
+* Fix SecureRandom generation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0887757bf61392c64f680e6b9ca7d324236f50db)
+* Execute stream send before completionstage [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cef95e62d45fc8fe9e41d6f17c66f4d4e64d3026)
+* move verify [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/959679e6c776367ef9eec59f552f882d81dd5924)
+* batch mode mvn clean [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/551f373948ebae0d67ec593dceebfe72aeeac519)
+* Bump sawtooth SDK to official v0.1.3 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/eaf944610e8203d3d728753fc7198616345ba011)
+* fix build-helper version [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1eec75ba3e43e939e77aa37bfd40b83cee805d32)
+* Resolve checkstyle issues [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d91408f313a2336411f626b40dee592de0d2c35d)
+* Add verify goal to trigger checkstyle [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/17eb6964a4f7b7f4737a0615fd253a439210ce80)
+* if offset is unknown start at 0 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3689db64041558e9009547566784a2a895a91da3)
+* Remove tracer-ui from test [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f5d350dcf1e0b32c77d40cc66f04f95be63da7c1)
+* Add build of images [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/18f5e11b52a131bcb02a6b53e00680b616be8e5c)
+* Include the daml-test.yaml [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f00750141812cf774005b1902cbdf51eca8adf1a)
+* Add integration tests to Jenkinsfile [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/09a932971b212d377a06f8f2c8098c461b836196)
+* Add JAVA_ARGS to entrypoints [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a4633ffa29139188505f7426b45125bcd595f95b)
+* Add ledger-api-testtool docker [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9a9303a0af63c85fd3a87f9b4c7a03dd00c8e3f3)
+* Add a docker build for the ledger-api-testtool [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/bd567c4904fc8c725d91ee9528a86c0c42a9b05d)
+* Update Readme [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/dfa80a6783d95e7912da2166a17a98f3055779f1)
+* Implement party allocation on RPC [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a5e3301e608dab6fa88523828de4e6930b2731ac)
+* Implement party adding on the TP [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cc6cf7f9ee5c29579eb0a68a3a88940b286aed14)
+* Add SawtoothDamlOperation and SawtoothDamlParty [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/157f36f3006e13faaadfda0caff1a19eaa26befa)
+* Format rpc.proto [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a4649a740a67fb21663e6f1669e6078fa37c2892)
+* Remove outdated README [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cbeb2fd8ae4313b4919b00d4c7454216bb58ab74)
+* Update RPC for new SDK [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9bd055f014e9c8c47a06cec333e0ec6a12bdaa21)
+* Update TP for new SDK [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d23773c39de23b216dc3699fe872468211dae87b)
+* Update SDK to 0.13.16 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8f76d770057d3a161e04c5c21b715ce51c122172)
+* Write keys as hex [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/bbf0a27e250fb736c68a0f33457363d8b6324749)
+* Fix nonce to properly generate [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/09cf270e087bfbc80367c4c91b0a90a850683d33)
+* Add reading of ledger-id from ledger [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/506cbb607f838d2f95ee7dfd4964827542e7f884)
+* Reduce logging levels [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/34f175e3794796020eddaf4071eafd078f41b29a)
+* Remove LRU cache, no substantial effect [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/192ccebe15afe48e9a44154ba6b878171e7867f7)
+* Add an LRU cache, not MT safe [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/250a021c9cb62fd41fa38b4085254c56cae14eb8)
+* Re-enable compression [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7658bfc1483e9bfa8f1af4c34bd16cd57ee9dcb6)
+* Disable compression [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8283df7479b70f70a89a5de97dc5ac6383698808)
+* Add timings to compression [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fdc975452ec8bc1814e1d4f1af35bce64a64aa70)
+* improve concurrency in submission [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8ed55b585b016ca94434ad9661cc616ba5bc983e)
+* Correct test failure [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7755ea769e414f4b96dae09e43beba1e1d2d40df)
+* set multiple values at once [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e4b96f4cbdb95a4a6d20700f18b106cd48772c3c)
+* Logging refinements [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9852cfbfed02849288a95cb22a760e807d8c1429)
+* Logging refinements [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ff78a4b03a1a2f213e94d278804c1152e683094e)
+* Add performance timing, reduce log noise [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/69ad8e18b2213b8ee3adb436ccb06be3f8e42560)
+* Support restarts using for reset index server [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5f581c50e76719af203bcef456d9486724170756)
+* Pull timemodel from ledger [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b9d8333f31f644aad57111f286063f17fb31e97c)
+* Reissue the request [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f327ae143cb5a2078ff44af9ad9fadeb7ef3c893)
+* Reinitialize ZmqStream in case it is early [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3397b9fb7983a29789c7358e649acb76bff2a105)
+* Set default timeout=10, return on NO_RESOURCE [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7ad8aae05dbd41340ec835d6a3ce29f6662b05b1)
+* Resolve NPE, improve logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f26f53188038d9fce97c37546c1c56f935d37c78)
+* Fix checkstyle [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/730f80aa12f772d263e51e062eab73d1dd371a0f)
+* Get TimeModel from chain or default [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cbef728260f3cbbf7dba403f21c663edf3d94285)
+* Add timemodel storing at the backend [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7b1f0d5851f21172327aba1845ef7e8b65b4a262)
+* Add catchup handling to SawtoothReadService [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c8f8eedaff719aa492d936dc4790e0eda7fc6a77)
+* Add logging to batch submission [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1a3e84ff16e90f50fb9a02a76c8c519e28efc00a)
+* Fix submission status check [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e8a8b87ccfb5dd818608d310bff41a3e4a23342d)
+* unwind multi k/v assignment [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f1a0fa73c6c752498079bfbd462347278ef6fb66)
+* Update to sdk 13.5 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e170f28123688aa52a626c98283217839a876298)
+* Improve client exception handling [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/18145973945b21ec96672634c43ba1c09426c299)
+* return to 12.25 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3ba7db6697b1d9a41cd5cd0fccd291274db93929)
+* Adjust time model [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/830e5df789995fe76034732fbde3fddf20ae5743)
+* Add some record time logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/937555e274cbf152ca9ecbcdab759d00932f57f4)
+* Adjust time model for 1m/1m/5m [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/9e54055419f14be6ab402d90c579cca92f532bff)
+* Update sdk to 13.0 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d2d0da3392ed8dc00135d21d9076fc76c86280b2)
 
 ## v0.1.1
 
-* correct branch checkout
-* Validation of log keys corrected
-* Fix missing log multipart key
-* Deal with empty values properly
-* Allow empty values vs nulls
-* Fix checkstyle
-* Set an arbitrary value for command dedups
-* Return option empty when size=0 and is dedup
-* Fix checkstyle violations
-* fix when uncompressing size=0
-* Compress log event
-* Fix missed compression
-* Multipart log entries
-* Add multipart key to package upload
-* Fix checkstyle
-* Fix checkstyle problem
-* Refactor DamlState K/V's to use a multipart key
-* Compress DamlStateValues,and DamlLogEntry in state
-* Add input addresses to output after populated
-* Add dedupKey and input addresses to output
-* Log output address on rpc
-* Fix return when the value is a 0 length ByteString
-* Log keyvalue types
-* Add package addresses as potential input
-* Add more logging
-* Add log entry list to input addresses
-* Add missing input address for global time
-* Improve Logging
-* Disable pmd ruleset
-* Remove UnnecessaryFullyQualifiedName rule
-* Refactor provide all requested state entries
-* Fix participantId and KeyManager
-* Update for sdk 12.25
-* More license headers
-* Add copyright headers to java files
-* Add copyright headers to xml, docker and sh
-* trigger a daily build
-* Cleanup Jenkinsfile
-* Upgrade sdk to 0.12.24
-* Replace protobuf direct calls with kvutil un/pack
-* Ensure transaction elements are shown properly
-* Add log entry address to output list
-* Add a secondary counter
-* Remove unused imports
-* Fix to enable transactions to be listed properly.
-* Update to use daml sdk 0.12.22
-* Fix so it can read the transactions from RPC
-* Remove unguarded and unnecessary logging
-* Add demo dar loading
-* Reduce some logging noise
-* Add tracer-ui
-* Fix routing
-* Remove the flag for manual run
-* Remove superfluous Jenkin files
-* Add tracer-ui composer
-* Refine build sequence
-* Remove stage where we tag and push images out
-* Use jenkins provided settings.xml
-* Exclude sources and javadoc jars from assembly
-* tidy pom files, fix a javadoc error
-* refactor checkstyle, add pmd, and resolve issues
-* upgrade protobuf, and remove log4j
-* Refactor for tracer support
-* Enhance KeyManager, add DirectoryKeyManager
-* Add Sawtooth RESTFul transaction tracer.
-* Add rest object
-* Refine logging
-* Refactor event subscription
-* Change read global time record at TP
-* Fix checkstyle variation
-* Separated out timekeeper according to design
-* Correct formatting and jvm selection
-* Remove unused imports
-* Add docker push
-* Fix settings.xml usage, do mvn clean
-* Add docker push
-* Fix settings.xml usage, do mvn clean
-* Separated out timekeeper according to design
-* Correct formatting and jvm selection
-* Remove unused imports
-* Add docker push
-* Fix settings.xml usage, do mvn clean
-* Implement getLedgerInitialConditions
-* Collapse DamlStateKeys into a single address space
-* Add turning timekeeper events into heartbeats
-* Add mvn deploy
-* change to use assemblies instead of shade
-* Add daml-tp and daml-rpc to daml-local
-* Add initial local net configuration
-* Separated out timekeeper according to design
-* Correct formatting and jvm selection
-* Remove unused imports
-* Implement getLedgerInitialConditions
-* Add docker push
-* Fix settings.xml usage, do mvn clean
-* Ops: Fix jenkinsfile
-* Refactor dockerfiles,add Jenkinsfile
-* Add turning timekeeper events into heartbeats
-* Collapse DamlStateKeys into a single address space
+* correct branch checkout [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a780becf6943ce3d77d79abed3c2837263ca8d29)
+* Validation of log keys corrected [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/671a31c4af2cbaf59c095f6330ff600f886167ad)
+* Fix missing log multipart key [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/94e8e42fc3750b6197f22bad0e7adfad6641f00e)
+* Deal with empty values properly [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e7340df07983922145cecc059da93d420d0365f3)
+* Allow empty values vs nulls [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2dc59de0334710bbba995673a7585b6e5d289340)
+* Fix checkstyle [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/80a4b663fd64903d7d17869f5e6000e3c9f3f63e)
+* Set an arbitrary value for command dedups [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0a49220a40719e8531007c823fe4103d8fdc253b)
+* Return option empty when size=0 and is dedup [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/197523352a58b73727e1dcc50f7baef7a762f329)
+* Fix checkstyle violations [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3df3ed1945c67777b73725b839f1216490cfc416)
+* fix when uncompressing size=0 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c0a2226156e6a50b8e87c86ccf326574d3689f8a)
+* Compress log event [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/63f3b89533e924f47fadd14e049cb17157ac0853)
+* Fix missed compression [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5bfe2c5f7c40f74762d4cfdbbd5e9a70118ba0a3)
+* Multipart log entries [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/83f2c4d555304ec4643eb19197fd95c051691965)
+* Add multipart key to package upload [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/825a84d657f3e94b8c4108ad6c88ddeca7075c80)
+* Fix checkstyle [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f05ceca8827acf7bc765feba43d42079eb52cb27)
+* Fix checkstyle problem [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8938e7994ab354bd892df5155eda869b24c830f3)
+* Refactor DamlState K/V's to use a multipart key [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7f3b61565d7d4cc37fc0549f01f224154d4897af)
+* Compress DamlStateValues,and DamlLogEntry in state [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/509618da8c828905518a3e1a82d969690db5d909)
+* Add input addresses to output after populated [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c3983083e17f1b97421452081e5a21df8e48e0d4)
+* Add dedupKey and input addresses to output [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/97a5370f95962233a74b380f09ba926e3a69e113)
+* Log output address on rpc [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a82e38cb07bfadc17dea64c9dbbda29b8a1db820)
+* Fix return when the value is a 0 length ByteString [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0f0b10e3f5157dd180a3f19227b0acf16a229666)
+* Log keyvalue types [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a8d98ce828a93b2794eded79f6e202a049f0149b)
+* Add package addresses as potential input [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4a4892337ffd6d6e95b83ea84a6db64dccafaed6)
+* Add more logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4bdc617de0741f6a24e4c991537fd9c71213df12)
+* Add log entry list to input addresses [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/713ed446c63bb2c2223589101ba805ec96952481)
+* Add missing input address for global time [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/bd1b4b4f8e4b31e71d01364cbc8304e3b25114dd)
+* Improve Logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6e070567a934583dccf33660fbb102d8a828cb4c)
+* Disable pmd ruleset [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/effc44fd07d4a2a9a38000e0ffedefc246c5a89c)
+* Remove UnnecessaryFullyQualifiedName rule [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/326235aafe6312ef3dff5e10d9d3515cff7bedf0)
+* Refactor provide all requested state entries [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/812496308084fab305c16e11543c676379993e4d)
+* Fix participantId and KeyManager [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/68ae06934e76ff91fcbc40bea2284e6b421e4900)
+* Update for sdk 12.25 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d16bfd4d331969d2ebaebc45045ed42d2027b3dc)
+* More license headers [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4cc143caef6e43305b36e840643d4ae9036a9bbb)
+* Add copyright headers to java files [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e758b31321dbc217aa67aad0bfd134314b18ab5e)
+* Add copyright headers to xml, docker and sh [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/69eb1b2d1ea973a1b2911fb64d4bc87f0468aa1d)
+* trigger a daily build [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/da5935b4163320e190190ff54b8111d30aeacaa5)
+* Cleanup Jenkinsfile [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/966705e751c41efa66e9c6d7252d7b595d6173d2)
+* Upgrade sdk to 0.12.24 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1be076933b8a8fd9478ec87c63c61f3f00d109b9)
+* Replace protobuf direct calls with kvutil un/pack [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3d0be5aa626e218b8ac847047a52b8094d881dc6)
+* Ensure transaction elements are shown properly [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/323a7cfaaa9c5759f12d64f7de263590fb4b34c8)
+* Add log entry address to output list [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c9d98c444096d059ccb9d580cda285566e315bd8)
+* Add a secondary counter [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c55dbf32ecc4924a1b3e547d1d81dc3d1882c7a5)
+* Remove unused imports [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fb2309cb519160734b5dc46b561525fd383e4be3)
+* Fix to enable transactions to be listed properly. [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d377fccbc752c30727ef3a09f52a48e799886f7c)
+* Update to use daml sdk 0.12.22 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f2fdb6ebaf46f176724be6b41d4484fb41b0345f)
+* Fix so it can read the transactions from RPC [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e76e469047e717f785e21e5427325fe1f6c6dd1d)
+* Remove unguarded and unnecessary logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/35f8b5d9c0f78b633633462aedab8a6f1e9ea4ea)
+* Add demo dar loading [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7ec38a1e19c29d5cfc6dfe332c8965cb12223d2d)
+* Reduce some logging noise [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/585762185b5f33d862a2789097a26be372ba7241)
+* Add tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/df01d7c97ae80c838ca40e711454df34602a2005)
+* Fix routing [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2d530c551aab80414a44ff66cb0eb219115f705f)
+* Remove the flag for manual run [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3d87e14c11347680abaa7c1727777f7673c2a7c6)
+* Remove superfluous Jenkin files [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/22c72f33f3d7bc369fd0cc646e2d2d17f761ff4d)
+* Add tracer-ui composer [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/13a82474797895146edc8a89e9d54a0cd1dbfd00)
+* Refine build sequence [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/338797c12bb9644c874787cc19c27a72d9dd5617)
+* Remove stage where we tag and push images out [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d44081a5d9aaf1628b5d771ee12db402163ebc46)
+* Use jenkins provided settings.xml [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/115f742b27690e9923bd6ff45095008dabd55534)
+* Use jenkins provided settings.xml [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4747916d1f11bd942e08592680e6d5ccd357f55e)
+* Exclude sources and javadoc jars from assembly [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/baba6513f72dae1fa2d106111c6f825c87e71826)
+* tidy pom files, fix a javadoc error [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/584fd8d5c535a77174cf072e7eda020c383bc246)
+* refactor checkstyle, add pmd, and resolve issues [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3f5839b1beaa8d032ad0df3c97504eb587c38b92)
+* upgrade protobuf, and remove log4j [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6a04a1bfb9bf091b023f39cd9a0c3d5aaa1b010e)
+* Refactor for tracer support [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ae9148141b57feba3d64e5815900faf5dd2eb618)
+* Enhance KeyManager, add DirectoryKeyManager [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/91c9749f3f30cc73bd9643c2c7f01f0c14dca240)
+* Add Sawtooth RESTFul transaction tracer. [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/888ecdba913e48709ec3d29a3822ea45b589643b)
+* Add rest object [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c40c879434513e2fd511040eb07f426d6aa2891c)
+* Refine logging [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/22e4640a07853b8731367f65105f14465885c08b)
+* Refactor event subscription [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3c2a0fcc7608ee80e02c6a928ade0314aa847b8a)
+* Change read global time record at TP [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2a9b11dfb8686ed297e9abfe01da27d124982eda)
+* Fix checkstyle variation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3d1b491250a2de8bb457ae1c623945c7733b22c1)
+* Separated out timekeeper according to design [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/51434139bb66c21864805e11b1a1d84bd2ebd206)
+* Correct formatting and jvm selection [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2da3ff6cda8ff9ed477b8dd20355085c2345258e)
+* Remove unused imports [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/95f3579bfc39e441c1898aa47296ebce76ba1975)
+* Add docker push [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2ec6a47a03e2b6e75bc72ea1389511862ae736af)
+* Fix settings.xml usage, do mvn clean [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0cbdf1b229ad579406c8d4bc258aae3318d91d7c)
+* Add docker push [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c5c198b76b1fc2c5be783556466aff5cb16e6ec6)
+* Fix settings.xml usage, do mvn clean [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d9417c69468bf33191c64413697c1b9574ef6700)
+* Separated out timekeeper according to design [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cc47e560ec60ae4a9c424231d1468291f4d6060e)
+* Correct formatting and jvm selection [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6326665c154bcd4c0bceb2d4cb3fc3c26bb5fcf0)
+* Remove unused imports [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fdc5e4244c1ed06748b46131261013a275a87e74)
+* Add docker push [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6d881155fc0a693b36367cfbd9cfabe30de15333)
+* Fix settings.xml usage, do mvn clean [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3788500025606ae79aaae32535f3df22e18fed55)
+* Implement getLedgerInitialConditions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5a252786da4599b253747a9ca9aaa412596ee54d)
+* Collapse DamlStateKeys into a single address space [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f103c53be7842f98389e536e8576f3ef28436ece)
+* Add turning timekeeper events into heartbeats [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/089482866d8df646414271bc779023218e2b9db7)
+* Add mvn deploy [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/aacd999949f47f875787315c471a6ffd7b2c2a80)
+* change to use assemblies instead of shade [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4d67345bfb70474646ac01ff753dcdc73e5fbc59)
+* Add daml-tp and daml-rpc to daml-local [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0e107024139f839e4a67bb3cfaff68b4e29c1182)
+* Add initial local net configuration [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a39bd43363104083ce8e6919654132972403ffcc)
+* Separated out timekeeper according to design [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c0cab2cbc0537b775a348017c518f654a91d6b39)
+* Correct formatting and jvm selection [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/69b1f38184276317e52a6a03a76749eb9d525799)
+* Remove unused imports [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/caf41bda73a56b4f3f5454f168fa6e81df3aa06d)
+* Implement getLedgerInitialConditions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7395bd6ba6b5344ed8b3d70cf56eea7751daf600)
+* Add docker push [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8dd32137ebd30c0ccd5064d9599430499c748128)
+* Fix settings.xml usage, do mvn clean [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1f7f8af6b4e699cfa7033fc8da72a9be4ff92fac)
+* Ops: Fix jenkinsfile [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8d5c6099eafd64a03d5bc7c771325c3f040d3ac3)
+* Ops: Fix jenkinsfile [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/4daccd1e0c371b662dc1df8337921627a4be3fe1)
+* Refactor dockerfiles,add Jenkinsfile [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8b9cc131a12e9450a53905fc1bb84dd5e3cc2433)
+* Add turning timekeeper events into heartbeats [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/12110142c4c9c9afc87c92262c946bdcacff481c)
+* Collapse DamlStateKeys into a single address space [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/8fdef200b6f5f955f612662df7d2203572c8b91f)
 
