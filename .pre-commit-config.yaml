@@ -4,12 +4,12 @@ default_language_version:
   python: python3
 repos:
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v2.17.12
+    rev: v2.19.0
     hooks:
       - id: commitizen
         stages: [commit-msg]
   - repo: https://github.com/gruntwork-io/pre-commit
-    rev: v0.1.12
+    rev: v0.1.15
     hooks:
       - id: helmlint
   - repo: https://github.com/gherynos/pre-commit-java
@@ -42,11 +42,11 @@ repos:
           - "2"
           - -ci
   - repo: https://github.com/markdownlint/markdownlint
-    rev: master
+    rev: v0.11.0
     hooks:
-      - id: markdownlint_docker
+      - id: markdownlint
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v7.30.0
+    rev: v8.0.0-rc.0
     hooks:
       - id: eslint
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -87,7 +87,7 @@ repos:
       - id: fmt
       - id: cargo-check
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.26.1
+    rev: v1.26.3
     hooks:
       - id: yamllint
         exclude: ".*/templates/.*"
