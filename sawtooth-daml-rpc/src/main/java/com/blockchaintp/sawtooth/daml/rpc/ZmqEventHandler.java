@@ -1,11 +1,15 @@
 /*
- * Copyright 2019 Blockchain Technology Partners Licensed under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
- * ------------------------------------------------------------------------------
+ * Copyright 2019-2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.blockchaintp.sawtooth.daml.rpc;
 
@@ -24,9 +28,11 @@ import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
 import com.blockchaintp.sawtooth.messaging.ZmqStream;
 import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.blockchaintp.utils.protobuf.VersionedEnvelope;
-import com.daml.ledger.participant.state.kvutils.KVOffset;
+import com.daml.ledger.participant.state.kvutils.OffsetBuilder;
+import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;
+import com.daml.ledger.participant.state.v1.Offset$;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -64,9 +70,9 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   private static final int DEFAULT_TIMEOUT = 10;
   private static final Logger LOGGER = LoggerFactory.getLogger(ZmqEventHandler.class);
-  private static final String[] SUBSCRIBE_SUBJECTS = new String[] {
-      EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT, EventConstants.DAML_LOG_EVENT_SUBJECT,
-      com.blockchaintp.sawtooth.timekeeper.EventConstants.TIMEKEEPER_EVENT_SUBJECT};
+  private static final String[] SUBSCRIBE_SUBJECTS = new String[] { EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT,
+      EventConstants.DAML_LOG_EVENT_SUBJECT,
+      com.blockchaintp.sawtooth.timekeeper.EventConstants.TIMEKEEPER_EVENT_SUBJECT };
 
   private final Collection<EventSubscription> subscriptions;
 
@@ -81,7 +87,8 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   /**
    * Build a handler for the given zmqUrl.
    *
-   * @param zmqUrl the zmq address to connect to
+   * @param zmqUrl
+   *          the zmq address to connect to
    */
   public ZmqEventHandler(final String zmqUrl) {
     this(new ZmqStream(zmqUrl));
@@ -91,15 +98,15 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   /**
    * Build a handler based on the given Stream.
    *
-   * @param argStream the delegate to use
+   * @param argStream
+   *          the delegate to use
    */
   public ZmqEventHandler(final Stream argStream) {
     this.currentBlockNum = 0;
     this.subscriptions = new ArrayList<>();
     this.damlEventBuffers = new HashMap<>();
     for (final String subject : SUBSCRIBE_SUBJECTS) {
-      final EventSubscription evtSubscription =
-          EventSubscription.newBuilder().setEventType(subject).build();
+      final EventSubscription evtSubscription = EventSubscription.newBuilder().setEventType(subject).build();
       this.subscriptions.add(evtSubscription);
     }
     this.stream = argStream;
@@ -110,12 +117,10 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   private String getBlockIdByOffset(final Offset offset) {
     // Block 1 is the genesis block, While unlikely the first possible interesting
     // data is at block 2
-    final Long blockNum = Math.max(2, KVOffset.highestIndex(offset));
+    final Long blockNum = Math.max(2, OffsetBuilder.highestIndex(offset));
 
-    final ClientBlockGetByNumRequest bgbn =
-        ClientBlockGetByNumRequest.newBuilder().setBlockNum(blockNum).build();
-    final Future resp =
-        this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
+    final ClientBlockGetByNumRequest bgbn = ClientBlockGetByNumRequest.newBuilder().setBlockNum(blockNum).build();
+    final Future resp = this.stream.send(MessageType.CLIENT_BLOCK_GET_BY_NUM_REQUEST, bgbn.toByteString());
 
     LOGGER.debug("Waiting for ClientBlockGetResponse for block_num: {}", blockNum);
     try {
@@ -129,21 +134,19 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
         }
         final ClientBlockGetResponse response = ClientBlockGetResponse.parseFrom(result);
         switch (response.getStatus()) {
-          case OK:
-            LOGGER.debug("ClientBlockGetResponse received...");
-            return response.getBlock().getHeaderSignature();
-          case NO_RESOURCE:
-            LOGGER.warn("NO_RESOURCE received from ClientBlockGetResponse: {}",
-                response);
-            return null;
-          case INTERNAL_ERROR:
-          case UNRECOGNIZED:
-          case INVALID_ID:
-          case STATUS_UNSET:
-          default:
-            LOGGER.warn("Invalid response received from ClientBlockGetByNumRequest: {}",
-                    response.getStatus());
-            return null;
+        case OK:
+          LOGGER.debug("ClientBlockGetResponse received...");
+          return response.getBlock().getHeaderSignature();
+        case NO_RESOURCE:
+          LOGGER.warn("NO_RESOURCE received from ClientBlockGetResponse: {}", response);
+          return null;
+        case INTERNAL_ERROR:
+        case UNRECOGNIZED:
+        case INVALID_ID:
+        case STATUS_UNSET:
+        default:
+          LOGGER.warn("Invalid response received from ClientBlockGetByNumRequest: {}", response.getStatus());
+          return null;
         }
       }
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {
@@ -226,14 +229,14 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
         LOGGER.trace("Received event of type {}", e.getEventType());
         final Map<String, String> attrMap = eventAttributeMap(e);
         switch (e.getEventType()) {
-          case EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT:
-            handleBlockCommitEvent(attrMap, e);
-            break;
-          case EventConstants.DAML_LOG_EVENT_SUBJECT:
-            handleDamlLogEvent(attrMap, e);
-            break;
-          default:
-            break;
+        case EventConstants.SAWTOOTH_BLOCK_COMMIT_SUBJECT:
+          handleBlockCommitEvent(attrMap, e);
+          break;
+        case EventConstants.DAML_LOG_EVENT_SUBJECT:
+          handleDamlLogEvent(attrMap, e);
+          break;
+        default:
+          break;
         }
       }
 
@@ -247,8 +250,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     final String entryIdStr = attrMap.get(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE);
     final ByteString entryIdVal = ByteString.copyFromUtf8(entryIdStr);
 
-    if (attrMap.getOrDefault(EventConstants.DAML_LOG_ENTRY_FETCH_ATTRIBUTE, "false")
-        .equals("true")) {
+    if (attrMap.getOrDefault(EventConstants.DAML_LOG_ENTRY_FETCH_ATTRIBUTE, "false").equals("true")) {
       String[] addresses = attrMap.get(EventConstants.DAML_LOG_FETCH_IDS_ATTRIBUTE).split(",");
       List<VersionedEnvelope> veList = new ArrayList<>();
       try {
@@ -258,13 +260,13 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
           veList.add(elem);
         }
         ByteString evtData = VersionedEnvelopeUtils.unwrapMultipart(veList);
-        LOGGER.debug("Combined {} event fragments into an event of size {}", addresses.length,
-            evtData.size());
+        LOGGER.debug("Combined {} event fragments into an event of size {}", addresses.length, evtData.size());
         final long blockNum = getCurrentBlockNum();
         final int subOffset = getCurrentSubOffset();
-        final Offset eventOffset = KVOffset.fromLong(blockNum, subOffset, 0);
+        final Offset eventOffset = OffsetBuilder.fromLong(blockNum, subOffset, 0);
         incrementSubOffset();
-        final LedgerRecord lr = LedgerRecord.apply(eventOffset, entryIdVal, evtData);
+        final LedgerRecord lr = LedgerRecord.apply(eventOffset, Raw.LogEntryId$.MODULE$.apply(entryIdVal),
+            Raw.Envelope$.MODULE$.apply(evtData));
         sendToProcessors(lr);
       } catch (InvalidProtocolBufferException ipbe) {
         LOGGER.warn("Exception parsing event, elemets={}", veList.size());
@@ -287,13 +289,13 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
             veList.add(elem);
           }
           ByteString evtData = VersionedEnvelopeUtils.unwrapMultipart(veList);
-          LOGGER.debug("Combined {} event fragments into an event of size {}", eventSoFar.size(),
-              evtData.size());
+          LOGGER.debug("Combined {} event fragments into an event of size {}", eventSoFar.size(), evtData.size());
           final long blockNum = getCurrentBlockNum();
           final int subOffset = getCurrentSubOffset();
-          final var eventOffset = KVOffset.fromLong(blockNum, subOffset, 0);
+          final var eventOffset = OffsetBuilder.fromLong(blockNum, subOffset, 0);
           incrementSubOffset();
-          final var lr = LedgerRecord.apply(eventOffset, entryIdVal, evtData);
+          final var lr = LedgerRecord.apply(eventOffset, Raw.LogEntryId$.MODULE$.apply(entryIdVal),
+              Raw.Envelope$.MODULE$.apply(evtData));
           sendToProcessors(lr);
         } catch (InvalidProtocolBufferException ipbe) {
           // deepcode ignore AlwaysEmptyCollection: <please specify a reason of ignoring this>
@@ -314,8 +316,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
 
   @SuppressWarnings("java:S1172")
   private void handleBlockCommitEvent(final Map<String, String> attrMap, final Event e) {
-    final var blockNum =
-        Long.parseLong(attrMap.get(EventConstants.SAWTOOTH_BLOCK_NUM_EVENT_ATTRIBUTE));
+    final var blockNum = Long.parseLong(attrMap.get(EventConstants.SAWTOOTH_BLOCK_NUM_EVENT_ATTRIBUTE));
     setCurrentBlockNum(blockNum);
     LOGGER.info("Received block-commit block_num={}", blockNum);
   }
@@ -340,14 +341,15 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * Send a subscribe message to the validator.
    */
   public void sendSubscribe() {
-    Offset o = KVOffset.fromLong(2, 0, 0);
+    Offset o = OffsetBuilder.fromLong(2, 0, 0);
     this.sendSubscribe(o);
   }
 
   /**
    * Send a subscribe message to the validator.
    *
-   * @param beginAfter the offset to begin subscribing after
+   * @param beginAfter
+   *          the offset to begin subscribing after
    */
   @SuppressWarnings("java:S1141")
   public void sendSubscribe(final Offset beginAfter) {
@@ -368,8 +370,7 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
     final ClientEventsSubscribeRequest cesReq = ClientEventsSubscribeRequest.newBuilder()
         .addAllSubscriptions(subscriptions).addAllLastKnownBlockIds(lastBlockIds).build();
 
-    final Future resp =
-        this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
+    final Future resp = this.stream.send(MessageType.CLIENT_EVENTS_SUBSCRIBE_REQUEST, cesReq.toByteString());
     LOGGER.debug("Waiting for subscription response...");
     try {
       ByteString result = null;
@@ -380,22 +381,20 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
           LOGGER.warn("Still waiting for subscription response...");
           continue;
         }
-        final ClientEventsSubscribeResponse subscribeResponse =
-            ClientEventsSubscribeResponse.parseFrom(result);
+        final ClientEventsSubscribeResponse subscribeResponse = ClientEventsSubscribeResponse.parseFrom(result);
         switch (subscribeResponse.getStatus()) {
-          case UNKNOWN_BLOCK:
-            throw new DamlSawtoothRuntimeException(
-                String.format("Unknown blockids in subscription: %s", lastBlockIds));
-          case INVALID_FILTER:
-            LOGGER.warn("InvalidFilters response received");
-            throw new DamlSawtoothRuntimeException(
-                String.format("InvalidFilters response received: %s", subscribeResponse.getResponseMessage()));
-          case STATUS_UNSET:
-          case OK:
-            this.subscribed = true;
-            LOGGER.info("Subscription response received...");
-            return;
-          default:
+        case UNKNOWN_BLOCK:
+          throw new DamlSawtoothRuntimeException(String.format("Unknown blockids in subscription: %s", lastBlockIds));
+        case INVALID_FILTER:
+          LOGGER.warn("InvalidFilters response received");
+          throw new DamlSawtoothRuntimeException(
+              String.format("InvalidFilters response received: %s", subscribeResponse.getResponseMessage()));
+        case STATUS_UNSET:
+        case OK:
+          this.subscribed = true;
+          LOGGER.info("Subscription response received...");
+          return;
+        default:
         }
       }
 
@@ -411,10 +410,8 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
    * Send an unsubscribe message to the validator.
    */
   public void sendUnsubscribe() {
-    final ClientEventsUnsubscribeRequest ceuReq =
-        ClientEventsUnsubscribeRequest.newBuilder().build();
-    final Future resp =
-        this.stream.send(MessageType.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST, ceuReq.toByteString());
+    final ClientEventsUnsubscribeRequest ceuReq = ClientEventsUnsubscribeRequest.newBuilder().build();
+    final Future resp = this.stream.send(MessageType.CLIENT_EVENTS_UNSUBSCRIBE_REQUEST, ceuReq.toByteString());
     try {
       resp.getResult();
       LOGGER.debug("Unsubscribed...");
@@ -429,13 +426,13 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
   /**
    * Get the state at the given address.
    *
-   * @param address the address of the state entry
+   * @param address
+   *          the address of the state entry
    * @return the data at the address
    */
   @SuppressWarnings("java:S1141")
   public ByteString getState(final String address) {
-    final ClientStateGetRequest req =
-        ClientStateGetRequest.newBuilder().setAddress(address).build();
+    final ClientStateGetRequest req = ClientStateGetRequest.newBuilder().setAddress(address).build();
     final Future resp = stream.send(MessageType.CLIENT_STATE_GET_REQUEST, req.toByteString());
 
     LOGGER.debug("Waiting for ClientStateGetResponse for address {}", address);
@@ -450,26 +447,24 @@ public final class ZmqEventHandler implements Runnable, ZLoop.IZLoopHandler {
         }
         final var response = ClientStateGetResponse.parseFrom(result);
         switch (response.getStatus()) {
-          case OK:
-            final ByteString bs = response.getValue();
-            LOGGER
-                .debug("ClientStateGetResponse received OK for {}={}", address, bs);
-            return bs;
-          case NO_RESOURCE:
-            LOGGER.warn("Address {} not currently set", address);
-            return null;
-          case INVALID_ADDRESS:
-          case NOT_READY:
-          case NO_ROOT:
-          case INTERNAL_ERROR:
-          case UNRECOGNIZED:
-          case STATUS_UNSET:
-          case INVALID_ROOT:
-          default:
-            LOGGER.warn(
-                "Invalid response received from ClientStateGetRequest address={} response={}",
-                address, response.getStatus());
-            return null;
+        case OK:
+          final ByteString bs = response.getValue();
+          LOGGER.debug("ClientStateGetResponse received OK for {}={}", address, bs);
+          return bs;
+        case NO_RESOURCE:
+          LOGGER.warn("Address {} not currently set", address);
+          return null;
+        case INVALID_ADDRESS:
+        case NOT_READY:
+        case NO_ROOT:
+        case INTERNAL_ERROR:
+        case UNRECOGNIZED:
+        case STATUS_UNSET:
+        case INVALID_ROOT:
+        default:
+          LOGGER.warn("Invalid response received from ClientStateGetRequest address={} response={}", address,
+              response.getStatus());
+          return null;
         }
       }
     } catch (InterruptedException | InvalidProtocolBufferException | ValidatorConnectionError exc) {

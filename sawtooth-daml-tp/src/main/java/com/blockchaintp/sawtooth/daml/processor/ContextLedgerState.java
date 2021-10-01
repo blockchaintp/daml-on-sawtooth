@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Blockchain Technology Partners
+ * Copyright 2020-2021 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -11,7 +11,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package com.blockchaintp.sawtooth.daml.processor;
 
 import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
@@ -24,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import com.blockchaintp.sawtooth.daml.EventConstants;
 import com.blockchaintp.sawtooth.daml.Namespace;
@@ -33,7 +33,9 @@ import com.blockchaintp.sawtooth.daml.protobuf.DamlTransactionFragment;
 import com.blockchaintp.sawtooth.timekeeper.protobuf.TimeKeeperGlobalRecord;
 import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.blockchaintp.utils.protobuf.VersionedEnvelope;
+import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.validator.LedgerStateOperations;
+import com.daml.lf.data.Time;
 import com.daml.lf.data.Time.Timestamp;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -49,8 +51,10 @@ import sawtooth.sdk.processor.exceptions.InvalidTransactionException;
 import scala.Function1;
 import scala.Option;
 import scala.Tuple2;
+import scala.collection.Iterable;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
+import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.runtime.BoxedUnit;
 
@@ -72,25 +76,23 @@ public final class ContextLedgerState implements LedgerState<String> {
   private final Context state;
 
   /**
-   * @param aState the State class which this object wraps.
+   * @param aState
+   *          the State class which this object wraps.
    */
   public ContextLedgerState(final Context aState) {
     this.state = aState;
     this.deferredEvents = new ArrayList<>();
   }
 
-  private ByteString getStateOrNull(final String address)
-      throws InternalError, InvalidTransactionException {
+  private ByteString getStateOrNull(final String address) throws InternalError, InvalidTransactionException {
     final Map<String, ByteString> stateMap = state.getState(List.of(address));
     if (stateMap.containsKey(address)) {
       final ByteString bs = stateMap.get(address);
       if (bs.isEmpty() || bs == null) {
-        LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
-            bs.toByteArray().length);
+        LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(), bs.toByteArray().length);
         return null;
       } else {
-        LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(),
-            bs.toByteArray().length);
+        LOGGER.debug("address={} is set isEmpty={} size={}", address, bs.isEmpty(), bs.toByteArray().length);
         return bs;
       }
     } else {
@@ -100,8 +102,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
-  public ByteString getDamlState(final ByteString key)
-      throws InternalError, InvalidTransactionException {
+  public ByteString getDamlState(final ByteString key) throws InternalError, InvalidTransactionException {
     String addr = Namespace.makeDamlStateAddress(key);
     ByteString bs = getStateOrNull(addr);
     if (bs == null) {
@@ -112,8 +113,7 @@ public final class ContextLedgerState implements LedgerState<String> {
         List<VersionedEnvelope> veList = new ArrayList<>();
         VersionedEnvelope firstEnvelope = VersionedEnvelope.parseFrom(bs);
         veList.add(firstEnvelope);
-        LOGGER.debug("Fetched initial address={} part=0/{} size={}", addr, firstEnvelope.getParts(),
-            bs.size());
+        LOGGER.debug("Fetched initial address={} part=0/{} size={}", addr, firstEnvelope.getParts(), bs.size());
         if (firstEnvelope.getParts() > 1) {
           List<String> fetchAddresses = new ArrayList<>();
           for (int i = 1; i < firstEnvelope.getParts(); i++) {
@@ -126,17 +126,15 @@ public final class ContextLedgerState implements LedgerState<String> {
               ByteString val = stateMap.get(fAddr);
               VersionedEnvelope e = VersionedEnvelope.parseFrom(val);
               veList.add(e);
-              LOGGER.debug("Fetched next address={} part={}/{} size={}", fAddr, e.getPartNumber(),
-                  e.getParts(), val.size());
+              LOGGER.debug("Fetched next address={} part={}/{} size={}", fAddr, e.getPartNumber(), e.getParts(),
+                  val.size());
             } else {
-              throw new InvalidTransactionException(
-                  String.format("StateMap did not contain address=%s", fAddr));
+              throw new InvalidTransactionException(String.format("StateMap did not contain address=%s", fAddr));
             }
           }
         }
         ByteString val = VersionedEnvelopeUtils.unwrapMultipart(veList);
-        LOGGER.debug("Read address={} parts={} size={}", addr, veList.size(),
-            val.toByteArray().length);
+        LOGGER.debug("Read address={} parts={} size={}", addr, veList.size(), val.toByteArray().length);
         return val;
       } catch (InvalidProtocolBufferException e) {
         throw new InvalidTransactionException(e.getMessage());
@@ -152,8 +150,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     List<String> addrs = new ArrayList<>();
     for (int i = 0; i < endTx.getParts(); i++) {
       final String address = Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment",
-          endTx.getLogEntryId().toStringUtf8(), String.valueOf(endTx.getParts()),
-          String.valueOf(i));
+          endTx.getLogEntryId().toStringUtf8(), String.valueOf(endTx.getParts()), String.valueOf(i));
       addrs.add(address);
     }
     Map<String, ByteString> fragments = state.getState(addrs);
@@ -166,8 +163,8 @@ public final class ContextLedgerState implements LedgerState<String> {
         ByteString fragBytes = fragments.get(address);
         if (fragBytes == null) {
           if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Adding fragment leid={} index={} address={} is null",
-              endTx.getLogEntryId().toStringUtf8(), index, address);
+            LOGGER.debug("Adding fragment leid={} index={} address={} is null", endTx.getLogEntryId().toStringUtf8(),
+                index, address);
           }
           throw new InvalidTransactionException("Fragment is null");
         } else {
@@ -176,8 +173,7 @@ public final class ContextLedgerState implements LedgerState<String> {
                 endTx.getLogEntryId().toStringUtf8(), index, address, fragBytes.size());
           }
           DamlTransactionFragment frag = DamlTransactionFragment.parseFrom(fragBytes);
-          accumulatedBytes =
-              ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
+          accumulatedBytes = ArrayUtils.addAll(accumulatedBytes, frag.getSubmissionFragment().toByteArray());
           if (null == contentHash) {
             contentHash = frag.getContentHash();
           }
@@ -208,7 +204,7 @@ public final class ContextLedgerState implements LedgerState<String> {
       throws InternalError, InvalidTransactionException {
     final Map<ByteString, ByteString> retMap = new HashMap<>();
     for (final ByteString k : keys) {
-      final ByteString damlState = getDamlState(k);
+      final var damlState = getDamlState(k);
       if (null != damlState) {
         retMap.put(k, damlState);
       } else {
@@ -226,8 +222,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     String firstAddress = "";
     for (final Entry<ByteString, ByteString> e : entries) {
       final ByteString key = e.getKey();
-      List<ByteString> parts =
-          VersionedEnvelopeUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
+      List<ByteString> parts = VersionedEnvelopeUtils.wrapMultipart(e.getValue(), DEFAULT_MAX_VAL_SIZE);
       int index = 0;
       int size = 0;
       for (ByteString p : parts) {
@@ -252,19 +247,17 @@ public final class ContextLedgerState implements LedgerState<String> {
   @Override
   public void storeTransactionFragmet(final DamlTransactionFragment tx)
       throws InternalError, InvalidTransactionException {
-    final String address =
-        Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment", tx.getLogEntryId().toStringUtf8(),
-            String.valueOf(tx.getParts()), String.valueOf(tx.getPartNumber()));
+    final String address = Namespace.makeAddress(Namespace.DAML_TX_NS, "fragment", tx.getLogEntryId().toStringUtf8(),
+        String.valueOf(tx.getParts()), String.valueOf(tx.getPartNumber()));
     final ByteString val = tx.toByteString();
     if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(),
-        address, val.size());
+      LOGGER.debug("Storing fragment at tx={} address={} size={}", tx.getLogEntryId().toStringUtf8(), address,
+          val.size());
     }
     final Map<String, ByteString> setMap = new HashMap<>();
     setMap.put(address, val);
     state.setState(setMap.entrySet());
   }
-
 
   @Override
   public void setDamlState(final ByteString key, final ByteString val)
@@ -278,21 +271,19 @@ public final class ContextLedgerState implements LedgerState<String> {
   public Timestamp getRecordTime() throws InternalError {
     try {
       LOGGER.debug("Fetching global time {}", TIMEKEEPER_GLOBAL_RECORD);
-      final Map<String, ByteString> stateMap =
-          state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
+      final Map<String, ByteString> stateMap = state.getState(Arrays.asList(TIMEKEEPER_GLOBAL_RECORD));
       if (stateMap.containsKey(TIMEKEEPER_GLOBAL_RECORD)) {
-        final TimeKeeperGlobalRecord tkgr =
-            TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
+        final TimeKeeperGlobalRecord tkgr = TimeKeeperGlobalRecord.parseFrom(stateMap.get(TIMEKEEPER_GLOBAL_RECORD));
         final com.google.protobuf.Timestamp timestamp = tkgr.getLastCalculatedTime();
         LOGGER.debug("Record Time = {}", tkgr.getLastCalculatedTime());
         final long micros = Timestamps.toMicros(timestamp);
-        return new Timestamp(micros);
+        return Time.Timestamp$.MODULE$.assertFromLong(micros);
       } else {
-        return new Timestamp(1);
+        return Time.Timestamp$.MODULE$.assertFromLong(1);
       }
     } catch (final InvalidTransactionException exc) {
       LOGGER.warn("Error fetching global time, assuming beginning of epoch {}", exc.getMessage());
-      return new Timestamp(1);
+      return Time.Timestamp$.MODULE$.assertFromLong(1);
     } catch (InternalError | InvalidProtocolBufferException exc) {
       final InternalError err = new InternalError(exc.getMessage());
       err.initCause(exc);
@@ -301,9 +292,10 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
-  public Future<String> appendToLog(final ByteString key, final ByteString value) {
+  public Future<String> appendToLog(final Raw.LogEntryId key, final Raw.Envelope value,
+      final ExecutionContext context) {
     try {
-      final String logId = sendLogEvent(key, value);
+      final String logId = sendLogEvent(key.bytes(), value.bytes());
       return Future.successful(logId);
     } catch (InternalError | InvalidTransactionException e) {
       throw new DamlSawtoothRuntimeException("Error sending log event", e);
@@ -311,13 +303,13 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
-  public Future<Option<ByteString>> readState(final ByteString key) {
+  public Future<Option<Raw.Envelope>> readState(final Raw.StateKey key, final ExecutionContext context) {
     try {
-      final ByteString damlState = getDamlState(key);
+      final var damlState = getDamlState(key.bytes());
       if (null == damlState) {
         return Future.successful(Option.empty());
       } else {
-        return Future.successful(Option.apply(damlState));
+        return Future.successful(Option.apply(Raw.Envelope$.MODULE$.apply(damlState)));
       }
     } catch (InternalError | InvalidTransactionException e) {
       throw new DamlSawtoothRuntimeException("Error reading state: " + e.getMessage(), e);
@@ -325,37 +317,49 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
-  public Future<Seq<Option<ByteString>>> readState(final Seq<ByteString> keys) {
-    final Collection<ByteString> keyColl = JavaConverters.asJavaCollection(keys);
-    final List<Option<ByteString>> retList = new ArrayList<>();
+  public Future<scala.collection.immutable.Seq<Option<Raw.Envelope>>> readState(Iterable<Raw.StateKey> keys,
+      ExecutionContext executionContext) {
+    final var keyColl = JavaConverters.asJavaCollection(keys);
+    final var retList = new ArrayList<Option<Raw.Envelope>>();
     try {
-      final Map<ByteString, ByteString> damlStates = getDamlStates(keyColl);
-      for (final ByteString k : keyColl) {
-        if (damlStates.containsKey(k)) {
-          retList.add(Option.apply(damlStates.get(k)));
+      final var damlStates = getDamlStates(keyColl.stream().map(Raw.StateKey::bytes).collect(Collectors.toList()));
+      for (final var k : keyColl) {
+        if (damlStates.containsKey(k.bytes())) {
+          retList.add(Option.apply(Raw.Envelope$.MODULE$.apply(damlStates.get(k.bytes()))));
         } else {
           retList.add(Option.empty());
         }
       }
-      return Future.successful(JavaConverters.asScalaBuffer(retList));
+      return Future.successful(JavaConverters.asScalaBuffer(retList).toSeq());
     } catch (InternalError | InvalidTransactionException e) {
       throw new DamlSawtoothRuntimeException("Error reading state: " + e.getMessage(), e);
     }
   }
 
   Collection<Entry<ByteString, ByteString>> fromDamlSeqPair(
-      final Seq<Tuple2<ByteString, ByteString>> seqOfPairs) {
-    final Collection<Tuple2<ByteString, ByteString>> pairColl =
-        JavaConverters.asJavaCollection(seqOfPairs);
+      final Iterable<Tuple2<Raw.StateKey, Raw.Envelope>> seqOfPairs) {
+    final var pairColl = JavaConverters.asJavaCollection(seqOfPairs);
     final List<Entry<ByteString, ByteString>> retList = new ArrayList<>();
-    for (final Tuple2<ByteString, ByteString> t : pairColl) {
-      retList.add(Map.entry(t._1(), t._2()));
+    for (final var t : pairColl) {
+      retList.add(Map.entry(t._1().bytes(), t._2().bytes()));
     }
     return retList;
   }
 
   @Override
-  public Future<BoxedUnit> writeState(final Seq<Tuple2<ByteString, ByteString>> keyValuePairs) {
+  public Future<BoxedUnit> writeState(final Raw.StateKey key, final Raw.Envelope value,
+      final ExecutionContext context) {
+    try {
+      setDamlState(key.bytes(), value.bytes());
+      return Future.successful(BoxedUnit.UNIT);
+    } catch (InternalError | InvalidTransactionException e) {
+      throw new DamlSawtoothRuntimeException("Error writing state " + e.getMessage(), e);
+    }
+  }
+
+  @Override
+  public Future<BoxedUnit> writeState(Iterable<Tuple2<Raw.StateKey, Raw.Envelope>> keyValuePairs,
+      ExecutionContext executionContext) {
     try {
       setDamlStates(fromDamlSeqPair(keyValuePairs));
       return Future.successful(BoxedUnit.UNIT);
@@ -365,18 +369,8 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
-  public Future<BoxedUnit> writeState(final ByteString key, final ByteString value) {
-    try {
-      setDamlState(key, value);
-      return Future.successful(BoxedUnit.UNIT);
-    } catch (InternalError | InvalidTransactionException e) {
-      throw new DamlSawtoothRuntimeException("Error writing state " + e.getMessage(), e);
-    }
-  }
-
-  @Override
-  public <T> Future<T> inTransaction(
-      final Function1<LedgerStateOperations<String>, Future<T>> body) {
+  public <T> Future<T> inTransaction(final Function1<LedgerStateOperations<String>, Future<T>> body,
+      final ExecutionContext context) {
     return body.apply(this);
   }
 
@@ -389,12 +383,11 @@ public final class ContextLedgerState implements LedgerState<String> {
       for (ByteString bs : multipart) {
         final Map<String, String> attrMap = new HashMap<>();
         attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId.toStringUtf8());
-        attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
-            String.valueOf(multipart.size()));
+        attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE, String.valueOf(multipart.size()));
         attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_ATTRIBUTE, String.valueOf(part));
         if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part,
-            bs.size(), entry.size());
+          LOGGER.debug("Sending event for {}, part={}, data size={}/{}", entryId.toStringUtf8(), part, bs.size(),
+              entry.size());
         }
         state.addEvent(EventConstants.DAML_LOG_EVENT_SUBJECT, attrMap.entrySet(), bs);
         part++;
@@ -410,8 +403,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     LOGGER.debug("Publishing large event for entry = {}", entryId);
     final Map<String, String> attrMap = new HashMap<>();
     attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_EVENT_ATTRIBUTE, entryId);
-    attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE,
-        String.valueOf(multipart.size()));
+    attrMap.put(EventConstants.DAML_LOG_ENTRY_ID_PART_COUNT_ATTRIBUTE, String.valueOf(multipart.size()));
     attrMap.put(EventConstants.DAML_LOG_ENTRY_FETCH_ATTRIBUTE, "true");
 
     int index = 0;
@@ -438,7 +430,9 @@ public final class ContextLedgerState implements LedgerState<String> {
 
   /**
    * Flush all the deferred events to the log (essentially publishing them).
-   * @throws InternalError if there is some prolem flushing an event
+   * 
+   * @throws InternalError
+   *           if there is some prolem flushing an event
    */
   public void flushDeferredEvents() throws InternalError {
     for (DamlEvent evt : this.deferredEvents) {
@@ -461,8 +455,7 @@ public final class ContextLedgerState implements LedgerState<String> {
     }
 
     public void flush(final Context ledgerState) throws InternalError {
-      LOGGER.info("Sending event on {} with {} attributes and data size={}", subject,
-          attrMap.size(), data.size());
+      LOGGER.info("Sending event on {} with {} attributes and data size={}", subject, attrMap.size(), data.size());
       ledgerState.addEvent(subject, attrMap.entrySet(), data);
     }
   }

@@ -3,10 +3,9 @@
 
 package com.daml.platform.apiserver.services.admin
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, InputStream}
 import java.util.UUID
 import java.util.zip.ZipInputStream
-
 import akka.actor.Scheduler
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
@@ -22,6 +21,7 @@ import com.daml.ledger.api.v1.admin.package_management_service._
 import com.daml.logging.{ContextualizedLogger, LoggingContext}
 import com.daml.platform.api.grpc.GrpcApiService
 import com.daml.platform.server.api.validation.ErrorFactories
+import com.daml.telemetry.TelemetryContext
 import com.google.protobuf.timestamp.Timestamp
 import io.grpc.ServerServiceDefinition
 
@@ -36,7 +36,7 @@ final class ApiPackageManagementService private (
     packagesWrite: WritePackagesService,
     timeProvider: TimeProvider,
     materializer: Materializer,
-    scheduler: Scheduler)(implicit logCtx: LoggingContext)
+    scheduler: Scheduler)(implicit logCtx: LoggingContext, telemetryContext: TelemetryContext)
     extends PackageManagementService
     with GrpcApiService {
 
@@ -55,7 +55,7 @@ final class ApiPackageManagementService private (
         ListKnownPackagesResponse(pkgs.toSeq.map {
           case (pkgId, details) =>
             PackageDetails(
-              pkgId.toString,
+              pkgId,
               details.size,
               Some(Timestamp(details.knownSince.getEpochSecond, details.knownSince.getNano)),
               details.sourceDescription.getOrElse(""))
@@ -80,13 +80,13 @@ final class ApiPackageManagementService private (
 
     implicit val ec: ExecutionContext = DE
     val uploadDarFileResponse = for {
-      dar <- DarReader { case (_, x) => Try(Archive.parseFrom(x)) }
+      dar <- DarReader[Archive] { case (_, x: InputStream) => Try(Archive.parseFrom(x)) }
         .readArchive(
           "package-upload",
           new ZipInputStream(new ByteArrayInputStream(request.darFile.toByteArray)))
         .fold(
           err => Future.failed(ErrorFactories.invalidArgument(err.getMessage)),
-          Future.successful
+          x => Future.successful(x)
         )
       ledgerEndBeforeRequest <- transactionsService.currentLedgerEnd()
       submissionResult <- FutureConverters.toScala(
@@ -116,7 +116,7 @@ final class ApiPackageManagementService private (
       timeToLive: FiniteDuration,
       offset: LedgerOffset.Absolute): Future[PackageEntry] = {
     packagesIndex
-      .packageEntries(offset)
+      .packageEntries(Option.apply(offset))
       .collect {
         case entry @ PackageEntry.PackageUploadAccepted(`submissionId`, _) => entry
         case entry @ PackageEntry.PackageUploadRejected(`submissionId`, _, _) => entry
@@ -131,7 +131,7 @@ object ApiPackageManagementService {
       readBackend: IndexPackagesService,
       transactionsService: IndexTransactionsService,
       writeBackend: WritePackagesService,
-      timeProvider: TimeProvider)(implicit mat: Materializer, logCtx: LoggingContext)
+      timeProvider: TimeProvider)(implicit mat: Materializer, logCtx: LoggingContext, telemetryContext: TelemetryContext)
     : PackageManagementServiceGrpc.PackageManagementService with GrpcApiService =
     new ApiPackageManagementService(
       readBackend,

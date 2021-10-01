@@ -65,6 +65,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>daml-on-sawtooth</groupId>
+      <artifactId>sawtooth-daml-common</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
@@ -87,12 +92,6 @@
       <groupId>com.daml</groupId>
       <artifactId>participant-state-kvutils_${scala.lang.version}</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>${scala.lang.version}.10</version>
-    </dependency>
-
 
     <!-- Hyperledger Sawtooth -->
     <dependency>

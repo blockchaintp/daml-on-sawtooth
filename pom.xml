@@ -100,13 +100,14 @@
   </modules>
 
   <properties>
+    <revision>1.4.8-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <protobuf.version>3.10.0</protobuf.version>
     <sawtooth.sdk.version>v0.1.3</sawtooth.sdk.version>
     <paralos.version>0.0.1</paralos.version>
     <timekeeper.version>1.3.10</timekeeper.version>
-    <daml.sdk.version>1.3.0</daml.sdk.version>
-    <scala.lang.version>2.12</scala.lang.version>
+    <daml.sdk.version>1.13.1</daml.sdk.version>
+    <scala.lang.version>2.13</scala.lang.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -311,22 +312,80 @@
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>net.alchim31.maven</groupId>
-          <artifactId>scala-maven-plugin</artifactId>
-          <version>4.0.1</version>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>2.12.1</version>
+          <configuration>
+            <encoding>UTF-8</encoding>
+            <formats>
+              <!-- you can define as many formats as you want, each is independent -->
+              <format>
+                <!-- define the files to apply to -->
+                <includes>
+                  <include>*.md</include>
+                  <include>.gitignore</include>
+                </includes>
+                <!-- define the steps to apply to those files -->
+                <toggleOffOn />
+                <trimTrailingWhitespace/>
+                <endWithNewline/>
+                <indent>
+                  <tabs>false</tabs>
+                  <spaces>true</spaces>
+                  <spacesPerTab>2</spacesPerTab>
+                </indent>
+              </format>
+            </formats>
+            <!-- language-specific formats -->
+            <java>
+              <eclipse>
+                <file>${maven.multiModuleProjectDirectory}/.eclipse-formatter.xml</file>
+              </eclipse>
+              <licenseHeader>
+                <file>${maven.multiModuleProjectDirectory}/.copyright-header-cstyle.txt</file>
+                <delimiter>package </delimiter>
+              </licenseHeader>
+              <toggleOffOn />
+            </java>
+            <ratchetFrom>origin/master</ratchetFrom>
+            <scala>
+              <includes>
+                <include>src/main/scala/**/*.scala</include>
+                <include>src/test/scala/**/*.scala</include>
+              </includes>
+              <scalafmt>
+                <version>2.7.5</version>
+                <file>${maven.multiModuleProjectDirectory}/.scalafmt.conf</file>
+              </scalafmt>
+              <licenseHeader>
+                <file>${maven.multiModuleProjectDirectory}/.copyright-header-cstyle.txt</file>
+                <delimiter>package </delimiter>
+              </licenseHeader>
+            </scala>
+          </configuration>
           <executions>
             <execution>
+              <?m2e execute onConfiguration,onIncremental?>
+              <goals>
+                <goal>check</goal>
+              </goals>
+              <phase>compile</phase>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>4.5.3</version>
+          <executions>
+            <execution>
+              <?m2e execute onConfiguration,onIncremental?>
               <goals>
                 <goal>compile</goal>
                 <goal>testCompile</goal>
               </goals>
             </execution>
           </executions>
-          <configuration>
-            <scalaVersion>2.12.11</scalaVersion>
-            <source>${java.source.version}</source>
-            <target>${java.target.version}</target>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -337,37 +396,6 @@
               <goals>
                 <goal>jxr</goal>
               </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>3.0.0</version>
-          <dependencies>
-            <dependency>
-              <groupId>${project.groupId}</groupId>
-              <artifactId>build-tools</artifactId>
-              <version>${project.version}</version>
-            </dependency>
-          </dependencies>
-          <executions>
-            <execution>
-              <id>validate</id>
-              <goals>
-                <goal>check</goal>
-              </goals>
-              <configuration>
-                <encoding>UTF-8</encoding>
-                <configLocation>checkstyle.xml</configLocation>
-                <headerLocation>LICENSE.txt</headerLocation>
-                <consoleOutput>true</consoleOutput>
-                <failOnViolation>true</failOnViolation>
-                <violationSeverity>warning</violationSeverity>
-                <sourceDirectories>
-                  <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-                </sourceDirectories>
-              </configuration>
             </execution>
           </executions>
         </plugin>

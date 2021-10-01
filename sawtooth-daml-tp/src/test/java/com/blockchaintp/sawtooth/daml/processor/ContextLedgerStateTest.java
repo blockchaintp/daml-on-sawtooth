@@ -1,19 +1,16 @@
 /*
- *  Copyright 2020 Blockchain Technology Partners
+ * Copyright 2020-2021 Blockchain Technology Partners
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
-
 package com.blockchaintp.sawtooth.daml.processor;
 
 import static org.junit.Assert.assertEquals;
@@ -104,31 +101,28 @@ public class ContextLedgerStateTest {
     String appId = RandomString.make(RANDOM_STRING_LENGTH);
     String submitter = RandomString.make(RANDOM_STRING_LENGTH);
     String commandId = RandomString.make(RANDOM_STRING_LENGTH);
-    DamlCommandDedupKey firstDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
-        .setSubmitter(submitter).setCommandId(commandId).build();
+    DamlCommandDedupKey firstDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId).addSubmitters(submitter)
+        .setCommandId(commandId).build();
     DamlStateKey firstKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
-    DamlCommandDedupKey emptyDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
-        .setSubmitter(submitter).setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
+    DamlCommandDedupKey emptyDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId).addSubmitters(submitter)
+        .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
     DamlStateKey emptyKey = DamlStateKey.newBuilder().setCommandDedup(emptyDedupKey).build();
     DamlCommandDedupValue firstDedupVal = DamlCommandDedupValue.newBuilder().build();
-    ByteString firstVal =
-        DamlStateValue.newBuilder().setCommandDedup(firstDedupVal).build().toByteString();
+    ByteString firstVal = DamlStateValue.newBuilder().setCommandDedup(firstDedupVal).build().toByteString();
     try {
       ledgerState.setDamlState(firstKey.toByteString(), firstVal);
       ByteString damlCommandDedup = ledgerState.getDamlState(firstKey.toByteString());
       assertNotNull(damlCommandDedup);
-      assertEquals(String.format("%s != %s", firstVal, damlCommandDedup),
-          firstVal,damlCommandDedup);
+      assertEquals(String.format("%s != %s", firstVal, damlCommandDedup), firstVal, damlCommandDedup);
 
-      DamlCommandDedupKey dneDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId)
-          .setSubmitter(submitter).setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
+      DamlCommandDedupKey dneDedupKey = DamlCommandDedupKey.newBuilder().setCommandId(appId).addSubmitters(submitter)
+          .setCommandId(RandomString.make(RANDOM_STRING_LENGTH)).build();
       DamlStateKey dneKey = DamlStateKey.newBuilder().setCommandDedup(dneDedupKey).build();
       ByteString dneCommandDedup = ledgerState.getDamlState(dneKey.toByteString());
       assertNull(dneCommandDedup);
 
       DamlStateKey stateKey = DamlStateKey.newBuilder().setCommandDedup(firstDedupKey).build();
-      Map<ByteString, ByteString> retMap =
-          ledgerState.getDamlStates(Arrays.asList(stateKey.toByteString()));
+      Map<ByteString, ByteString> retMap = ledgerState.getDamlStates(Arrays.asList(stateKey.toByteString()));
       assertEquals(firstVal, retMap.get(stateKey.toByteString()));
       try {
         ledgerState.getDamlState(emptyKey.toByteString());
@@ -141,6 +135,5 @@ public class ContextLedgerStateTest {
       fail("No exceptions should be thrown: " + exc.getMessage());
     }
   }
-
 
 }

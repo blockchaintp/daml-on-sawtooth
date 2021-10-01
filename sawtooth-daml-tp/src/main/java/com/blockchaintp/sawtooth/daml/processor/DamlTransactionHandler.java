@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Blockchain Technology Partners
+ * Copyright 2020-2021 Blockchain Technology Partners
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -11,7 +11,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package com.blockchaintp.sawtooth.daml.processor;
 
 import java.net.InetAddress;
@@ -32,6 +31,7 @@ import com.blockchaintp.utils.VersionedEnvelopeUtils;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.caching.Cache;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
+import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.validator.SubmissionValidator;
 import com.daml.ledger.validator.ValidationFailed;
 import com.daml.lf.data.Time.Timestamp;
@@ -149,11 +149,11 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
     final ExecutionContext ec = ExecutionContext.fromExecutor(ExecutionContext.global());
     final SubmissionValidator<String> validator = SubmissionValidator.create(ledgerState, () -> logEntryId, false,
-        Cache.none(), this.engine, this.metrics, ec);
+        Cache.none(), this.engine, this.metrics);
     final Timestamp recordTime = ledgerState.getRecordTime();
     LOGGER.trace("Begin validation correlationId={}", correlationId);
-    final Future<Either<ValidationFailed, String>> validateAndCommit = validator.validateAndCommit(tx.getSubmission(),
-        correlationId, recordTime, participantId);
+    final Future<Either<ValidationFailed, String>> validateAndCommit = validator.validateAndCommit(
+        Raw.Envelope$.MODULE$.apply(tx.getSubmission()), correlationId, recordTime, participantId, ec);
     final CompletionStage<Either<ValidationFailed, String>> validateAndCommitCS = FutureConverters
         .toJava(validateAndCommit);
     LOGGER.trace("End validation correlationId={}", correlationId);
@@ -185,11 +185,12 @@ public final class DamlTransactionHandler implements TransactionHandler {
   /**
    * Fundamental checks of the transaction.
    *
-   * @param tpProcessRequest the process request
-   * @throws InvalidTransactionException if the transaction fails because of a
-   *                                     business rule validation error
-   * @throws InternalError               if the transaction fails because of a
-   *                                     system error
+   * @param tpProcessRequest
+   *          the process request
+   * @throws InvalidTransactionException
+   *           if the transaction fails because of a business rule validation error
+   * @throws InternalError
+   *           if the transaction fails because of a system error
    */
   private void basicRequestChecks(final TpProcessRequest tpProcessRequest) throws InvalidTransactionException {
 

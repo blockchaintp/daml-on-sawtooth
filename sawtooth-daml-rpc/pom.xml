@@ -71,6 +71,12 @@
 
   <dependencies>
     <dependency>
+      <groupId>daml-on-sawtooth</groupId>
+      <artifactId>sawtooth-daml-common</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
@@ -209,6 +215,5 @@
       <groupId>org.hyperledger.sawtooth</groupId>
       <artifactId>sawtooth-sdk-transaction-processor</artifactId>
     </dependency>
-
   </dependencies>
 </project>

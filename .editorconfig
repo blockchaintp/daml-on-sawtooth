@@ -1,0 +1,17 @@
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file, 2 space tabs and utf-8
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+end_of_line = lf
+insert_final_newline = true
+
+[*.java]
+max_line_length = 120
+
+# Tab indentation (no size specified)
+[Makefile]
+indent_style = tab
