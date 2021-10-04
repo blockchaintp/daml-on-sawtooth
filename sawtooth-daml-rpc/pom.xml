@@ -83,12 +83,12 @@
     <dependency>
       <groupId>io.reactivex.rxjava2</groupId>
       <artifactId>rxjava</artifactId>
-      <version>2.2.8</version>
+      <version>2.2.21</version>
     </dependency>
     <dependency>
       <groupId>org.reactivestreams</groupId>
       <artifactId>reactive-streams</artifactId>
-      <version>1.0.2</version>
+      <version>1.0.3</version>
     </dependency>
 
     <!-- Unit testing -->
@@ -142,20 +142,12 @@
       <groupId>com.daml</groupId>
       <artifactId>sandbox_${scala.lang.version}</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.typesafe.akka</groupId>
-      <artifactId>akka-actor_${scala.lang.version}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.typesafe.akka</groupId>
-      <artifactId>akka-stream_${scala.lang.version}</artifactId>
-    </dependency>
 
     <!--JSON -->
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <version>20190722</version>
+      <version>20210307</version>
     </dependency>
 
     <!-- <dependency>
