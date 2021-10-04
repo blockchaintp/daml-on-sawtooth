@@ -64,29 +64,16 @@
   </build>
 
   <dependencies>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-    </dependency>
 
     <!-- DAML -->
     <dependency>
       <groupId>com.daml</groupId>
-      <artifactId>participant-state-kvutils-java-proto</artifactId>
+      <artifactId>daml-lf-engine_${scala.lang.version}</artifactId>
     </dependency>
     <dependency>
       <groupId>com.daml</groupId>
-      <artifactId>daml-lf-engine_${scala.lang.version}</artifactId>
+      <artifactId>participant-state-kvutils-java-proto</artifactId>
     </dependency>
-
     <!-- BTP -->
     <dependency>
       <groupId>com.blockchaintp</groupId>

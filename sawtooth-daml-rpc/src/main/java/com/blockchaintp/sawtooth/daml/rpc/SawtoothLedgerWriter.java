@@ -53,7 +53,6 @@ import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
-import com.daml.ledger.participant.state.v1.TransactionMeta;
 import com.daml.ledger.validator.DefaultStateKeySerializationStrategy;
 import com.daml.metrics.Metrics;
 import com.daml.telemetry.TelemetryContext;
@@ -243,21 +242,20 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   }
 
   private List<String> extractInputAddresses(final ByteString envelope) {
-    final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope.toByteArray());
-    if (either.isLeft()) {
-      throw new DamlSawtoothRuntimeException(either.left().get());
-    }
-    final DamlSubmission submission = either.right().get();
-    final List<DamlStateKey> inputs = submission.getInputDamlStateList();
+    return Envelope.openSubmission(envelope.toByteArray())
+      .map(submission -> {
+        final List<DamlStateKey> inputs = submission.getInputDamlStateList();
 
-    final List<String> addresses = inputs.stream().map(damlStateKey -> {
-      return Namespace
-          .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes());
-    }).collect(Collectors.toList());
-    addresses.add(TIMEKEEPER_GLOBAL_RECORD);
-    addresses.add(Namespace.DAML_STATE_VALUE_NS);
-    addresses.add(Namespace.DAML_TX_NS);
-    return addresses;
+        final List<String> addresses = inputs.stream().map(damlStateKey -> Namespace
+          .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes())).collect(Collectors.toList());
+        addresses.add(TIMEKEEPER_GLOBAL_RECORD);
+        addresses.add(Namespace.DAML_STATE_VALUE_NS);
+        addresses.add(Namespace.DAML_TX_NS);
+        return addresses;
+      })
+      .left()
+      .map(err -> {throw new DamlSawtoothRuntimeException(err);})
+      .getOrElse(() -> null);
   }
 
   private List<String> extractOutputAddresses(final ByteString envelope) {

@@ -116,6 +116,10 @@
     </dependency>
     <dependency>
       <groupId>com.daml</groupId>
+      <artifactId>participant-integration-api_${scala.lang.version}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.daml</groupId>
       <artifactId>participant-state_${scala.lang.version}</artifactId>
     </dependency>
     <dependency>
