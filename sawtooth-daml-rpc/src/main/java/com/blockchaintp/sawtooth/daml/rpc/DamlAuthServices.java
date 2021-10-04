@@ -42,10 +42,7 @@ import com.daml.ledger.api.auth.ClaimActAsParty$;
 import com.daml.ledger.api.auth.ClaimAdmin$;
 import com.daml.ledger.api.auth.ClaimPublic$;
 import com.daml.ledger.api.auth.ClaimSet;
-import com.daml.ledger.api.v1.value.Value;
-import com.daml.lf.data.Ref;
 
-import com.daml.lf.data.Ref$;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,7 +167,7 @@ public final class DamlAuthServices implements AuthService {
       claimsList.$plus$eq(ClaimAdmin$.MODULE$);
     }
 
-    payload.actAs().foreach(name -> ClaimActAsParty$.MODULE$.apply(name));
+    payload.actAs().foreach(ClaimActAsParty$.MODULE$::apply);
 
     return new ClaimSet.Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), Option.empty(),
         payload.exp());
