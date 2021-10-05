@@ -91,7 +91,7 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
     try {
       this.keyMgr = DirectoryKeyManager.create(this.keystoreDir);
     } catch (final IOException e) {
-      LOGGER.error("Invalid keystore directory " + this.keystoreDir);
+      LOGGER.error("Invalid keystore directory {}", this.keystoreDir);
       throw new IllegalArgumentException(e);
     }
     this.reader = new SawtoothLedgerReader(ledgerId, zmqUrl);

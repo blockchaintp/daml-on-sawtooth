@@ -172,6 +172,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     /// This should be replaced with metadata use
     final List<String> inputAddresses = extractInputAddresses(envelope.bytes());
     final List<String> outputAddresses = extractOutputAddresses(envelope.bytes());
+    String interrupted_while_submitting_transaction = "Interrupted while submitting transaction";
     if (envelope.size() > DEFAULT_TX_FRAGMENT_SIZE) {
       final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope.bytes()).setLogEntryId(logEntryId)
           .build();
@@ -199,9 +200,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         try {
           this.submitQueue.put(cp);
         } catch (final InterruptedException e) {
-          LOGGER.warn("Interrupted while submitting transaction", e);
+          LOGGER.warn(interrupted_while_submitting_transaction, e);
           Thread.currentThread().interrupt();
-          return Future.apply(() -> new SubmissionResult.InternalError("Interrupted while submitting transaction"),
+          return Future.apply(() -> new SubmissionResult.InternalError(interrupted_while_submitting_transaction),
               ExecutionContext.global());
         }
       }
@@ -217,9 +218,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.warn("Interrupted while submitting transaction", e);
+          LOGGER.warn(interrupted_while_submitting_transaction, e);
           Thread.currentThread().interrupt();
-          return new SubmissionResult.InternalError("Interrupted while submitting transaction");
+          return new SubmissionResult.InternalError(interrupted_while_submitting_transaction);
         }
       }, ExecutionContext.global());
     } else {
@@ -233,9 +234,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.warn("Interrupted while submitting transaction", e);
+          LOGGER.warn(interrupted_while_submitting_transaction, e);
           Thread.currentThread().interrupt();
-          return new SubmissionResult.InternalError("Interrupted while submitting transaction");
+          return new SubmissionResult.InternalError(interrupted_while_submitting_transaction);
         }
       }, ExecutionContext.global());
     }
@@ -259,21 +260,18 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   }
 
   private List<String> extractOutputAddresses(final ByteString envelope) {
-    final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope.toByteArray());
-    if (either.isLeft()) {
-      throw new DamlSawtoothRuntimeException(either.left().get());
-    }
-    final DamlSubmission submission = either.right().get();
-    final Collection<DamlStateKey> collStateKeys = JavaConverters
+    return Envelope.openSubmission(envelope.toByteArray()).map(submission -> {
+      final Collection<DamlStateKey> collStateKeys = JavaConverters
         .asJavaCollection(this.kvCommitting.submissionOutputs(submission));
-    List<String> collect = collStateKeys.stream().map(damlStateKey -> {
-      return Namespace
-          .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes());
-    }).collect(Collectors.toList());
-    collect.add(Namespace.DAML_STATE_VALUE_NS);
-    collect.add(Namespace.DAML_EVENT_NS);
-    collect.add(Namespace.DAML_TX_NS);
-    return collect;
+      List<String> collect = collStateKeys.stream().map(damlStateKey -> Namespace
+        .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes())).collect(Collectors.toList());
+      collect.add(Namespace.DAML_STATE_VALUE_NS);
+      collect.add(Namespace.DAML_EVENT_NS);
+      collect.add(Namespace.DAML_TX_NS);
+      return collect;
+
+    }).left().map(err -> {throw new DamlSawtoothRuntimeException(err);})
+      .getOrElse(() -> null);
   }
 
   private ByteString makeDamlLogEntryId() {

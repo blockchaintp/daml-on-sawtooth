@@ -3,6 +3,7 @@ package com.blockchaintp.sawtooth.daml;
 import java.util.Collection;
 import java.util.List;
 
+import com.daml.ledger.participant.state.kvutils.DamlKvutils;
 import com.google.protobuf.ByteString;
 import com.blockchaintp.sawtooth.SawtoothClientUtils;
 import com.blockchaintp.sawtooth.daml.protobuf.DamlOperation;
@@ -44,9 +45,9 @@ public final class SawtoothDamlUtils {
    * @param batch the daml operation batch
    * @return the tuple
    */
-   public static Tuple4<String, String, ByteString, DamlSubmissionBatch> damlOperationBatchToDamlSubmissionBatch(
+   public static Tuple4<String, String, ByteString, DamlKvutils.DamlSubmissionBatch> damlOperationBatchToDamlSubmissionBatch(
        final DamlOperationBatch batch) {
-     final DamlSubmissionBatch.Builder builder = DamlSubmissionBatch.newBuilder();
+     final DamlKvutils.DamlSubmissionBatch.Builder builder = DamlKvutils.DamlSubmissionBatch.newBuilder();
      boolean hasTx = false;
      String participantId = null;
      String correlationId = null;
@@ -58,7 +59,7 @@ public final class SawtoothDamlUtils {
          hasTx = true;
          final ByteString envelope = op.getTransaction().getSubmission();
          lastLogEntryId = op.getTransaction().getLogEntryId();
-         final CorrelatedSubmission correlatedSubmission = DamlSubmissionBatch.CorrelatedSubmission
+         final DamlKvutils.DamlSubmissionBatch.CorrelatedSubmission correlatedSubmission = DamlKvutils.DamlSubmissionBatch.CorrelatedSubmission
             .newBuilder().setCorrelationId(op.getCorrelationId()).setSubmission(envelope).build();
         builder.addSubmissions(correlatedSubmission);
       }
