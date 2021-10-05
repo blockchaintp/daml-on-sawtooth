@@ -37,11 +37,13 @@ import org.slf4j.event.Level
 import com.blockchaintp.utils.LogUtils
 import com.daml.ledger.resources.ResourceContext
 import com.daml.ledger.resources.ResourceOwner
+import com.daml.platform.apiserver.ApiServerConfig
 
 import scala.util.Try
 import scopt.OptionParser
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 object Main {
 
@@ -63,7 +65,6 @@ object Main {
     ): ResourceOwner[KeyValueParticipantState] = {
       LogUtils.setRootLogLevel(config.extra.logLevel)
       LogUtils.setLogLevel("org.flywaydb.core.internal", Level.INFO.name())
-
       for {
         readerWriter <- owner(config, participantConfig, engine)
       } yield new KeyValueParticipantState(
