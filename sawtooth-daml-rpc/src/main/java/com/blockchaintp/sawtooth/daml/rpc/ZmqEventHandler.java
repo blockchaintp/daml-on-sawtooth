@@ -32,7 +32,6 @@ import com.daml.ledger.participant.state.kvutils.OffsetBuilder;
 import com.daml.ledger.participant.state.kvutils.Raw;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.v1.Offset;
-import com.daml.ledger.participant.state.v1.Offset$;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 

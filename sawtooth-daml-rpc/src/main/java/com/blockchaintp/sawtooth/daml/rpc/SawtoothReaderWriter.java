@@ -25,9 +25,7 @@ import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
-import com.daml.resources.Resource;
 import com.daml.telemetry.TelemetryContext;
-import com.google.protobuf.ByteString;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
 import scala.Option;
-import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 
 /**

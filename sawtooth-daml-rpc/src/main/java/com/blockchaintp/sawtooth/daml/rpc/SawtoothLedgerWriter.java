@@ -45,7 +45,6 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.ledger.api.health.HealthStatus;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.Envelope;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
@@ -72,13 +71,13 @@ import sawtooth.sdk.protobuf.Transaction;
 import scala.collection.JavaConverters;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
-import scala.util.Either;
 
 /**
  * A Sawtooth based LedgerWriter.
  */
 public final class SawtoothLedgerWriter implements LedgerWriter {
 
+  private static final String INTERRUPTED_WHILE_SUBMITTING_TRANSACTION = "Interrupted while submitting transaction";
   private static final int DEFAULT_TX_FRAGMENT_SIZE = 256 * 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
@@ -172,7 +171,6 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     /// This should be replaced with metadata use
     final List<String> inputAddresses = extractInputAddresses(envelope.bytes());
     final List<String> outputAddresses = extractOutputAddresses(envelope.bytes());
-    String interrupted_while_submitting_transaction = "Interrupted while submitting transaction";
     if (envelope.size() > DEFAULT_TX_FRAGMENT_SIZE) {
       final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope.bytes()).setLogEntryId(logEntryId)
           .build();
@@ -200,9 +198,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         try {
           this.submitQueue.put(cp);
         } catch (final InterruptedException e) {
-          LOGGER.warn(interrupted_while_submitting_transaction, e);
+          LOGGER.warn(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION, e);
           Thread.currentThread().interrupt();
-          return Future.apply(() -> new SubmissionResult.InternalError(interrupted_while_submitting_transaction),
+          return Future.apply(() -> new SubmissionResult.InternalError(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION),
               ExecutionContext.global());
         }
       }
@@ -218,9 +216,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.warn(interrupted_while_submitting_transaction, e);
+          LOGGER.warn(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION, e);
           Thread.currentThread().interrupt();
-          return new SubmissionResult.InternalError(interrupted_while_submitting_transaction);
+          return new SubmissionResult.InternalError(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION);
         }
       }, ExecutionContext.global());
     } else {
@@ -234,9 +232,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.warn(interrupted_while_submitting_transaction, e);
+          LOGGER.warn(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION, e);
           Thread.currentThread().interrupt();
-          return new SubmissionResult.InternalError(interrupted_while_submitting_transaction);
+          return new SubmissionResult.InternalError(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION);
         }
       }, ExecutionContext.global());
     }
@@ -262,7 +260,7 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   private List<String> extractOutputAddresses(final ByteString envelope) {
     return Envelope.openSubmission(envelope.toByteArray()).map(submission -> {
       final Collection<DamlStateKey> collStateKeys = JavaConverters
-        .asJavaCollection(this.kvCommitting.submissionOutputs(submission));
+        .asJavaCollection(KeyValueCommitting.submissionOutputs(submission));
       List<String> collect = collStateKeys.stream().map(damlStateKey -> Namespace
         .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes())).collect(Collectors.toList());
       collect.add(Namespace.DAML_STATE_VALUE_NS);

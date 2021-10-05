@@ -56,6 +56,7 @@ import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
+import scala.jdk.CollectionConverters;
 import scala.runtime.BoxedUnit;
 
 /**
@@ -330,7 +331,7 @@ public final class ContextLedgerState implements LedgerState<String> {
           retList.add(Option.empty());
         }
       }
-      return Future.successful(JavaConverters.asScalaBuffer(retList).toSeq());
+      return Future.successful(CollectionConverters.CollectionHasAsScala(retList).asScala().toSeq());
     } catch (InternalError | InvalidTransactionException e) {
       throw new DamlSawtoothRuntimeException("Error reading state: " + e.getMessage(), e);
     }
