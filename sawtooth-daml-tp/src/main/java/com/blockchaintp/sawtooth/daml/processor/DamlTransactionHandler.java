@@ -138,6 +138,7 @@ public final class DamlTransactionHandler implements TransactionHandler {
     }
   }
 
+  @SuppressWarnings("deprecation")
   private String handleTransaction(final LedgerState<String> ledgerState, final DamlTransaction tx,
       final String participantId, final String correlationId) throws InvalidTransactionException, InternalError {
     DamlLogEntryId logEntryId;

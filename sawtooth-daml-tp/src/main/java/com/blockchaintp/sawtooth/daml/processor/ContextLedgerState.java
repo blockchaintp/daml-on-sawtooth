@@ -53,7 +53,6 @@ import scala.Option;
 import scala.Tuple2;
 import scala.collection.Iterable;
 import scala.collection.JavaConverters;
-import scala.collection.Seq;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.jdk.CollectionConverters;
@@ -103,6 +102,7 @@ public final class ContextLedgerState implements LedgerState<String> {
   }
 
   @Override
+  @SuppressWarnings("java:S3776")
   public ByteString getDamlState(final ByteString key) throws InternalError, InvalidTransactionException {
     String addr = Namespace.makeDamlStateAddress(key);
     ByteString bs = getStateOrNull(addr);

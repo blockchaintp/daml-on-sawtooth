@@ -32,7 +32,8 @@ import com.daml.ledger.participant.state.v1.TimeModel
 import com.daml.lf.engine.Engine
 import com.daml.logging.LoggingContext
 import com.daml.platform.configuration.LedgerConfiguration
-import com.daml.resources.{FutureResourceOwner, ProgramResource}
+import com.daml.resources.FutureResourceOwner
+import com.daml.resources.ProgramResource
 import org.slf4j.event.Level
 import com.blockchaintp.utils.LogUtils
 import com.daml.ledger.resources.ResourceContext
@@ -79,14 +80,16 @@ object Main {
         logCtx: LoggingContext
     ): ResourceOwner[KeyValueLedger] = {
       new FutureResourceOwner(() => {
-        Future.successful(new SawtoothReaderWriter(
-          participantConfig.participantId,
-          config.extra.zmqUrl,
-          config.extra.keystore,
-          config.ledgerId,
-          config.extra.maxOpsPerBatch,
-          config.extra.maxOutStandingBatches
-        ))
+        Future.successful(
+          new SawtoothReaderWriter(
+            participantConfig.participantId,
+            config.extra.zmqUrl,
+            config.extra.keystore,
+            config.ledgerId,
+            config.extra.maxOpsPerBatch,
+            config.extra.maxOutStandingBatches
+          )
+        )
       })
     }
 

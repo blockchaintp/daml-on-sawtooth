@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 
 import com.blockchaintp.keymanager.KeyManager;
 import com.blockchaintp.sawtooth.SawtoothClientUtils;
-import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.SawtoothDamlUtils;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
@@ -84,7 +83,6 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
 
   private final String participantId;
   private final Metrics metrics;
-  private final KeyValueCommitting kvCommitting;
   private final BlockingDeque<CommitPayload> submitQueue;
 
   private final KeyManager keyManager;
@@ -151,7 +149,6 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     }
 
     this.metrics = new Metrics(SharedMetricRegistries.getOrCreate(hostname));
-    this.kvCommitting = new KeyValueCommitting(DamlEngineSingleton.getInstance(), this.metrics);
 
     new KeyValueSubmission(this.metrics);
     this.submitter = new Submitter(this.stream);
@@ -241,35 +238,38 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   }
 
   private List<String> extractInputAddresses(final ByteString envelope) {
-    return Envelope.openSubmission(envelope.toByteArray())
-      .map(submission -> {
-        final List<DamlStateKey> inputs = submission.getInputDamlStateList();
+    return Envelope.openSubmission(envelope.toByteArray()).map(submission -> {
+      final List<DamlStateKey> inputs = submission.getInputDamlStateList();
 
-        final List<String> addresses = inputs.stream().map(damlStateKey -> Namespace
-          .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes())).collect(Collectors.toList());
-        addresses.add(TIMEKEEPER_GLOBAL_RECORD);
-        addresses.add(Namespace.DAML_STATE_VALUE_NS);
-        addresses.add(Namespace.DAML_TX_NS);
-        return addresses;
-      })
-      .left()
-      .map(err -> {throw new DamlSawtoothRuntimeException(err);})
-      .getOrElse(() -> null);
+      final List<String> addresses = inputs.stream()
+          .map(damlStateKey -> Namespace
+              .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes()))
+          .collect(Collectors.toList());
+      addresses.add(TIMEKEEPER_GLOBAL_RECORD);
+      addresses.add(Namespace.DAML_STATE_VALUE_NS);
+      addresses.add(Namespace.DAML_TX_NS);
+      return addresses;
+    }).left().map(err -> {
+      throw new DamlSawtoothRuntimeException(err);
+    }).getOrElse(() -> null);
   }
 
   private List<String> extractOutputAddresses(final ByteString envelope) {
     return Envelope.openSubmission(envelope.toByteArray()).map(submission -> {
       final Collection<DamlStateKey> collStateKeys = JavaConverters
-        .asJavaCollection(KeyValueCommitting.submissionOutputs(submission));
-      List<String> collect = collStateKeys.stream().map(damlStateKey -> Namespace
-        .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes())).collect(Collectors.toList());
+          .asJavaCollection(KeyValueCommitting.submissionOutputs(submission));
+      List<String> collect = collStateKeys.stream()
+          .map(damlStateKey -> Namespace
+              .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes()))
+          .collect(Collectors.toList());
       collect.add(Namespace.DAML_STATE_VALUE_NS);
       collect.add(Namespace.DAML_EVENT_NS);
       collect.add(Namespace.DAML_TX_NS);
       return collect;
 
-    }).left().map(err -> {throw new DamlSawtoothRuntimeException(err);})
-      .getOrElse(() -> null);
+    }).left().map(err -> {
+      throw new DamlSawtoothRuntimeException(err);
+    }).getOrElse(() -> null);
   }
 
   private ByteString makeDamlLogEntryId() {

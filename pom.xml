@@ -149,7 +149,7 @@
       <dependency>
         <groupId>org.zeromq</groupId>
         <artifactId>jeromq</artifactId>
-        <version>0.5.2</version>
+        <version>0.3.6</version>
       </dependency>
       <!-- DAML Dependencies -->
       <dependency>
@@ -204,6 +204,11 @@
       </dependency>
       <dependency>
         <groupId>com.daml</groupId>
+        <artifactId>participant-integration-api_${scala.lang.version}</artifactId>
+        <version>${daml.sdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.daml</groupId>
         <artifactId>participant-state-index_${scala.lang.version}</artifactId>
         <version>${daml.sdk.version}</version>
       </dependency>
@@ -241,7 +246,7 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>2.0.0-alpha5</version>
+        <version>1.8.0-beta4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
