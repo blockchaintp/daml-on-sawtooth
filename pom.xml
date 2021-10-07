@@ -151,6 +151,11 @@
         <artifactId>jeromq</artifactId>
         <version>0.3.6</version>
       </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.8.0-beta4</version>
+      </dependency>
       <!-- DAML Dependencies -->
       <dependency>
         <groupId>com.google.protobuf</groupId>

@@ -196,7 +196,10 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
     <!-- BTP -->
     <dependency>
       <groupId>daml-on-sawtooth</groupId>
