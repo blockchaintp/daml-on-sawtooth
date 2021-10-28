@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.sawtooth.daml.rpc;
 
 import static com.blockchaintp.sawtooth.timekeeper.Namespace.TIMEKEEPER_GLOBAL_RECORD;
@@ -18,7 +31,6 @@ import java.util.stream.Collectors;
 
 import com.blockchaintp.keymanager.KeyManager;
 import com.blockchaintp.sawtooth.SawtoothClientUtils;
-import com.blockchaintp.sawtooth.daml.DamlEngineSingleton;
 import com.blockchaintp.sawtooth.daml.Namespace;
 import com.blockchaintp.sawtooth.daml.SawtoothDamlUtils;
 import com.blockchaintp.sawtooth.daml.exceptions.DamlSawtoothRuntimeException;
@@ -32,13 +44,16 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.daml.ledger.api.health.HealthStatus;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlLogEntryId;
 import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlStateKey;
-import com.daml.ledger.participant.state.kvutils.DamlKvutils.DamlSubmission;
 import com.daml.ledger.participant.state.kvutils.Envelope;
 import com.daml.ledger.participant.state.kvutils.KeyValueCommitting;
 import com.daml.ledger.participant.state.kvutils.KeyValueSubmission;
+import com.daml.ledger.participant.state.kvutils.Raw;
+import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
+import com.daml.ledger.validator.DefaultStateKeySerializationStrategy;
 import com.daml.metrics.Metrics;
+import com.daml.telemetry.TelemetryContext;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -55,20 +70,19 @@ import sawtooth.sdk.protobuf.Transaction;
 import scala.collection.JavaConverters;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
-import scala.util.Either;
 
 /**
  * A Sawtooth based LedgerWriter.
  */
 public final class SawtoothLedgerWriter implements LedgerWriter {
 
+  private static final String INTERRUPTED_WHILE_SUBMITTING_TRANSACTION = "Interrupted while submitting transaction";
   private static final int DEFAULT_TX_FRAGMENT_SIZE = 256 * 1024;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SawtoothLedgerWriter.class);
 
   private final String participantId;
   private final Metrics metrics;
-  private final KeyValueCommitting kvCommitting;
   private final BlockingDeque<CommitPayload> submitQueue;
 
   private final KeyManager keyManager;
@@ -86,11 +100,16 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   /**
    * Creates a SawtoothLedgerWriter suitable for use in Daml APIs.
    *
-   * @param pid                the participant id
-   * @param zmqUrl             the url of the zmq endpoint to submit
-   * @param keyMgr             the key manager to use for signing
-   * @param opsPerBatch        the maximum number of operations per batch
-   * @param outStandingBatches how many batches to submit before waiting
+   * @param pid
+   *          the participant id
+   * @param zmqUrl
+   *          the url of the zmq endpoint to submit
+   * @param keyMgr
+   *          the key manager to use for signing
+   * @param opsPerBatch
+   *          the maximum number of operations per batch
+   * @param outStandingBatches
+   *          how many batches to submit before waiting
    */
   public SawtoothLedgerWriter(final String pid, final String zmqUrl, final KeyManager keyMgr, final int opsPerBatch,
       final int outStandingBatches) {
@@ -100,11 +119,16 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
   /**
    * Creates a SawtoothLedgerWriter suitable for use in Daml APIs.
    *
-   * @param id                 the participant id
-   * @param s                  the sawtooth stream
-   * @param k                  the keymanager to sign the transactions and batches
-   * @param opsPerBatch        the maximum number of operations per batch
-   * @param outStandingBatches how many batches to submit before waiting
+   * @param id
+   *          the participant id
+   * @param s
+   *          the sawtooth stream
+   * @param k
+   *          the keymanager to sign the transactions and batches
+   * @param opsPerBatch
+   *          the maximum number of operations per batch
+   * @param outStandingBatches
+   *          how many batches to submit before waiting
    */
   public SawtoothLedgerWriter(final String id, final Stream s, final KeyManager k, final int opsPerBatch,
       final int outStandingBatches) {
@@ -125,7 +149,6 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     }
 
     this.metrics = new Metrics(SharedMetricRegistries.getOrCreate(hostname));
-    this.kvCommitting = new KeyValueCommitting(DamlEngineSingleton.getInstance(), this.metrics);
 
     new KeyValueSubmission(this.metrics);
     this.submitter = new Submitter(this.stream);
@@ -138,17 +161,16 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
     return HealthStatus.healthy();
   }
 
-  /**
-   * @deprecated since DAML v1.3.0.
-   */
   @Override
-  @Deprecated(since = "1.3.0")
-  public Future<SubmissionResult> commit(final String correlationId, final ByteString envelope) {
+  public Future<SubmissionResult> commit(final String correlationId, final Raw.Envelope envelope,
+      final CommitMetadata metadata, final TelemetryContext telemetryContext) {
     final ByteString logEntryId = makeDamlLogEntryId();
-    final List<String> inputAddresses = extractInputAddresses(envelope);
-    final List<String> outputAddresses = extractOutputAddresses(envelope);
+    /// This should be replaced with metadata use
+    final List<String> inputAddresses = extractInputAddresses(envelope.bytes());
+    final List<String> outputAddresses = extractOutputAddresses(envelope.bytes());
     if (envelope.size() > DEFAULT_TX_FRAGMENT_SIZE) {
-      final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope).setLogEntryId(logEntryId).build();
+      final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope.bytes()).setLogEntryId(logEntryId)
+          .build();
 
       var start = 0;
       List<ByteString> fragments = new ArrayList<>();
@@ -173,9 +195,9 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
         try {
           this.submitQueue.put(cp);
         } catch (final InterruptedException e) {
-          LOGGER.warn("Interrupted while submitting transaction", e);
+          LOGGER.warn(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION, e);
           Thread.currentThread().interrupt();
-          return Future.apply(() -> new SubmissionResult.InternalError("Interrupted while submitting transaction"),
+          return Future.apply(() -> new SubmissionResult.InternalError(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION),
               ExecutionContext.global());
         }
       }
@@ -191,13 +213,14 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.warn("Interrupted while submitting transaction", e);
+          LOGGER.warn(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION, e);
           Thread.currentThread().interrupt();
-          return new SubmissionResult.InternalError("Interrupted while submitting transaction");
+          return new SubmissionResult.InternalError(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION);
         }
       }, ExecutionContext.global());
     } else {
-      final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope).setLogEntryId(logEntryId).build();
+      final DamlTransaction tx = DamlTransaction.newBuilder().setSubmission(envelope.bytes()).setLogEntryId(logEntryId)
+          .build();
       final DamlOperation op = DamlOperation.newBuilder().setCorrelationId(correlationId)
           .setSubmittingParticipant(participantId()).setTransaction(tx).build();
       final CommitPayload cp = new CommitPayload(inputAddresses, outputAddresses, op);
@@ -206,46 +229,47 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
           this.submitQueue.put(cp);
           return SubmissionResult.Acknowledged$.MODULE$;
         } catch (final InterruptedException e) {
-          LOGGER.warn("Interrupted while submitting transaction", e);
+          LOGGER.warn(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION, e);
           Thread.currentThread().interrupt();
-          return new SubmissionResult.InternalError("Interrupted while submitting transaction");
+          return new SubmissionResult.InternalError(INTERRUPTED_WHILE_SUBMITTING_TRANSACTION);
         }
       }, ExecutionContext.global());
     }
   }
 
   private List<String> extractInputAddresses(final ByteString envelope) {
-    final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope);
-    if (either.isLeft()) {
-      throw new DamlSawtoothRuntimeException(either.left().get());
-    }
-    final DamlSubmission submission = either.right().get();
-    final List<DamlStateKey> inputs = submission.getInputDamlStateList();
+    return Envelope.openSubmission(envelope.toByteArray()).map(submission -> {
+      final List<DamlStateKey> inputs = submission.getInputDamlStateList();
 
-    final List<String> addresses = inputs.stream().map(damlStateKey -> {
-      return Namespace.makeDamlStateAddress(this.kvCommitting.packDamlStateKey(damlStateKey));
-    }).collect(Collectors.toList());
-    addresses.add(TIMEKEEPER_GLOBAL_RECORD);
-    addresses.add(Namespace.DAML_STATE_VALUE_NS);
-    addresses.add(Namespace.DAML_TX_NS);
-    return addresses;
+      final List<String> addresses = inputs.stream()
+          .map(damlStateKey -> Namespace
+              .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes()))
+          .collect(Collectors.toList());
+      addresses.add(TIMEKEEPER_GLOBAL_RECORD);
+      addresses.add(Namespace.DAML_STATE_VALUE_NS);
+      addresses.add(Namespace.DAML_TX_NS);
+      return addresses;
+    }).left().map(err -> {
+      throw new DamlSawtoothRuntimeException(err);
+    }).getOrElse(() -> null);
   }
 
   private List<String> extractOutputAddresses(final ByteString envelope) {
-    final Either<String, DamlSubmission> either = Envelope.openSubmission(envelope);
-    if (either.isLeft()) {
-      throw new DamlSawtoothRuntimeException(either.left().get());
-    }
-    final DamlSubmission submission = either.right().get();
-    final Collection<DamlStateKey> collStateKeys = JavaConverters
-        .asJavaCollection(this.kvCommitting.submissionOutputs(submission));
-    List<String> collect = collStateKeys.stream().map(damlStateKey -> {
-      return Namespace.makeDamlStateAddress(this.kvCommitting.packDamlStateKey(damlStateKey));
-    }).collect(Collectors.toList());
-    collect.add(Namespace.DAML_STATE_VALUE_NS);
-    collect.add(Namespace.DAML_EVENT_NS);
-    collect.add(Namespace.DAML_TX_NS);
-    return collect;
+    return Envelope.openSubmission(envelope.toByteArray()).map(submission -> {
+      final Collection<DamlStateKey> collStateKeys = JavaConverters
+          .asJavaCollection(KeyValueCommitting.submissionOutputs(submission));
+      List<String> collect = collStateKeys.stream()
+          .map(damlStateKey -> Namespace
+              .makeDamlStateAddress(DefaultStateKeySerializationStrategy.serializeStateKey(damlStateKey).bytes()))
+          .collect(Collectors.toList());
+      collect.add(Namespace.DAML_STATE_VALUE_NS);
+      collect.add(Namespace.DAML_EVENT_NS);
+      collect.add(Namespace.DAML_TX_NS);
+      return collect;
+
+    }).left().map(err -> {
+      throw new DamlSawtoothRuntimeException(err);
+    }).getOrElse(() -> null);
   }
 
   private ByteString makeDamlLogEntryId() {
@@ -386,15 +410,15 @@ public final class SawtoothLedgerWriter implements LedgerWriter {
       final ClientBatchSubmitResponse getResponse = ClientBatchSubmitResponse.parseFrom(result);
       final var status = getResponse.getStatus();
       switch (status) {
-        case OK:
-          LOGGER.debug("ClientBatchSubmit response is OK");
-          return true;
-        case QUEUE_FULL:
-          LOGGER.warn("ClientBatchSubmit response is QUEUE_FULL");
-          return false;
-        default:
-          LOGGER.warn("ClientBatchSubmit response is {}", status);
-          throw new SawtoothWriteException(String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
+      case OK:
+        LOGGER.debug("ClientBatchSubmit response is OK");
+        return true;
+      case QUEUE_FULL:
+        LOGGER.warn("ClientBatchSubmit response is QUEUE_FULL");
+        return false;
+      default:
+        LOGGER.warn("ClientBatchSubmit response is {}", status);
+        throw new SawtoothWriteException(String.format("ClientBatchSubmit returned %s", getResponse.getStatus()));
       }
     }
   }

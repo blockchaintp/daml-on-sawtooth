@@ -1,3 +1,16 @@
+/*
+ * Copyright 2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package com.blockchaintp.sawtooth.daml.rpc;
 
 import java.io.IOException;
@@ -5,14 +18,14 @@ import java.io.IOException;
 import com.blockchaintp.keymanager.DirectoryKeyManager;
 import com.blockchaintp.keymanager.KeyManager;
 import com.daml.ledger.api.health.HealthStatus;
+import com.daml.ledger.participant.state.kvutils.Raw;
+import com.daml.ledger.participant.state.kvutils.api.CommitMetadata;
 import com.daml.ledger.participant.state.kvutils.api.LedgerReader;
 import com.daml.ledger.participant.state.kvutils.api.LedgerRecord;
 import com.daml.ledger.participant.state.kvutils.api.LedgerWriter;
 import com.daml.ledger.participant.state.v1.Offset;
 import com.daml.ledger.participant.state.v1.SubmissionResult;
-import com.daml.resources.Resource;
-import com.daml.resources.ResourceOwner;
-import com.google.protobuf.ByteString;
+import com.daml.telemetry.TelemetryContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import akka.NotUsed;
 import akka.stream.scaladsl.Source;
 import scala.Option;
-import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 
 /**
@@ -41,34 +53,42 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
   /**
    * Create a SawtoothReaderWriter with the provided parameters.
    *
-   * @param participantId the participant id
-   * @param zmqUrl the zmq url of the sawtooth node
-   * @param k the path of the keystre
-   * @param ledgerId the ledger id
+   * @param participantId
+   *          the participant id
+   * @param zmqUrl
+   *          the zmq url of the sawtooth node
+   * @param k
+   *          the path of the keystre
+   * @param ledgerId
+   *          the ledger id
    */
-  public SawtoothReaderWriter(final String participantId, final String zmqUrl,
-      final String k, final String ledgerId) {
-    this(participantId, zmqUrl, k, ledgerId, DEFAULT_MAX_OPS_PER_BATCH,
-        DEFAULT_MAX_OUTSTANDING_BATCHES);
+  public SawtoothReaderWriter(final String participantId, final String zmqUrl, final String k, final String ledgerId) {
+    this(participantId, zmqUrl, k, ledgerId, DEFAULT_MAX_OPS_PER_BATCH, DEFAULT_MAX_OUTSTANDING_BATCHES);
   }
 
   /**
    * Create a SawtoothReaderWriter with the provided parameters.
    *
-   * @param participantId the participant id
-   * @param zmqUrl the zmq url of the sawtooth node
-   * @param k the path of the keystre
-   * @param ledgerId the ledger id
-   * @param opsPerBatch the maximum number per batch
-   * @param outstandingBatches the number of outstanding batches before waiting
+   * @param participantId
+   *          the participant id
+   * @param zmqUrl
+   *          the zmq url of the sawtooth node
+   * @param k
+   *          the path of the keystre
+   * @param ledgerId
+   *          the ledger id
+   * @param opsPerBatch
+   *          the maximum number per batch
+   * @param outstandingBatches
+   *          the number of outstanding batches before waiting
    */
-  public SawtoothReaderWriter(final String participantId, final String zmqUrl,
-      final String k, final String ledgerId, final int opsPerBatch, final int outstandingBatches) {
+  public SawtoothReaderWriter(final String participantId, final String zmqUrl, final String k, final String ledgerId,
+      final int opsPerBatch, final int outstandingBatches) {
     this.keystoreDir = k;
     try {
       this.keyMgr = DirectoryKeyManager.create(this.keystoreDir);
     } catch (final IOException e) {
-      LOGGER.error("Invalid keystore directory " + this.keystoreDir);
+      LOGGER.error("Invalid keystore directory {}", this.keystoreDir);
       throw new IllegalArgumentException(e);
     }
     this.reader = new SawtoothLedgerReader(ledgerId, zmqUrl);
@@ -96,56 +116,15 @@ public final class SawtoothReaderWriter implements LedgerReader, LedgerWriter {
     return reader.ledgerId();
   }
 
-  @Deprecated
-  @Override
-  public Future<SubmissionResult> commit(final String correlationId, final ByteString envelope) {
-    return writer.commit(correlationId, envelope);
-  }
-
   @Override
   public String participantId() {
     return writer.participantId();
   }
 
-  /**
-   * A resource owner suitable for DAML apis.
-   */
-  public static final class Owner implements ResourceOwner<SawtoothReaderWriter> {
-
-    private final String participantId;
-    private final String zmqUrl;
-    private final String keystore;
-    private final String ledgerId;
-    private int outstandingBatches;
-    private int opsPerBatch;
-
-    /**
-   * A resource owner suitable for DAML apis.
-     *
-     * @param configuredParticipantId the participant id
-     * @param z the zmqUrl
-     * @param k the keystore location
-     * @param cfgOpsPerBatch the max number of operations per batch
-     * @param cfgOutstandingBatches the maximum number of batches to submit before waiting.
-     * @param lid the ledger id
-     */
-    public Owner(final String configuredParticipantId, final String z, final String k,
-        final int cfgOpsPerBatch, final int cfgOutstandingBatches, final Option<String> lid) {
-      this.participantId = configuredParticipantId;
-      this.zmqUrl = z;
-      this.keystore = k;
-      this.opsPerBatch = cfgOpsPerBatch;
-      this.outstandingBatches = cfgOutstandingBatches;
-      this.ledgerId = lid.getOrElse(() -> "default-ledger-id");
-
-    }
-
-    @Override
-    public Resource<SawtoothReaderWriter> acquire(final ExecutionContext executionContext) {
-      return Resource.successful(new SawtoothReaderWriter(this.participantId, this.zmqUrl,
-          this.keystore, this.ledgerId, this.opsPerBatch, this.outstandingBatches),
-          executionContext);
-    }
-
+  @Override
+  public Future<SubmissionResult> commit(String correlationId, Raw.Envelope envelope, CommitMetadata metadata,
+      TelemetryContext telemetryContext) {
+    return writer.commit(correlationId, envelope, metadata, telemetryContext);
   }
+
 }

@@ -105,7 +105,7 @@ services:
     entrypoint: "bash -c \"\
       sleep 30 && \
       /opt/sawtooth-daml-rpc/entrypoint.sh \
-        --participant port=9000,address=0.0.0.0,participant-id=rpc-0,server-jdbc-url=jdbc:postgresql://postgres/postgres?user=postgres \
+        --participant port=9000,management-service-timeout=PT600S,address=0.0.0.0,participant-id=rpc-0,server-jdbc-url=jdbc:postgresql://postgres/postgres?user=postgres \
         --ledger-id test \
         --log-level info \
         --max-outstanding-batches 2 \

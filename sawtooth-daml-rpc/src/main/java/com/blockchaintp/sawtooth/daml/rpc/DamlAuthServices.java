@@ -1,11 +1,15 @@
 /*
- * Copyright 2019 Blockchain Technology Partners Licensed under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
- * ------------------------------------------------------------------------------
+ * Copyright 2019-2021 Blockchain Technology Partners
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.blockchaintp.sawtooth.daml.rpc;
 
@@ -37,8 +41,7 @@ import com.daml.ledger.api.auth.Claim;
 import com.daml.ledger.api.auth.ClaimActAsParty$;
 import com.daml.ledger.api.auth.ClaimAdmin$;
 import com.daml.ledger.api.auth.ClaimPublic$;
-import com.daml.ledger.api.auth.Claims;
-import com.daml.lf.data.Ref;
+import com.daml.ledger.api.auth.ClaimSet;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -64,7 +67,8 @@ public final class DamlAuthServices implements AuthService {
   private Algorithm ecdsaAlgorithm = null;
 
   /**
-   * @param pubKeyInHex public key in hexadecimal format
+   * @param pubKeyInHex
+   *          public key in hexadecimal format
    */
   public DamlAuthServices(final String pubKeyInHex) {
     final Secp256k1PublicKey pubKey = Secp256k1PublicKey.fromHex(pubKeyInHex);
@@ -91,24 +95,23 @@ public final class DamlAuthServices implements AuthService {
   }
 
   /**
-   * @param headers grpc metadata
+   * @param headers
+   *          grpc metadata
    * @return CompletionStage of Claims
    */
-  public CompletionStage<Claims> decodeMetadata(final io.grpc.Metadata headers) {
+  public CompletionStage<ClaimSet> decodeMetadata(final Metadata headers) {
     try {
       return CompletableFuture.completedFuture(decodeAndParse(headers));
     } catch (final Exception e) {
-      return CompletableFuture.completedFuture(Claims.empty());
+      return CompletableFuture.completedFuture(ClaimSet.Claims$.MODULE$.Empty());
     }
   }
 
-  private com.daml.ledger.api.auth.Claims decodeAndParse(final io.grpc.Metadata headers)
-      throws AuthorizationHeaderMissing {
+  private ClaimSet.Claims decodeAndParse(final io.grpc.Metadata headers) throws AuthorizationHeaderMissing {
     final var regex = "Bearer (.*)";
     final var pattern = Pattern.compile(regex);
 
-    final Metadata.Key<String> authorizationKey =
-        Metadata.Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER);
+    final Metadata.Key<String> authorizationKey = Metadata.Key.of("Authorization", Metadata.ASCII_STRING_MARSHALLER);
     final var authKeyString = headers.get(authorizationKey);
     final var matcher = pattern.matcher(authKeyString);
     if (!matcher.matches()) {
@@ -127,15 +130,11 @@ public final class DamlAuthServices implements AuthService {
     final byte[] payloadInByteArray = Base64.getDecoder().decode(payloadBase64String);
     final JSONObject payloadInJsonObject = new JSONObject(new String(payloadInByteArray));
 
-    final scala.Option<String> ledgerID =
-        scala.Option.apply(payloadInJsonObject.optString("ledgerId"));
-    final scala.Option<String> participantID =
-        scala.Option.apply(payloadInJsonObject.optString("participantId"));
-    final scala.Option<String> applicationID =
-        scala.Option.apply(payloadInJsonObject.optString("applicationId"));
+    final scala.Option<String> ledgerID = scala.Option.apply(payloadInJsonObject.optString("ledgerId"));
+    final scala.Option<String> participantID = scala.Option.apply(payloadInJsonObject.optString("participantId"));
+    final scala.Option<String> applicationID = scala.Option.apply(payloadInJsonObject.optString("applicationId"));
 
-    final scala.Option<Instant> exp =
-        scala.Option.apply(Instant.ofEpochMilli(payloadInJsonObject.optInt("exp")));
+    final scala.Option<Instant> exp = scala.Option.apply(Instant.ofEpochMilli(payloadInJsonObject.optInt("exp")));
     final Boolean admin = payloadInJsonObject.optBoolean("admin");
 
     final var actASInJSONArray = payloadInJsonObject.optJSONArray("actAs");
@@ -154,12 +153,11 @@ public final class DamlAuthServices implements AuthService {
       }
     }
 
-    return new AuthServiceJWTPayload(ledgerID,
-        participantID, applicationID, exp, admin, actAS, readAS);
+    return new AuthServiceJWTPayload(ledgerID, participantID, applicationID, exp, admin, actAS, readAS);
 
   }
 
-  private Claims payloadToDAClaims(final AuthServiceJWTPayload payload) {
+  private ClaimSet.Claims payloadToDAClaims(final AuthServiceJWTPayload payload) {
 
     final ListBuffer<Claim> claimsList = new ListBuffer<>();
 
@@ -169,13 +167,11 @@ public final class DamlAuthServices implements AuthService {
       claimsList.$plus$eq(ClaimAdmin$.MODULE$);
     }
 
-    payload.actAs()
-        .foreach(name -> ClaimActAsParty$.MODULE$.apply(Ref.Party().assertFromString(name)));
+    payload.actAs().foreach(ClaimActAsParty$.MODULE$::apply);
 
-    return new Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), Option.empty(), payload.exp());
+    return new ClaimSet.Claims(claimsList.toList(), payload.ledgerId(), payload.participantId(), Option.empty(),
+        payload.exp());
   }
-
-
 
   @Override
   public Key<String> AUTHORIZATION_KEY() {
@@ -183,8 +179,8 @@ public final class DamlAuthServices implements AuthService {
   }
 
   @Override
-  public void com$daml$ledger$api$auth$AuthService$_setter_$AUTHORIZATION_KEY_$eq(
-      final Key<String> x) {
+  @SuppressWarnings("java:S117")
+  public void com$daml$ledger$api$auth$AuthService$_setter_$AUTHORIZATION_KEY_$eq(final Key x$1) {
     // Nasty Scala artifact. believe this is an autogenerated setter for a val in a trait
     // But the naming indicates that it is meant to be some sort of constant.
   }
