@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v1.13.1
+
+* fix: Restore direct sl4j dependencies [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/d2bae2cb9dad80e840c6f1e897e733411fcdfe34)
+* fix: Disable deprecation warnings for now [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1bc23e532fac3892d209e02cba6ebdc9546e5e85)
+* fix: Correct duration spec [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/eeed6a80bd12cb9653987d52fffd4a8004af5732)
+* style: More sonar issues [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fc2a4c0836475a3b986672d25f844c1fe7cf1404)
+* fix: No longer need this monkey patch, available on partipant config [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/efee420e11fd92ba3f29751a75e58f792a651b59)
+* style: Make sonar happy, this really should be wontfix at this point however [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/225c34e6376f7d4436ef873a16a1e80bb51875c9)
+* fix: Bump back the SL4J as we are getting an rte [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f3f6adb1d9dcc4be54f46f7fd0b6ee71be67b7d7)
+* fix: Use transitive version of akka [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/6a2560195ec0c67602b8261d1e247ebe0b353771)
+* style: Some relevant sonar issues [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/5aa388e6934e293e24c52349999b29642d6ba006)
+* feat: Bump to 1.13.1, converge formatting [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/10e1d5e3d6b0ffca452af0ae74f618df63b260f3)
+
+## v1.13.0
+
+
 ## v1.3.11
 
 * build(deps): Bump guava from 24.0-jre to 29.0-jre [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/1bc1d8d9ac451711baa00f17138d7d4ce4373a4d)
