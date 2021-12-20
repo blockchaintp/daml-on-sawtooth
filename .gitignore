@@ -12,7 +12,6 @@
 **/.cache-tests
 **/.externalToolBuilders
 **/.metals
-**/.scalafmt.conf
 **/.factorypath
 
 # Exclude macOS system
