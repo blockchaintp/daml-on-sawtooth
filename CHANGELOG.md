@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.13.3
+
+* build(deps): update paralos-java and slf4j deps [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f001d9f66cfe056de90c081f0624587062aedf28)
+
 ## v1.13.2
 
 * build(deps): Bump log4j-core from 2.16.0 to 2.17.0 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/0e6ed203250e024ce82c16987c438545e04359fb)
@@ -241,26 +245,14 @@
 * Update testtool SDK to 13.21 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/e9f9f861421b9a5cd48ebb7e351af3a96b6f78cf)
 * Add some detailed logging wrt timemodel [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/3f1d4728d6eaf32e4c1d9e866cfd6baebed173e6)
 * Update to use sdk 0.13.18 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/45dd572514f8454d3af80729cbd19f6a5491b8c9)
-
-## build/BTP2.0.1-2-gdd47ed9-0.1.2-15-g2d2572f
-
 * Change to using protobuf JsonFormat [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/837d5d36408038dc1ace901833bccda9517c7e41)
 * Fix Java spacing. [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/eba5938c2436594492d5f15faef3603b5e797821)
 * Temporary fix [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b865d81025fba448dcc7b189ed2a44bd0b352ab5)
-
-## build/BTP2.0.1-2-gdd47ed9-0.1.2-11-g4e155d2
-
 * Ignore node modules [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7525018e29b5a899b146ecd51dba75c8db1f5d86)
+* SXT-113 Update dependencies and add resolutions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fdea8a7e10ad43202f07937d409149212fa76737)
 * Remove noop-transaction-processor [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/28b1317d10526df19a78f2f80464e383b996abe2)
 * Refactor submissions and correct party allocation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f39d94d658110ac23ac5e4fe721cee10ea04bd06)
 * Correct Paul Sitoh in CODEOWNERS [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/2e18a086dc573b060b3abad2eeb5f5e110d58d4e)
-
-## build/BTP2.0.1-0.1.2-5-ged14a65
-
-* SXT-113 Update dependencies and add resolutions [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/fdea8a7e10ad43202f07937d409149212fa76737)
-
-## build/BTP2.0.1-0.1.2-3-g662689d
-
 * Update instruction for user to customise noxy [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/c3c6dca49d3670a5a4f92e0d39b4cf686ea10ddf)
 * Change tracer-ui compose port to expose directive [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/dc069de6f13aefe3b99081c274c8178e5c93a129)
 
@@ -269,9 +261,6 @@
 * Remove noop-transaction-processor [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/df1cbd488884c4a0ffcc8658ba346a17cd659ec1)
 * Refactor submissions and correct party allocation [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7e5ea59b6c4eac631071b26bccfec6fa5230b396)
 * Correct Paul Sitoh in CODEOWNERS [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/993b6c8a1cf937274553b6cd1aa622021a34fac5)
-
-## build/BTP2.0.0-77-gf4f8c57-0.1.1-87-gf06850a
-
 * Add Brian Healey [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7df5c5d3f85e52dbec84288a8d647db71f472808)
 * Add Marcin Ziolek [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/b78e1bcbc60beded6e1c9d407b00c84e30b6f1ba)
 * Add Jussi Maki as CODEOWNER [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/cf28de5db90dc53d8cffe59d701679982f6889b2)
