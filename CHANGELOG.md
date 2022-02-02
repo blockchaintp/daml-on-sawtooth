@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v1.13.5
+
+* build(deps): Bump follow-redirects from 1.14.4 to 1.14.7 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/a62e29083e2bd20a6dc1e9a2fff98c84ab1df4ea)
+* build(deps): Bump ua-parser-js from 0.7.19 to 0.7.31 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7852159fff1971342a995659fdd1f5b26627a803)
+* build(deps): Bump log4j-core from 2.17.0 to 2.17.1 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/52200bfa9fb726d838bd8f1f4f0ef5bfd86091a5)
+* build(deps): Bump log4j-api from 2.17.0 to 2.17.1 [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/ea33d1517be09a410d720507e73fd263c832dc21)
+* build(deps): Bump lodash from 4.17.15 to 4.17.21 in /tracer-ui [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/7dc44a30630470e183b9933cb3d8b181d5c940c2)
+
+## v1.13.4
+
+
 ## v1.13.3
 
 * build(deps): update paralos-java and slf4j deps [view commit](https://github.com/blockchaintp/daml-on-sawtooth/commit/f001d9f66cfe056de90c081f0624587062aedf28)
