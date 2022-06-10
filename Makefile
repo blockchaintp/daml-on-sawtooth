@@ -35,7 +35,8 @@ test_integration: package
 		-v || true
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test.yaml up \
 		--exit-code-from ledger-api-testtool || true
-	docker logs $(ISOLATION_ID)_ledger-api-testtool_1 > build/results.txt 2>&1
+	docker-compose -p $(ISOLATION_ID) -f docker/daml-test.yaml logs \
+		ledger-api-testtool > build/results.txt 2>&1
 	./run_tests ./build/results.txt PUBLIC > build/daml-test.results
 	docker-compose -p $(ISOLATION_ID) -f docker/daml-test.yaml down \
 	 || true
