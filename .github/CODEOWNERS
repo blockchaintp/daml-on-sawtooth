@@ -1,0 +1,8 @@
+# Default owners
+* @blockchaintp/btp-engineering @mziolekda @dasormeter
+
+# Documentation has additional team to review
+/docs/* @blockchaintp/btp-engineering @blockchaintp/btp-documentation
+
+# Repository Admin only for .github
+/.github/* @blockchaintp/repository-admin
