@@ -9,9 +9,12 @@ indent_size = 2
 end_of_line = lf
 insert_final_newline = true
 
-[*.java]
+[*.{java,ts,tsx,js,graphql,yaml,css}]
 max_line_length = 120
 
 # Tab indentation (no size specified)
 [Makefile]
+indent_style = tab
+
+[*.{go,mk}]
 indent_style = tab
