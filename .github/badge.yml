@@ -1,0 +1,10 @@
+types:
+  fix: 'fix'
+  feat: 'feature'
+  docs: 'documentation'
+  style: 'style'
+  refactor: 'refactor'
+  perf: 'performance'
+  test: 'test'
+  build: 'build'
+  ci: 'continuous integration'
