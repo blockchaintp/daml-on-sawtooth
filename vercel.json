@@ -1,0 +1,8 @@
+{
+  "installCommand": "pip install -r docs/versions.txt",
+  "outputDirectory": "site",
+  "buildCommand": "mkdocs build",
+  "github": {
+    "silent": true
+  }
+}
