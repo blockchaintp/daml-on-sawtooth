@@ -112,4 +112,4 @@ Please refer to [AUTH.md](./AUTH.md) for more instructions.
 
 ## Copyright
 
-Copyright @2019 Blockchain Technology Partners
+Copyright © 2023 Paravela Limited
